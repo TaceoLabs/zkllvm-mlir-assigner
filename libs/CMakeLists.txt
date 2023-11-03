@@ -1,0 +1,4 @@
+add_subdirectory(crypto3)
+add_subdirectory(blueprint)
+set(ONNX_MLIR_ENABLE_MHLO OFF)
+add_subdirectory(onnx-mlir)

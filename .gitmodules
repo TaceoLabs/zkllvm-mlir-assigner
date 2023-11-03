@@ -1,0 +1,12 @@
+[submodule "cmake/modules"]
+	path = cmake/modules
+	url = ../../BoostCMake/cmake_modules.git
+[submodule "libs/crypto3"]
+	path = libs/crypto3
+	url = ../../NilFoundation/crypto3.git
+[submodule "libs/blueprint"]
+	path = libs/blueprint
+	url = ../../TaceoLabs/zkllvm-blueprint.git
+[submodule "libs/onnx-mlir"]
+	path = libs/onnx-mlir
+	url = ../../TaceoLabs/onnx-mlir.git
