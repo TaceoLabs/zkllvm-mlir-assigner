@@ -28,6 +28,8 @@ elseif(CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
+find_package(spdlog REQUIRED)
+
 string(TOUPPER ${CURRENT_PROJECT_NAME} UPPER_CURRENT_PROJECT_NAME)
 
 # get header files; only needed by CMake generators,
@@ -36,7 +38,8 @@ set(${CURRENT_PROJECT_NAME}_HEADERS)
 
 # list cpp files excluding platform-dependent files
 list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-     main.cpp)
+     main.cpp
+     parser/CountPass.cpp)
 
 add_executable(${CURRENT_PROJECT_NAME}
                ${${CURRENT_PROJECT_NAME}_HEADERS}
@@ -47,6 +50,7 @@ set_target_properties(${CURRENT_PROJECT_NAME} PROPERTIES
                       EXPORT_NAME ${CURRENT_PROJECT_NAME}
                       CXX_STANDARD 17
                       CXX_STANDARD_REQUIRED TRUE)
+target_compile_options(${CURRENT_PROJECT_NAME} PRIVATE -Wno-cast-qual)
 
 target_link_libraries(${CURRENT_PROJECT_NAME}
                       LLVMIRReader
@@ -63,12 +67,15 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
                       crypto3::random
                       crypto3::zk
 
+                      OMCompilerUtils
+
                       marshalling::core
                       marshalling::crypto3_algebra
                       marshalling::crypto3_multiprecision
                       marshalling::crypto3_zk
 
-                      ${Boost_LIBRARIES})
+                      ${Boost_LIBRARIES}
+                      spdlog::spdlog_header_only)
 
 target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>

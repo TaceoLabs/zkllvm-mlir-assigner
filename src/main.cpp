@@ -32,24 +32,24 @@
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
-#include <nil/crypto3/algebra/curves/ed25519.hpp>
 #include <nil/crypto3/algebra/curves/pallas.hpp>
-#include <nil/crypto3/algebra/fields/arithmetic_params/ed25519.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
+#include <nil/crypto3/algebra/curves/ed25519.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/ed25519.hpp>
 
-#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/params.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
 #include <ios>
 
-#include <nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp>
-#include <nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp>
-#include <nil/marshalling/endianness.hpp>
-#include <nil/marshalling/field_type.hpp>
 #include <nil/marshalling/status_type.hpp>
+#include <nil/marshalling/field_type.hpp>
+#include <nil/marshalling/endianness.hpp>
+#include <nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp>
+#include <nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp>
 
-#include "mlir-assigner/helper/asserts.hpp"
-#include "mlir-assigner/parser/parser.hpp"
+#include <mlir-assigner/helper/asserts.hpp>
+#include <mlir-assigner/parser/parser.hpp>
 #include <nil/blueprint/utils/satisfiability_check.hpp>
 
 #include <llvm/Support/CommandLine.h>
@@ -158,9 +158,9 @@ int curve_dependent_main(std::string bytecode_file_name,
                          PrintCircuitOutput>
       parser_instance(stack_size, verbose, policy);
 
-  std::unique_ptr<llvm::Module> module =
-      parser_instance.parseIRFile(bytecode_file_name.c_str());
-  if (module == nullptr) {
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      parser_instance.parseMLIRFile(bytecode_file_name.c_str());
+  if (!module) {
     return 1;
   }
 
