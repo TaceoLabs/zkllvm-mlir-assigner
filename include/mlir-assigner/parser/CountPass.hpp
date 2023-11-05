@@ -17,58 +17,60 @@ using namespace mlir;
 #define ARITH_CONST "arith.constant"
 
 #define DEBUG_FLAG false
-#define DEBUG(X)    \
-    if (DEBUG_FLAG) \
-    llvm::outs() << X << "\n"
+#define DEBUG(X)                                                               \
+  if (DEBUG_FLAG)                                                              \
+  llvm::outs() << X << "\n"
 
-namespace zk_ml_toolchain
-{
+namespace zk_ml_toolchain {
 
-    // TODO link to mlir-hlo so that we do not have to copy-paste
+// TODO link to mlir-hlo so that we do not have to copy-paste
 
-    int64_t evalAffineExpr(AffineExpr expr, ArrayRef<int64_t> dims, ArrayRef<int64_t> symbols);
-    bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> dims, ArrayRef<int64_t> symbols);
-    bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> operands);
-    SmallVector<int64_t> evalAffineMap(AffineMap map, ArrayRef<int64_t> dims, ArrayRef<int64_t> symbols);
-    llvm::SmallVector<int64_t> evalAffineMap(AffineMap map, ArrayRef<int64_t> operands);
+int64_t evalAffineExpr(AffineExpr expr, ArrayRef<int64_t> dims,
+                       ArrayRef<int64_t> symbols);
+bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> dims,
+                    ArrayRef<int64_t> symbols);
+bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> operands);
+SmallVector<int64_t> evalAffineMap(AffineMap map, ArrayRef<int64_t> dims,
+                                   ArrayRef<int64_t> symbols);
+llvm::SmallVector<int64_t> evalAffineMap(AffineMap map,
+                                         ArrayRef<int64_t> operands);
 
-    // END COPY
+// END COPY
 
-    class CountPass
-        : public mlir::PassWrapper<CountPass, mlir::OperationPass<>>
-    {
-    private:
-        unsigned indent = 0;
-        std::unordered_map<std::string, unsigned> counter;
-        std::map<llvm::hash_code, int64_t> values;
+class CountPass : public mlir::PassWrapper<CountPass, mlir::OperationPass<>> {
+private:
+  unsigned indent = 0;
+  std::unordered_map<std::string, unsigned> counter;
+  std::map<llvm::hash_code, int64_t> values;
 
-        StringRef getArgument() const final;
-        StringRef getDescription() const final;
-        void runOnOperation() override;
+  //   std::unordered_map<> memrefs;
 
-        template <class T>
-        T castFromAttr(Attribute attr);
+  StringRef getArgument() const final;
+  StringRef getDescription() const final;
+  void runOnOperation() override;
 
-        int64_t getMaxFromVector(llvm::SmallVector<int64_t> v);
-        int64_t getMinFromVector(llvm::SmallVector<int64_t> v);
+  template <class T> T castFromAttr(Attribute attr);
 
-        void printIndent(unsigned offset = 0);
+  int64_t getMaxFromVector(llvm::SmallVector<int64_t> v);
+  int64_t getMinFromVector(llvm::SmallVector<int64_t> v);
 
-        void doAffineFor(Operation *op, int64_t from, int64_t to, int64_t step);
+  void printIndent(unsigned offset = 0);
 
-        template <class T>
-        void printSmallvector(llvm::SmallVector<T> &v);
+  void doAffineFor(Operation *op, int64_t from, int64_t to, int64_t step);
 
-        int64_t evaluateForParameter(AffineMap &affineMap, llvm::SmallVector<Value> &operands, bool from);
+  template <class T> void printSmallvector(llvm::SmallVector<T> &v);
 
-        void countDepth(Operation *op);
+  int64_t evaluateForParameter(AffineMap &affineMap,
+                               llvm::SmallVector<Value> &operands, bool from);
 
-        void countRegion(Region &region);
+  void countDepth(Operation *op);
 
-        void countBlock(Block &block);
-    };
+  void countRegion(Region &region);
 
-    std::unique_ptr<Pass> createCountPass();
+  void countBlock(Block &block);
+};
+
+std::unique_ptr<Pass> createCountPass();
 } // namespace zk_ml_toolchain
 
 #endif // ZK_ML_TOOLCHAIN_COUNT_PASS

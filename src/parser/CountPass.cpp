@@ -1,5 +1,8 @@
 #include <mlir-assigner/parser/CountPass.hpp>
 
+#include <mlir/Dialect/Affine/IR/AffineOps.h>
+#include <mlir/Dialect/MemRef/IR/MemRef.h>
+
 int64_t zk_ml_toolchain::evalAffineExpr(AffineExpr expr, ArrayRef<int64_t> dims,
                                         ArrayRef<int64_t> symbols) {
   int64_t lhs = 0, rhs = 0;
@@ -191,31 +194,29 @@ int64_t zk_ml_toolchain::CountPass::evaluateForParameter(
 }
 
 void zk_ml_toolchain::CountPass::countDepth(Operation *op) {
+
   // Print the operation itself and some of its properties
   // Print the operation attributes
   std::string opName = op->getName().getIdentifier().str();
   // printIndent();
   //  DEBUG("visiting " << opName);
-  if (opName == AFFINE_FOR) {
+  if (AffineForOp operation = llvm::dyn_cast<AffineForOp>(op)) {
     DEBUG("visiting affine for!");
     assert(op->getAttrs().size() == 3);
-    AffineMap fromMap =
-        castFromAttr<AffineMapAttr>(op->getAttrs()[0].getValue())
-            .getAffineMap();
-    int64_t step =
-        llvm::dyn_cast<IntegerAttr>(op->getAttrs()[1].getValue()).getInt();
-    AffineMap toMap = castFromAttr<AffineMapAttr>(op->getAttrs()[2].getValue())
-                          .getAffineMap();
+    AffineMap fromMap = operation.getLowerBoundMap();
+    int64_t step = operation.getStep();
+    AffineMap toMap = operation.getUpperBoundMap();
     assert(fromMap.getNumInputs() + toMap.getNumInputs() ==
            op->getNumOperands());
-    llvm::SmallVector<Value> operandsFrom(op->getOperands().begin(),
-                                          op->getOperands().begin() +
-                                              fromMap.getNumInputs());
-    llvm::SmallVector<Value> operandsTo(op->getOperands().begin() +
-                                            fromMap.getNumInputs(),
-                                        op->getOperands().end());
-    int64_t from = evaluateForParameter(fromMap, operandsFrom, true);
-    int64_t to = evaluateForParameter(toMap, operandsTo, false);
+
+    auto operandsFrom = operation.getLowerBoundOperands();
+    auto operandsTo = operation.getUpperBoundOperands();
+    auto operandsFromV =
+        llvm::SmallVector<Value>(operandsFrom.begin(), operandsFrom.end());
+    auto operandsToV =
+        llvm::SmallVector<Value>(operandsTo.begin(), operandsTo.end());
+    int64_t from = evaluateForParameter(fromMap, operandsFromV, true);
+    int64_t to = evaluateForParameter(toMap, operandsToV, false);
     doAffineFor(op, from, to, step);
   } else if (opName == AFFINE_IF) {
     DEBUG("visiting affine if!");
@@ -271,6 +272,18 @@ void zk_ml_toolchain::CountPass::countDepth(Operation *op) {
     } else {
       DEBUG("ignoring non int constant");
     }
+  } else if (memref::AllocOp operation = llvm::dyn_cast<memref::AllocOp>(op)) {
+    llvm::outs() << "allocating memref\n";
+    MemRefType type = operation.getType();
+    llvm::outs() << type.getElementType() << "\n";
+    for (auto dim : type.getShape()) {
+      llvm::outs() << dim << "\n";
+    }
+    auto uses = operation->getResult(0).getUsers();
+    for (auto use : uses) {
+      llvm::outs() << "use: " << use << "\n";
+    }
+
   } else {
     auto operationIter = this->counter.find(opName);
     if (operationIter != this->counter.end()) {
