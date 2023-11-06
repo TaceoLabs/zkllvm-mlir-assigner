@@ -42,7 +42,7 @@
 #include "src/Compiler/CompilerUtils.hpp"
 
 // passes
-#include "mlir-assigner/parser/CountPass.hpp"
+#include <mlir-assigner/parser/AssignMLIRPass.hpp>
 
 #include <mlir-assigner/policy/policy_manager.hpp>
 
@@ -100,34 +100,17 @@ public:
 
   bool evaluate(const mlir::ModuleOp &module,
                 const boost::json::array &public_input) {
+
+    // Initialize undef and zero vars once
+    undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
+    zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
+
     mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-    pm.addPass(zk_ml_toolchain::createCountPass());
+    pm.addPass(zk_ml_toolchain::createAssignMLIRPass<var>());
     if (mlir::failed(pm.run(module))) {
       llvm::errs() << "Passmanager failed to run!\n";
       return false;
     }
-    // stack_frame<var> base_frame;
-    // auto &variables = base_frame.scalars;
-    // base_frame.caller = nullptr;
-    // auto entry_point_it = module.end();
-    // for (auto function_it = module.begin(); function_it != module.end();
-    //      ++function_it) {
-    //   if (function_it->hasFnAttribute(llvm::Attribute::Circuit)) {
-    //     if (entry_point_it != module.end()) {
-    //       std::cerr << "More then one functions with [[circuit]] attribute in
-    //       "
-    //                    "the module"
-    //                 << std::endl;
-    //       return false;
-    //     }
-    //     entry_point_it = function_it;
-    //   }
-    // }
-    // if (entry_point_it == module.end()) {
-    //   std::cerr << "Entry point is not found" << std::endl;
-    //   return false;
-    // }
-    // auto &function = *entry_point_it;
 
     // auto input_reader =
     //     InputReader<BlueprintFieldType, var,
@@ -172,39 +155,6 @@ public:
     //     UNREACHABLE("Unhandled global variable");
     //   }
     // }
-
-    // // Collect all the possible labels that could be an argument in
-    // // IndirectBrInst
-    // for (const llvm::Function &function : module) {
-    //   for (const llvm::BasicBlock &bb : function) {
-    //     for (const llvm::Instruction &inst : bb) {
-    //       if (inst.getOpcode() != llvm::Instruction::IndirectBr) {
-    //         continue;
-    //       }
-    //       auto ib = llvm::cast<llvm::IndirectBrInst>(&inst);
-    //       for (const llvm::BasicBlock *succ : ib->successors()) {
-    //         if (labels.find(succ) != labels.end()) {
-    //           continue;
-    //         }
-    //         auto label_type = llvm::Type::getInt8PtrTy(module.getContext());
-    //         unsigned label_type_size =
-    //             layout_resolver->get_type_size(label_type);
-    //         ptr_type ptr = stack_memory.add_cells({label_type_size});
-
-    //         // Store the pointer to BasicBlock to memory
-    //         // TODO(maksenov): avoid C++ pointers in assignment table
-    //         stack_memory.store(ptr, put_into_assignment((const
-    //         uintptr_t)succ));
-
-    //         labels[succ] = put_into_assignment(ptr);
-    //       }
-    //     }
-    //   }
-    // }
-
-    // Initialize undef and zero vars once
-    undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
-    zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
 
     // const llvm::Instruction *next_inst = &function.begin()->front();
     // while (true) {

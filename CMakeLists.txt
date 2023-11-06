@@ -5,6 +5,8 @@ cmake_policy(SET CMP0028 NEW)
 cmake_policy(SET CMP0057 NEW)
 cmake_policy(SET CMP0063 NEW)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake"
      "${CMAKE_CURRENT_LIST_DIR}/cmake/packages"
      "${CMAKE_CURRENT_LIST_DIR}/cmake/modules/share/modules/cmake")

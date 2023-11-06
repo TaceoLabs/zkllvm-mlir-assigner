@@ -38,8 +38,7 @@ set(${CURRENT_PROJECT_NAME}_HEADERS)
 
 # list cpp files excluding platform-dependent files
 list(APPEND ${CURRENT_PROJECT_NAME}_SOURCES
-     main.cpp
-     parser/CountPass.cpp)
+     main.cpp)
 
 add_executable(${CURRENT_PROJECT_NAME}
                ${${CURRENT_PROJECT_NAME}_HEADERS}
