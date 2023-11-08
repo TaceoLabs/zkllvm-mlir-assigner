@@ -35,7 +35,6 @@
 
 // #include <mlir-assigner/helper/input_reader.hpp>
 #include <mlir-assigner/helper/logger.hpp>
-#include <mlir-assigner/memory/memory.hpp>
 
 // ONNX_MLIR stuff, fix include paths
 #include "src/Compiler/CompilerUtils.hpp"
@@ -52,8 +51,7 @@ template <typename BlueprintFieldType, typename ArithmetizationParams,
           bool PrintCircuitOutput>
 struct parser {
 
-  parser(long stack_size, bool detailed_logging, const std::string &kind = "")
-      : stack_memory(stack_size) {
+  parser(long stack_size, bool detailed_logging, const std::string &kind = "") {
     if (detailed_logging) {
       log.set_level(logger::level::DEBUG);
     }
@@ -179,7 +177,6 @@ private:
   mlir::MLIRContext context;
   //   const llvm::BasicBlock *predecessor = nullptr;
   //   std::stack<stack_frame<var>> call_stack;
-  program_memory<var> stack_memory;
   //   std::unordered_map<const llvm::Value *, var> globals;
   //   std::unordered_map<const llvm::BasicBlock *, var> labels;
   bool finished = false;

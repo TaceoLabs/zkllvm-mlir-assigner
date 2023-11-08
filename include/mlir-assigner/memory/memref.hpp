@@ -79,7 +79,13 @@ template <typename VarType> struct memref {
     data[offset] = value;
   }
 
+  void put_flat(const int64_t idx, const VarType &value) {
+    assert(idx < data.size());
+    data[idx] = value;
+  }
+
   mlir::Type getType() const { return type; }
+  int64_t size() const { return data.size(); }
 
 private:
   std::vector<VarType> data;

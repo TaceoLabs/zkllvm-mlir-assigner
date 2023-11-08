@@ -1,3 +1,6 @@
+#ifndef NIL_BLUEPRINT_STACK_FRAME_HPP
+#define NIL_BLUEPRINT_STACK_FRAME_HPP
+
 #include <mlir-assigner/memory/memref.hpp>
 #include <llvm/ADT/Hashing.h>
 #include <vector>
@@ -13,3 +16,5 @@ template <typename VarType> struct stack_frame {
 };
 } // namespace blueprint
 } // namespace nil
+
+#endif // NIL_BLUEPRINT_STACK_FRAME_HPP

@@ -21,6 +21,7 @@
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
+#include <mlir-assigner/parser/input_reader.hpp>
 
 #include <unordered_map>
 #include <map>
@@ -40,8 +41,8 @@ namespace zk_ml_toolchain {
 
 namespace detail {
 
-int64_t evalAffineExpr(AffineExpr expr, ArrayRef<int64_t> dims,
-                       ArrayRef<int64_t> symbols) {
+int64_t evalAffineExpr(AffineExpr expr, llvm::ArrayRef<int64_t> dims,
+                       llvm::ArrayRef<int64_t> symbols) {
   int64_t lhs = 0, rhs = 0;
   if (auto bin = expr.dyn_cast<AffineBinaryOpExpr>()) {
     lhs = evalAffineExpr(bin.getLHS(), dims, symbols);
@@ -69,8 +70,8 @@ int64_t evalAffineExpr(AffineExpr expr, ArrayRef<int64_t> dims,
   }
 }
 
-bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> dims,
-                    ArrayRef<int64_t> symbols) {
+bool evalIntegerSet(IntegerSet set, llvm::ArrayRef<int64_t> dims,
+                    llvm::ArrayRef<int64_t> symbols) {
   // according to mlir/lib/IR/IntegerSetDetail.h constraints are either
   // an equality (affine_expr == 0) or an inequality (affine_expr >= 0).
   // Nevertheless, according to https://mlir.llvm.org/docs/Dialects/Affine/
@@ -93,12 +94,12 @@ bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> dims,
   }
   return true;
 }
-bool evalIntegerSet(IntegerSet set, ArrayRef<int64_t> operands) {
+bool evalIntegerSet(IntegerSet set, llvm::ArrayRef<int64_t> operands) {
   return evalIntegerSet(set, operands.take_front(set.getNumDims()),
                         operands.drop_front(set.getNumDims()));
 }
-SmallVector<int64_t> evalAffineMap(AffineMap map, ArrayRef<int64_t> dims,
-                                   ArrayRef<int64_t> symbols) {
+SmallVector<int64_t> evalAffineMap(AffineMap map, llvm::ArrayRef<int64_t> dims,
+                                   llvm::ArrayRef<int64_t> symbols) {
   SmallVector<int64_t> result;
   for (auto expr : map.getResults()) {
     result.push_back(evalAffineExpr(expr, dims, symbols));
@@ -297,6 +298,8 @@ private:
       doAffineFor(operation, from, to, step);
     } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
       // affine.load
+      llvm::outs() << "affine.load:" << mlir::hash_value(operation.getMemref())
+                   << "\n";
       auto memref =
           frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
       ASSERT(memref != frames.back().memrefs.end());
@@ -458,6 +461,16 @@ private:
       return;
     }
 
+    if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
+      auto ops = operation.getOperands();
+      ASSERT(ops.size() == 1); // only handle single return value atm
+      // llvm::outs() << "returning: ";
+      // llvm::outs() << ops[0] << "\n";
+      // the ops[0] is something that we can hash_value to grab the result from
+      // maps
+      return;
+    }
+
     if (KrnlEntryPointOp operation = llvm::dyn_cast<KrnlEntryPointOp>(op)) {
       int32_t numInputs = -1;
       int32_t numOutputs = -1;
@@ -486,9 +499,24 @@ private:
       ASSERT(numOutputs == 1);
 
       // prepare the arguments for the function
+      frames.push_back(nil::blueprint::stack_frame<VarType>());
+
+      nil::blueprint::InputReader<
+          BlueprintFieldType, VarType,
+          nil::blueprint::assignment<ArithmetizationType>>
+          input_reader(frames.back(), assignmnt);
+      bool ok = input_reader.fill_public_input(funcOp->second, public_input);
+      if (!ok) {
+        std::cerr << "Public input does not match the circuit signature";
+        const std::string &error = input_reader.get_error();
+        if (!error.empty()) {
+          std::cout << ": " << error;
+        }
+        std::cout << std::endl;
+        exit(-1);
+      }
 
       // go execute the function
-      frames.push_back(nil::blueprint::stack_frame<VarType>());
       handleRegion(funcOp->second.getRegion());
 
       // TODO: what to do when done...
