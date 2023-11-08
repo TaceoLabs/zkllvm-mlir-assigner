@@ -35,7 +35,6 @@
 
 // #include <mlir-assigner/helper/input_reader.hpp>
 #include <mlir-assigner/helper/logger.hpp>
-#include <mlir-assigner/memory/stack.hpp>
 #include <mlir-assigner/memory/memory.hpp>
 
 // ONNX_MLIR stuff, fix include paths

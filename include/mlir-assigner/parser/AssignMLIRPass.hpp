@@ -17,6 +17,7 @@
 #include "src/Dialect/Krnl/KrnlOps.hpp"
 
 #include <mlir-assigner/memory/memref.hpp>
+#include <mlir-assigner/memory/stack_frame.hpp>
 
 #include <unordered_map>
 #include <map>
@@ -168,18 +169,18 @@ private:
     DEBUG("for (" << from << "->" << to << " step " << step << ")");
     llvm::hash_code counterHash = mlir::hash_value(op.getInductionVar());
     DEBUG("inserting hash: " << counterHash << ":" << from);
-    auto res = this->constant_values.insert({counterHash, from});
+    auto res = frames.back().constant_values.insert({counterHash, from});
     ASSERT(res.second); // we do not want overrides here, since we delete it
                         // after loop this should never happen
     while (from < to) {
       handleRegion(op.getLoopBody());
       from += step;
       DEBUG("updating hash: " << counterHash << ":" << from);
-      this->constant_values[counterHash] = from;
+      frames.back().constant_values[counterHash] = from;
       DEBUG(from << "->" << to);
       DEBUG("for done! go next iteration..");
     }
-    this->constant_values.erase(counterHash);
+    frames.back().constant_values.erase(counterHash);
     DEBUG("deleting: " << counterHash);
   }
 
@@ -193,15 +194,17 @@ private:
       for (unsigned i = 0; i < affineMap.getNumInputs(); ++i) {
         llvm::hash_code hash = mlir::hash_value(operands[i]);
         DEBUG("looking for: " << hash);
-        if (constant_values.find(hash) == constant_values.end()) {
+        if (frames.back().constant_values.find(hash) ==
+            frames.back().constant_values.end()) {
           DEBUG(affineMap);
           DEBUG("CANNOT FIND " << mlir::hash_value(operands[i]));
           DEBUG("CANNOT FIND " << operands[i]);
           exit(0);
         } else {
-          assert(constant_values.find(hash) != constant_values.end());
-          assert(constant_values.count(hash));
-          inVector[i] = this->constant_values[hash];
+          assert(frames.back().constant_values.find(hash) !=
+                 frames.back().constant_values.end());
+          assert(frames.back().constant_values.count(hash));
+          inVector[i] = frames.back().constant_values[hash];
         }
       }
       llvm::SmallVector<int64_t> eval = evalAffineMap(affineMap, inVector);
@@ -212,15 +215,17 @@ private:
   void handleArithOperation(Operation *op) {
     if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
       // grab the two operands
-      auto lhs = locals.find(mlir::hash_value(operation.getLhs()));
-      ASSERT(lhs != locals.end());
-      auto rhs = locals.find(mlir::hash_value(operation.getRhs()));
-      ASSERT(rhs != locals.end());
+      auto lhs =
+          frames.back().locals.find(mlir::hash_value(operation.getLhs()));
+      ASSERT(lhs != frames.back().locals.end());
+      auto rhs =
+          frames.back().locals.find(mlir::hash_value(operation.getRhs()));
+      ASSERT(rhs != frames.back().locals.end());
 
       // TODO: instantiate component
       auto result = lhs->second;
       // insert result
-      locals[mlir::hash_value(operation.getResult())] = result;
+      frames.back().locals[mlir::hash_value(operation.getResult())] = result;
     } else if (arith::ConstantOp operation =
                    llvm::dyn_cast<arith::ConstantOp>(op)) {
       TypedAttr constantValue = operation.getValueAttr();
@@ -228,7 +233,7 @@ private:
         int64_t value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
         // this insert is ok, since this should never change, so we don't
         // override it if it is already there
-        constant_values.insert(
+        frames.back().constant_values.insert(
             std::make_pair(mlir::hash_value(operation.getResult()), value));
       } else {
         UNREACHABLE("unhandled constant");
@@ -264,8 +269,9 @@ private:
       doAffineFor(operation, from, to, step);
     } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
       // affine.load
-      auto memref = memrefs.find(mlir::hash_value(operation.getMemref()));
-      ASSERT(memref != memrefs.end());
+      auto memref =
+          frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
+      ASSERT(memref != frames.back().memrefs.end());
 
       // grab the indices and build index vector
       auto indices = operation.getIndices();
@@ -274,17 +280,18 @@ private:
       for (auto a : indices) {
         // look for indices in constant_values
         llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
-        auto res = constant_values.find(mlir::hash_value(a));
-        ASSERT(res != constant_values.end());
+        auto res = frames.back().constant_values.find(mlir::hash_value(a));
+        ASSERT(res != frames.back().constant_values.end());
         llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       auto value = memref->second.get(indicesV);
-      locals[mlir::hash_value(operation.getResult())] = value;
+      frames.back().locals[mlir::hash_value(operation.getResult())] = value;
     } else if (AffineStoreOp operation = llvm::dyn_cast<AffineStoreOp>(op)) {
       // affine.store
-      auto memref = memrefs.find(mlir::hash_value(operation.getMemref()));
-      ASSERT(memref != memrefs.end());
+      auto memref =
+          frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
+      ASSERT(memref != frames.back().memrefs.end());
 
       // grab the indices and build index vector
       auto indices = operation.getIndices();
@@ -293,14 +300,15 @@ private:
       for (auto a : indices) {
         // look for indices in constant_values
         llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
-        auto res = constant_values.find(mlir::hash_value(a));
-        ASSERT(res != constant_values.end());
+        auto res = frames.back().constant_values.find(mlir::hash_value(a));
+        ASSERT(res != frames.back().constant_values.end());
         llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       // grab the element from the locals array
-      auto value = locals.find(mlir::hash_value(operation.getValue()));
-      ASSERT(value != locals.end());
+      auto value =
+          frames.back().locals.find(mlir::hash_value(operation.getValue()));
+      ASSERT(value != frames.back().locals.end());
       // put the element from the memref using index vector
       memref->second.put(indicesV, value->second);
 
@@ -318,9 +326,10 @@ private:
       int i = 0;
       for (auto operand : op->getOperands()) {
         llvm::hash_code hash = mlir::hash_value(operand);
-        assert(constant_values.find(hash) != constant_values.end());
-        assert(constant_values.count(hash));
-        int64_t test = this->constant_values[hash];
+        assert(frames.back().constant_values.find(hash) !=
+               frames.back().constant_values.end());
+        assert(frames.back().constant_values.count(hash));
+        int64_t test = frames.back().constant_values[hash];
         operands[i++] = test;
       }
       if (evalIntegerSet(condition, operands)) {
@@ -338,9 +347,10 @@ private:
       llvm::SmallVector<Value> operands(op->getOperands().begin(),
                                         op->getOperands().end());
       int64_t result = evaluateForParameter(applyMap, operands, false);
-      constant_values[mlir::hash_value(op->getResults()[0])] = result;
+      frames.back().constant_values[mlir::hash_value(op->getResults()[0])] =
+          result;
     } else if (opName == "affine.max") {
-      DEBUG("got affine.apply");
+      DEBUG("got affine.max");
       assert(op->getResults().size() == 1);
       assert(op->getAttrs().size() == 1);
       AffineMap applyMap =
@@ -349,7 +359,8 @@ private:
       llvm::SmallVector<Value> operands(op->getOperands().begin(),
                                         op->getOperands().end());
       int64_t result = evaluateForParameter(applyMap, operands, true);
-      constant_values[mlir::hash_value(op->getResults()[0])] = result;
+      frames.back().constant_values[mlir::hash_value(op->getResults()[0])] =
+          result;
     } else {
       UNREACHABLE(std::string("unhandled affine operation: ") + opName);
     }
@@ -374,8 +385,8 @@ private:
       llvm::outs() << res2 << "\n";
       auto m = nil::blueprint::memref<VarType>(type.getShape(),
                                                type.getElementType());
-      auto insert_res =
-          memrefs.insert({mlir::hash_value(operation.getMemref()), m});
+      auto insert_res = frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getMemref()), m});
       ASSERT(insert_res.second); // Reallocating over an existing memref
                                  // should not happen ATM
     } else {
@@ -443,9 +454,13 @@ private:
       auto funcOp = functions.find(func);
       ASSERT(funcOp != functions.end());
 
+      // only can handle single outputs atm
+      ASSERT(numOutputs == 1);
+
       // prepare the arguments for the function
 
       // go execute the function
+      frames.push_back(nil::blueprint::stack_frame<VarType>());
       handleRegion(funcOp->second.getRegion());
 
       // TODO: what to do when done...
@@ -468,13 +483,8 @@ private:
   }
 
 private:
-  std::map<llvm::hash_code, int64_t> constant_values;
-  std::map<llvm::hash_code, nil::blueprint::memref<VarType>> memrefs;
-  std::map<llvm::hash_code, VarType> locals;
+  std::vector<nil::blueprint::stack_frame<VarType>> frames;
   std::map<std::string, func::FuncOp> functions;
-  // TODO: handle callstacks...
-
-  //   std::unordered_map<> memrefs;
 };
 
 template <typename VarType> std::unique_ptr<Pass> createAssignMLIRPass() {
