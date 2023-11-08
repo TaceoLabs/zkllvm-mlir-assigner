@@ -16,6 +16,9 @@
 
 #include "src/Dialect/Krnl/KrnlOps.hpp"
 
+#include <nil/blueprint/blueprint/plonk/assignment.hpp>
+#include <nil/blueprint/blueprint/plonk/circuit.hpp>
+
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
@@ -146,9 +149,22 @@ template <class T> void printSmallvector(llvm::SmallVector<T> &v) {
 
 using namespace detail;
 
-template <typename VarType>
+template <typename BlueprintFieldType, typename ArithmetizationParams>
 class AssignMLIRPass
-    : public mlir::PassWrapper<AssignMLIRPass<VarType>, mlir::OperationPass<>> {
+    : public mlir::PassWrapper<
+          AssignMLIRPass<BlueprintFieldType, ArithmetizationParams>,
+          mlir::OperationPass<>> {
+public:
+  using ArithmetizationType =
+      nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
+                                                       ArithmetizationParams>;
+  using VarType = nil::crypto3::zk::snark::plonk_variable<
+      typename BlueprintFieldType::value_type>;
+
+  AssignMLIRPass(nil::blueprint::circuit<ArithmetizationType> &circuit,
+                 nil::blueprint::assignment<ArithmetizationType> &assignment,
+                 const boost::json::array &public_input)
+      : bp(circuit), assignmnt(assignment), public_input(public_input) {}
 
 private:
   virtual StringRef getArgument() const final { return "assign-mlir"; }
@@ -485,10 +501,21 @@ private:
 private:
   std::vector<nil::blueprint::stack_frame<VarType>> frames;
   std::map<std::string, func::FuncOp> functions;
+  nil::blueprint::circuit<ArithmetizationType> &bp;
+  nil::blueprint::assignment<ArithmetizationType> &assignmnt;
+  const boost::json::array &public_input;
 };
 
-template <typename VarType> std::unique_ptr<Pass> createAssignMLIRPass() {
-  return std::make_unique<AssignMLIRPass<VarType>>();
+template <typename BlueprintFieldType, typename ArithmetizationParams>
+std::unique_ptr<Pass> createAssignMLIRPass(
+    nil::blueprint::circuit<nil::crypto3::zk::snark::plonk_constraint_system<
+        BlueprintFieldType, ArithmetizationParams>> &circuit,
+    nil::blueprint::assignment<nil::crypto3::zk::snark::plonk_constraint_system<
+        BlueprintFieldType, ArithmetizationParams>> &assignment,
+    const boost::json::array &public_input) {
+  return std::make_unique<
+      AssignMLIRPass<BlueprintFieldType, ArithmetizationParams>>(
+      circuit, assignment, public_input);
 }
 } // namespace zk_ml_toolchain
 

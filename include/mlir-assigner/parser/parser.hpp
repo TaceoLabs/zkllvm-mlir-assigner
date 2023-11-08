@@ -105,7 +105,9 @@ public:
     zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
 
     mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-    pm.addPass(zk_ml_toolchain::createAssignMLIRPass<var>());
+    pm.addPass(zk_ml_toolchain::createAssignMLIRPass<BlueprintFieldType,
+                                                     ArithmetizationParams>(
+        bp, assignmnt, public_input));
     if (mlir::failed(pm.run(module))) {
       llvm::errs() << "Passmanager failed to run!\n";
       return false;
