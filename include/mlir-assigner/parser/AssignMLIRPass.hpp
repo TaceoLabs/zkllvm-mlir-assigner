@@ -166,6 +166,18 @@ public:
                  const boost::json::array &public_input)
       : bp(circuit), assignmnt(assignment), public_input(public_input) {}
 
+  // copy constructor
+  AssignMLIRPass(const AssignMLIRPass &pass)
+      : bp(pass.bp), assignmnt(pass.assignmnt),
+        public_input(pass.public_input) {
+    // since we misappropreate the pass runner for our assignment, assume it the
+    // CC is not called we cannot delete it since it is required by the
+    // PassWrapper
+    UNREACHABLE("copy constructor should not be called atm");
+  }
+  AssignMLIRPass(AssignMLIRPass &&pass) = default;
+  AssignMLIRPass &operator=(const AssignMLIRPass &pass) = delete;
+
 private:
   virtual StringRef getArgument() const final { return "assign-mlir"; }
   virtual StringRef getDescription() const final {
