@@ -107,7 +107,7 @@ template <typename VarType> struct memref {
       if (i != data.size() - 1)
         os << ",";
     }
-    os << "]";
+    os << "]\n";
   }
 
 private:

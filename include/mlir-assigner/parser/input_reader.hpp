@@ -227,6 +227,8 @@ public:
     // if (values.size() != 1)
     //   return false;
     // frame.scalars[fixedpoint_arg] = values[0];
+    llvm::outs() << "parsed input: " << arg << "\n";
+    m.print(llvm::outs(), assignmnt);
 
     auto res = frame.memrefs.insert({mlir::hash_value(arg), m});
     ASSERT(res.second); // we do not want to override stuff here
