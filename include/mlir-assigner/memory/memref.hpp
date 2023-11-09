@@ -89,7 +89,7 @@ template <typename VarType> struct memref {
   }
 
   void put_flat(const int64_t idx, const VarType &value) {
-    assert(idx < data.size());
+    assert(idx >= 0 && idx < data.size());
     data[idx] = value;
   }
 
@@ -114,6 +114,21 @@ template <typename VarType> struct memref {
         os << ",";
     }
     os << "]\n";
+  }
+
+  nil::blueprint::memref<VarType>
+  reinterpret_as(llvm::ArrayRef<int64_t> new_dims, mlir::Type new_type) {
+    for (auto d : new_dims) {
+      llvm::outs() << d << "\n";
+    }
+    llvm::outs() << "new type: " << new_type << "\n";
+    // build a new memref
+    nil::blueprint::memref<VarType> new_memref(new_dims, new_type);
+    ASSERT(new_memref.size() == this->size());
+    ASSERT(new_memref.getType() == this->type);
+    // just copy over data
+    new_memref.data = this->data;
+    return new_memref;
   }
 
 private:

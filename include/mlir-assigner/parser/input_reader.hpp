@@ -32,10 +32,10 @@
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/BuiltinTypes.h>
 
+#include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
+
 #include <iostream>
 #include <boost/json/src.hpp>
-
-#define DELTA_FIX_1616 (1ULL << 16)
 
 namespace nil {
 namespace blueprint {
@@ -68,12 +68,8 @@ public:
     } else {
       UNREACHABLE("TODO add string support");
     }
-    if (d < 0) {
-      out = static_cast<int64_t>(-d * DELTA_FIX_1616);
-      out = -out;
-    } else {
-      out = static_cast<int64_t>(d * DELTA_FIX_1616);
-    }
+    nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+    out = fixed.get_value();
     return true;
   }
 

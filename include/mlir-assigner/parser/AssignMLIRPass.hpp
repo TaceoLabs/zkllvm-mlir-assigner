@@ -269,6 +269,20 @@ private:
                    llvm::dyn_cast<arith::SelectOp>(op)) {
       handle_select_component(operation, frames.back(), bp, assignmnt,
                               start_row);
+    } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
+
+      // TODO: ATM, handle only the case where we work on indices that are
+      // constant values
+      auto lhs = frames.back().constant_values.find(
+          mlir::hash_value(operation.getLhs()));
+      auto rhs = frames.back().constant_values.find(
+          mlir::hash_value(operation.getRhs()));
+      ASSERT(lhs != frames.back().constant_values.end());
+      ASSERT(rhs != frames.back().constant_values.end());
+      auto result = lhs->second + rhs->second;
+      frames.back().constant_values[mlir::hash_value(operation.getResult())] =
+          result;
+
     } else if (arith::ConstantOp operation =
                    llvm::dyn_cast<arith::ConstantOp>(op)) {
       TypedAttr constantValue = operation.getValueAttr();
@@ -415,6 +429,7 @@ private:
         handleRegion(op->getRegion(1));
       }
     } else if (opName == "affine.apply" || opName == "affine.min") {
+      // TODO: nicer handling of these
       DEBUG("got affine.apply");
       assert(op->getResults().size() == 1);
       assert(op->getAttrs().size() == 1);
@@ -490,8 +505,48 @@ private:
           {mlir::hash_value(operation.getMemref()), m});
       ASSERT(insert_res.second); // Reallocating over an existing memref
                                  // should not happen ATM
+    } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
+      // TODO: deduplicate with affine.load
+      auto memref =
+          frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
+      ASSERT(memref != frames.back().memrefs.end());
+
+      // grab the indices and build index vector
+      auto indices = operation.getIndices();
+      std::vector<int64_t> indicesV;
+      indicesV.reserve(indices.size());
+      for (auto a : indices) {
+        // look for indices in constant_values
+        // llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
+        auto res = frames.back().constant_values.find(mlir::hash_value(a));
+        ASSERT(res != frames.back().constant_values.end());
+        // llvm::outs() << res->second << "\n";
+        indicesV.push_back(res->second);
+      }
+      auto value = memref->second.get(indicesV);
+      frames.back().locals[mlir::hash_value(operation.getResult())] = value;
+
+    } else if (memref::ReinterpretCastOp operation =
+                   llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
+      auto source = operation.getSource();
+      auto result = operation.getResult();
+      auto result_type = operation.getType();
+      llvm::outs() << "reinterpret cast\n";
+      llvm::outs() << source << "\n";
+      llvm::outs() << result << "\n";
+      llvm::outs() << result_type << "\n";
+
+      auto old_memref = frames.back().memrefs.find(mlir::hash_value(source));
+      ASSERT(old_memref != frames.back().memrefs.end());
+      auto new_memref = old_memref->second.reinterpret_as(
+          result_type.getShape(), result_type.getElementType());
+      auto insert_res = frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getResult()), new_memref});
+      ASSERT(insert_res.second); // Reallocating over an existing memref
+                                 // should not happen ATM
     } else {
-      UNREACHABLE("unhandled memref operation");
+      std::string opName = op->getName().getIdentifier().str();
+      UNREACHABLE(std::string("unhandled memref operation: ") + opName);
     }
   }
 
@@ -550,6 +605,59 @@ private:
       return;
     }
 
+    if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
+      llvm::outs() << "global op\n";
+      llvm::outs() << operation << "\n";
+      llvm::outs() << operation.getOutput() << "\n";
+      llvm::outs() << operation.getShape() << "\n";
+      llvm::outs() << operation.getName() << "\n";
+      llvm::outs() << operation.getValue() << "\n";
+
+      // The element type of the array.
+      const mlir::Type type = operation.getOutput().getType();
+      const mlir::MemRefType memRefTy = type.cast<mlir::MemRefType>();
+      const mlir::Type constantElementType = memRefTy.getElementType();
+      const auto shape = memRefTy.getShape();
+      llvm::outs() << memRefTy << "\n";
+
+      // build a memref and fill it with value
+      nil::blueprint::memref<VarType> m(shape, constantElementType);
+
+      // Create the global at the entry of the module.
+      ASSERT(operation.getValue().has_value() &&
+             "Krnl Global must always have a value");
+      auto value = operation.getValue().value();
+      if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
+        // llvm::outs() << attr << "\n";
+
+        // TODO handle other types
+        auto floats = attr.tryGetValues<APFloat>();
+        if (mlir::failed(floats)) {
+          UNREACHABLE("Unsupported attribute type");
+        }
+        size_t idx = 0;
+        for (auto a : floats.value()) {
+          double d;
+          if (&a.getSemantics() == &llvm::APFloat::IEEEdouble()) {
+            d = a.convertToDouble();
+          } else if (&a.getSemantics() == &llvm::APFloat::IEEEsingle()) {
+            d = a.convertToFloat();
+          } else {
+            UNREACHABLE("unsupported float semantics");
+          }
+          nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1>
+              fixed(d);
+          auto var = put_into_assignment(fixed.get_value());
+          m.put_flat(idx++, var);
+        }
+      } else {
+        UNREACHABLE("Unsupported attribute type");
+      }
+      frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getOutput()), m});
+      return;
+    }
+
     if (KrnlEntryPointOp operation = llvm::dyn_cast<KrnlEntryPointOp>(op)) {
       int32_t numInputs = -1;
       int32_t numOutputs = -1;
@@ -589,9 +697,9 @@ private:
         std::cerr << "Public input does not match the circuit signature";
         const std::string &error = input_reader.get_error();
         if (!error.empty()) {
-          std::cout << ": " << error;
+          std::cerr << ": " << error;
         }
-        std::cout << std::endl;
+        std::cerr << std::endl;
         exit(-1);
       }
       public_input_idx = input_reader.get_idx();
@@ -631,6 +739,7 @@ private:
                    VarType::column_type::public_input);
   }
 
+  // std::map<llvm::hash_code, memref<VarType>> globals;
   std::vector<nil::blueprint::stack_frame<VarType>> frames;
   std::map<std::string, func::FuncOp> functions;
   nil::blueprint::circuit<ArithmetizationType> &bp;

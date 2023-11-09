@@ -138,8 +138,9 @@ void handle_fixedpoint_comparison_component(
   auto x = lhs->second;
   auto y = rhs->second;
 
-  std::cout << var_value(assignment, x) << " " << var_value(assignment, y)
-            << "\n";
+  // std::stringstream ss;
+  // ss << var_value(assignment, x) << " cmp " << var_value(assignment, y) <<
+  // "\n"; llvm::outs() << ss.str();
 
   // TACEO_TODO: check types
 

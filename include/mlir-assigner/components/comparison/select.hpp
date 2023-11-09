@@ -114,4 +114,4 @@ void handle_select_component(
 }
 } // namespace blueprint
 } // namespace nil
-#endif // CRYPTO3_ASSIGNER_SELECTA_HPP
+#endif // CRYPTO3_ASSIGNER_SELECT_HPP
