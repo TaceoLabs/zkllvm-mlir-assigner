@@ -111,61 +111,9 @@ public:
       return false;
     }
 
-    // auto input_reader =
-    //     InputReader<BlueprintFieldType, var,
-    //     assignment<ArithmetizationType>>(
-    //         base_frame, stack_memory, assignmnt, *layout_resolver);
-    // if (!input_reader.fill_public_input(function, public_input)) {
-    //   std::cerr << "Public input does not match the circuit signature";
-    //   const std::string &error = input_reader.get_error();
-    //   if (!error.empty()) {
-    //     std::cout << ": " << error;
-    //   }
-    //   std::cout << std::endl;
-    //   return false;
-    // }
-    // public_input_idx = input_reader.get_idx();
-    // call_stack.emplace(std::move(base_frame));
+    llvm::outs() << assignmnt.rows_amount() << " rows\n";
 
-    // for (const llvm::GlobalVariable &global : module.getGlobalList()) {
-
-    //   const llvm::Constant *initializer = global.getInitializer();
-    //   if (initializer->getType()->isAggregateType()) {
-    //     ptr_type ptr = store_constant<var>(initializer);
-    //     globals[&global] = put_into_assignment(ptr);
-    //   } else if (initializer->getType()->isIntegerTy() ||
-    //              (initializer->getType()->isFieldTy() &&
-    //               field_arg_num<BlueprintFieldType>(initializer->getType())
-    //               ==
-    //                   1)) {
-    //     ptr_type ptr = stack_memory.add_cells(
-    //         {layout_resolver->get_type_size(initializer->getType())});
-    //     std::vector<typename BlueprintFieldType::value_type>
-    //         marshalled_field_val = marshal_field_val(initializer);
-    //     stack_memory.store(ptr,
-    //     put_into_assignment(marshalled_field_val[0])); globals[&global] =
-    //     put_into_assignment(ptr);
-    //   } else if (llvm::isa<llvm::ConstantPointerNull>(initializer)) {
-    //     ptr_type ptr = stack_memory.add_cells(
-    //         {layout_resolver->get_type_size(initializer->getType())});
-    //     stack_memory.store(ptr, zero_var);
-    //     globals[&global] = put_into_assignment(ptr);
-    //   } else {
-    //     UNREACHABLE("Unhandled global variable");
-    //   }
-    // }
-
-    // const llvm::Instruction *next_inst = &function.begin()->front();
-    // while (true) {
-    //   next_inst = handle_instruction(next_inst);
-    //   if (finished) {
-    //     return true;
-    //   }
-    //   if (next_inst == nullptr) {
-    //     return false;
-    //   }
-    // }
-    return false;
+    return true;
   }
 
   template <typename InputType> var put_into_assignment(InputType input) {

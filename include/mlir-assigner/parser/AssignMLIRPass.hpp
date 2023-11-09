@@ -19,6 +19,11 @@
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
 #include <nil/blueprint/blueprint/plonk/circuit.hpp>
 
+#include <mlir-assigner/components/fixedpoint/addition.hpp>
+#include <mlir-assigner/components/fixedpoint/subtraction.hpp>
+#include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
+#include <mlir-assigner/components/fixedpoint/division.hpp>
+
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/parser/input_reader.hpp>
@@ -27,10 +32,6 @@
 #include <map>
 #include <unistd.h>
 using namespace mlir;
-
-#define AFFINE_FOR "affine.for"
-#define AFFINE_IF "affine.if"
-#define ARITH_CONST "arith.constant"
 
 #define DEBUG_FLAG true
 #define DEBUG(X)                                                               \
@@ -242,19 +243,19 @@ private:
   }
 
   void handleArithOperation(Operation *op) {
+    std::uint32_t start_row = assignmnt.allocated_rows();
     if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
-      // grab the two operands
-      auto lhs =
-          frames.back().locals.find(mlir::hash_value(operation.getLhs()));
-      ASSERT(lhs != frames.back().locals.end());
-      auto rhs =
-          frames.back().locals.find(mlir::hash_value(operation.getRhs()));
-      ASSERT(rhs != frames.back().locals.end());
-
-      // TODO: instantiate component
-      auto result = lhs->second;
-      // insert result
-      frames.back().locals[mlir::hash_value(operation.getResult())] = result;
+      handle_fixedpoint_addition_component(operation, frames.back(), bp,
+                                           assignmnt, start_row);
+    } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
+      handle_fixedpoint_subtraction_component(operation, frames.back(), bp,
+                                              assignmnt, start_row);
+    } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
+      handle_fixedpoint_mul_rescale_component(operation, frames.back(), bp,
+                                              assignmnt, start_row);
+    } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
+      handle_fixedpoint_division_component(operation, frames.back(), bp,
+                                           assignmnt, start_row);
     } else if (arith::ConstantOp operation =
                    llvm::dyn_cast<arith::ConstantOp>(op)) {
       TypedAttr constantValue = operation.getValueAttr();
@@ -345,7 +346,7 @@ private:
 
     } else if (AffineYieldOp operation = llvm::dyn_cast<AffineYieldOp>(op)) {
       // Affine Yields are Noops for us
-    } else if (opName == AFFINE_IF) {
+    } else if (opName == "affine.if") {
       DEBUG("visiting affine if!");
       assert(op->getAttrs().size() == 1);
       IntegerSet condition =
