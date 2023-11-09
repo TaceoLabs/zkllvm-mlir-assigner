@@ -2,6 +2,9 @@
 #define MLIR_ASSIGNER_MEMORY_MEMREF_HPP
 
 #include <mlir-assigner/helper/asserts.hpp>
+#include <nil/blueprint/blueprint/plonk/assignment.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 #include <llvm/ADT/ArrayRef.h>
 
 #include <vector>
@@ -87,12 +90,33 @@ template <typename VarType> struct memref {
   mlir::Type getType() const { return type; }
   int64_t size() const { return data.size(); }
 
+  template <typename BlueprintFieldType, typename ArithmetizationParams>
+  void print(llvm::raw_ostream &os,
+             const assignment<crypto3::zk::snark::plonk_constraint_system<
+                 BlueprintFieldType, ArithmetizationParams>> &assignment) {
+    os << "memref<";
+    for (int i = 0; i < dims.size(); i++) {
+      os << dims[i];
+      os << "x";
+    }
+    os << type << ">[";
+    for (int i = 0; i < data.size(); i++) {
+      auto value = var_value(assignment, data[i]).data;
+      components::FixedPoint<BlueprintFieldType, 1, 1> out(value, 16);
+      os << out.to_double();
+      if (i != data.size() - 1)
+        os << ",";
+    }
+    os << "]";
+  }
+
 private:
   std::vector<VarType> data;
   std::vector<int64_t> dims;
   std::vector<int64_t> strides;
   mlir::Type type;
 };
+
 } // namespace blueprint
 } // namespace nil
 #endif // MLIR_ASSIGNER_MEMORY_MEMREF_HPP

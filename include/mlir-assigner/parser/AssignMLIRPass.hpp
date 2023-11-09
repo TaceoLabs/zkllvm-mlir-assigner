@@ -468,6 +468,10 @@ private:
       // llvm::outs() << ops[0] << "\n";
       // the ops[0] is something that we can hash_value to grab the result from
       // maps
+      auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
+      ASSERT(retval != frames.back().memrefs.end());
+      llvm::outs() << "returning: ";
+      retval->second.print(llvm::outs(), assignmnt);
       return;
     }
 

@@ -124,36 +124,6 @@ public:
     return res;
   }
 
-  std::vector<var> process_fixedpoint(llvm::ZkFixedPointType *fixedpoint_type,
-                                      const boost::json::object &value) {
-    ASSERT(value.size() == 1 && value.contains("zk-fixedpoint"));
-    std::vector<var> res;
-    if (!parse_fixedpoint(value.at("zk-fixedpoint"),
-                          assignmnt.public_input(0, public_input_idx))) {
-      return {};
-    }
-    res.push_back(
-        var(0, public_input_idx++, false, var::column_type::public_input));
-    return res;
-  }
-
-  bool take_fixedpoint(llvm::Value *fixedpoint_arg, llvm::Type *fixedpoint_type,
-                       const boost::json::object &value) {
-    if (!fixedpoint_type->isZkFixedPointTy()) {
-      return false;
-    }
-    if (value.size() != 1 || !value.contains("zk-fixedpoint") ||
-        !value.at("zk-fixedpoint").is_double()) {
-      return false;
-    }
-    auto values = process_fixedpoint(
-        llvm::cast<llvm::ZkFixedPointType>(fixedpoint_type), value);
-    if (values.size() != 1)
-      return false;
-    frame.scalars[fixedpoint_arg] = values[0];
-    return true;
-  }
-
   std::vector<var> process_int(const boost::json::object &object,
                                std::size_t bitness, bool is_private) {
     ASSERT(object.size() == 1 && object.contains("int"));
