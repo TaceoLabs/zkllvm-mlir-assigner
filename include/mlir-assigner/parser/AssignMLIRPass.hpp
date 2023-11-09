@@ -19,6 +19,8 @@
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
 #include <nil/blueprint/blueprint/plonk/circuit.hpp>
 
+#include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
+
 #include <mlir-assigner/components/fixedpoint/addition.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
@@ -263,9 +265,27 @@ private:
         int64_t value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
         // this insert is ok, since this should never change, so we don't
         // override it if it is already there
+
+        // TACEO_TODO: better separation of constant values that come from the
+        // loop bounds an normal ones, ATM just do both
         frames.back().constant_values.insert(
             std::make_pair(mlir::hash_value(operation.getResult()), value));
+
+        typename BlueprintFieldType::value_type field_constant = value;
+        auto val = put_into_assignment(field_constant);
+        frames.back().locals.insert(
+            std::make_pair(mlir::hash_value(operation.getResult()), val));
+      } else if (constantValue.isa<FloatAttr>()) {
+        double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
+        nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(
+            d);
+        auto value = put_into_assignment(fixed.get_value());
+        // this insert is ok, since this should never change, so we
+        // don't override it if it is already there
+        frames.back().locals.insert(
+            std::make_pair(mlir::hash_value(operation.getResult()), value));
       } else {
+        llvm::outs() << constantValue.getType() << "\n";
         UNREACHABLE("unhandled constant");
       }
     } else {
@@ -299,8 +319,9 @@ private:
       doAffineFor(operation, from, to, step);
     } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
       // affine.load
-      llvm::outs() << "affine.load:" << mlir::hash_value(operation.getMemref())
-                   << "\n";
+      // llvm::outs() << "affine.load:" <<
+      // mlir::hash_value(operation.getMemref())
+      //              << "\n";
       auto memref =
           frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
       ASSERT(memref != frames.back().memrefs.end());
@@ -311,10 +332,10 @@ private:
       indicesV.reserve(indices.size());
       for (auto a : indices) {
         // look for indices in constant_values
-        llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
+        // llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
         auto res = frames.back().constant_values.find(mlir::hash_value(a));
         ASSERT(res != frames.back().constant_values.end());
-        llvm::outs() << res->second << "\n";
+        // llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       auto value = memref->second.get(indicesV);
@@ -331,10 +352,10 @@ private:
       indicesV.reserve(indices.size());
       for (auto a : indices) {
         // look for indices in constant_values
-        llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
+        // llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
         auto res = frames.back().constant_values.find(mlir::hash_value(a));
         ASSERT(res != frames.back().constant_values.end());
-        llvm::outs() << res->second << "\n";
+        // llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       // grab the element from the locals array
@@ -402,6 +423,30 @@ private:
 
     if (memref::AllocOp operation = llvm::dyn_cast<memref::AllocOp>(op)) {
       llvm::outs() << "allocating memref\n";
+      MemRefType type = operation.getType();
+      llvm::outs() << type.getElementType() << "\n";
+      for (auto dim : type.getShape()) {
+        llvm::outs() << dim << "\n";
+      }
+      auto uses = operation->getResult(0).getUsers();
+      for (auto use : uses) {
+        llvm::outs() << "use: " << use << "\n";
+      }
+      auto res = operation->getResult(0);
+      auto res2 = operation.getMemref();
+      llvm::outs() << res << "\n";
+      llvm::outs() << res2 << "\n";
+      auto m = nil::blueprint::memref<VarType>(type.getShape(),
+                                               type.getElementType());
+      auto insert_res = frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getMemref()), m});
+      ASSERT(insert_res.second); // Reallocating over an existing memref
+                                 // should not happen ATM
+    } else if (memref::AllocaOp operation =
+                   llvm::dyn_cast<memref::AllocaOp>(op)) {
+      // TACEO_TODO: handle cleanup of these stack memrefs
+      // TACEO_TODO: deduplicate with above
+      llvm::outs() << "allocating (stack) memref\n";
       MemRefType type = operation.getType();
       llvm::outs() << type.getElementType() << "\n";
       for (auto dim : type.getShape()) {
@@ -544,11 +589,18 @@ private:
   }
 
 private:
+  template <typename InputType> VarType put_into_assignment(InputType input) {
+    assignmnt.public_input(0, public_input_idx) = input;
+    return VarType(0, public_input_idx++, false,
+                   VarType::column_type::public_input);
+  }
+
   std::vector<nil::blueprint::stack_frame<VarType>> frames;
   std::map<std::string, func::FuncOp> functions;
   nil::blueprint::circuit<ArithmetizationType> &bp;
   nil::blueprint::assignment<ArithmetizationType> &assignmnt;
   const boost::json::array &public_input;
+  size_t public_input_idx = 0;
 };
 
 template <typename BlueprintFieldType, typename ArithmetizationParams>

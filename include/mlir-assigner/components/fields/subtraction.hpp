@@ -62,9 +62,6 @@ handle_native_field_subtraction_component(
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
 
-  using var = crypto3::zk::snark::plonk_variable<
-      typename BlueprintFieldType::value_type>;
-
   using component_type = components::subtraction<
       crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
                                                   ArithmetizationParams>,
