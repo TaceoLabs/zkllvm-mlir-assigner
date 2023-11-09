@@ -98,10 +98,6 @@ public:
   bool evaluate(const mlir::ModuleOp &module,
                 const boost::json::array &public_input) {
 
-    // Initialize undef and zero vars once
-    undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
-    zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
-
     mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
     pm.addPass(zk_ml_toolchain::createAssignMLIRPass<BlueprintFieldType,
                                                      ArithmetizationParams>(
@@ -116,22 +112,9 @@ public:
     return true;
   }
 
-  template <typename InputType> var put_into_assignment(InputType input) {
-    assignmnt.public_input(0, public_input_idx) = input;
-    return var(0, public_input_idx++, false, var::column_type::public_input);
-  }
-
 private:
   mlir::MLIRContext context;
-  //   const llvm::BasicBlock *predecessor = nullptr;
-  //   std::stack<stack_frame<var>> call_stack;
-  //   std::unordered_map<const llvm::Value *, var> globals;
-  //   std::unordered_map<const llvm::BasicBlock *, var> labels;
   bool finished = false;
-  size_t public_input_idx = 0;
-  //   std::unique_ptr<LayoutResolver> layout_resolver;
-  var undef_var;
-  var zero_var;
   logger log;
 };
 

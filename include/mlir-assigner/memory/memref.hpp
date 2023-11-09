@@ -29,10 +29,10 @@ template <typename VarType> struct memref {
     strides.resize(dims.size());
     for (int i = dims.size() - 1; i >= 0; i--) {
       strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
-      ASSERT(dims[i] > 0)
-      // this also handles the case when dims is empty, since we still allocate
-      // 1 here
+      ASSERT(dims[i] > 0);
     }
+    // this also handles the case when dims is empty, since we still allocate
+    // 1 here
     data.resize(std::accumulate(std::begin(dims), std::end(dims), 1,
                                 std::multiplies<uint32_t>()));
   }
@@ -41,9 +41,8 @@ template <typename VarType> struct memref {
     strides.resize(dims.size());
     for (int i = dims.size() - 1; i >= 0; i--) {
       strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
-      ASSERT(dims[i] > 0)
+      ASSERT(dims[i] > 0);
     }
-
     // this also handles the case when dims is empty, since we still allocate 1
     // here
     data.resize(std::accumulate(std::begin(dims), std::end(dims), 1,

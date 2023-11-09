@@ -1,6 +1,8 @@
 #ifndef CRYPTO3_ASSIGNER_FIXEDPOINT_EXP_HPP
 #define CRYPTO3_ASSIGNER_FIXEDPOINT_EXP_HPP
 
+#include <mlir/Dialect/Math/IR/Math.h>
+
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
 #include <nil/blueprint/component.hpp>
@@ -59,7 +61,7 @@ handle_fixedpoint_exp_component(
 } // namespace detail
 template <typename BlueprintFieldType, typename ArithmetizationParams>
 void handle_fixedpoint_exp_component(
-    const llvm::Instruction *inst,
+    mlir::math::ExpOp &operation,
     stack_frame<crypto3::zk::snark::plonk_variable<
         typename BlueprintFieldType::value_type>> &frame,
     circuit<crypto3::zk::snark::plonk_constraint_system<
@@ -67,18 +69,16 @@ void handle_fixedpoint_exp_component(
     assignment<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
-  llvm::Value *operand = inst->getOperand(0);
-  llvm::Type *op_type = operand->getType();
-  ASSERT(llvm::isa<llvm::ZkFixedPointType>(op_type));
-  frame.scalars[inst] =
-      detail::handle_fixedpoint_exp_component<BlueprintFieldType,
-                                              ArithmetizationParams>(
-          operand, frame.scalars, bp, assignment, start_row)
-          .output;
+  auto operand = frame.locals.find(mlir::hash_value(operation.getOperand()));
+  ASSERT(operand != frame.locals.end());
 
-  // TACEO_TODO check Scale size here in LLVM???
-  // ASSERT(llvm::cast<llvm::GaloisFieldType>(op0_type)->getFieldKind() ==
-  //        llvm::cast<llvm::GaloisFieldType>(op1_type)->getFieldKind());
+  auto x = operand->second;
+
+  // TACEO_TODO: check types
+
+  auto result =
+      detail::handle_fixedpoint_exp_component(x, bp, assignment, start_row);
+  frame.locals[mlir::hash_value(operation.getResult())] = result.output;
 }
 } // namespace blueprint
 } // namespace nil

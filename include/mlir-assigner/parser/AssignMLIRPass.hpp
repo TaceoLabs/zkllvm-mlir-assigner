@@ -10,6 +10,7 @@
 
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/Math/IR/Math.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/BuiltinDialect.h>
@@ -25,6 +26,9 @@
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
 #include <mlir-assigner/components/fixedpoint/division.hpp>
+#include <mlir-assigner/components/fixedpoint/exp.hpp>
+#include <mlir-assigner/components/comparison/fixed_comparison.hpp>
+#include <mlir-assigner/components/comparison/select.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -258,6 +262,13 @@ private:
     } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
       handle_fixedpoint_division_component(operation, frames.back(), bp,
                                            assignmnt, start_row);
+    } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
+      handle_fixedpoint_comparison_component(operation, frames.back(), bp,
+                                             assignmnt, start_row);
+    } else if (arith::SelectOp operation =
+                   llvm::dyn_cast<arith::SelectOp>(op)) {
+      handle_select_component(operation, frames.back(), bp, assignmnt,
+                              start_row);
     } else if (arith::ConstantOp operation =
                    llvm::dyn_cast<arith::ConstantOp>(op)) {
       TypedAttr constantValue = operation.getValueAttr();
@@ -290,7 +301,20 @@ private:
       }
     } else {
       std::string opName = op->getName().getIdentifier().str();
-      UNREACHABLE(std::string("unhandled affine operation: ") + opName);
+      UNREACHABLE(std::string("unhandled arith operation: ") + opName);
+    }
+  }
+
+  void handleMathOperation(Operation *op) {
+    std::uint32_t start_row = assignmnt.allocated_rows();
+    if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
+      handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt,
+                                      start_row);
+    } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
+      UNREACHABLE("TODO: sqrt");
+    } else {
+      std::string opName = op->getName().getIdentifier().str();
+      UNREACHABLE(std::string("unhandled math operation: ") + opName);
     }
   }
 
@@ -483,6 +507,11 @@ private:
       return;
     }
 
+    if (llvm::isa<mlir::math::MathDialect>(dial)) {
+      handleMathOperation(op);
+      return;
+    }
+
     if (llvm::isa<AffineDialect>(dial)) {
       handleAffineOperation(op);
       return;
@@ -565,6 +594,13 @@ private:
         std::cout << std::endl;
         exit(-1);
       }
+      public_input_idx = input_reader.get_idx();
+
+      // Initialize undef and zero vars once
+      undef_var =
+          put_into_assignment(typename BlueprintFieldType::value_type());
+      zero_var =
+          put_into_assignment(typename BlueprintFieldType::value_type(0));
 
       // go execute the function
       handleRegion(funcOp->second.getRegion());
@@ -601,6 +637,8 @@ private:
   nil::blueprint::assignment<ArithmetizationType> &assignmnt;
   const boost::json::array &public_input;
   size_t public_input_idx = 0;
+  VarType undef_var;
+  VarType zero_var;
 };
 
 template <typename BlueprintFieldType, typename ArithmetizationParams>
