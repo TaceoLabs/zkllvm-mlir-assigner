@@ -24,7 +24,7 @@ template <typename VarType> struct memref {
 
   memref &operator=(memref &&) = default;
 
-  memref(std::vector<uint32_t> dims, mlir::Type type)
+  memref(std::vector<int64_t> dims, mlir::Type type)
       : data(), dims(dims), strides(), type(type) {
     strides.resize(dims.size());
     for (int i = dims.size() - 1; i >= 0; i--) {
