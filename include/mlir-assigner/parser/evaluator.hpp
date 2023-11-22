@@ -183,7 +183,6 @@ private:
   bool PrintCircuitOutput;
   nil::blueprint::logger &logger;
 
-
   void doAffineFor(AffineForOp &op, int64_t from, int64_t to, int64_t step) {
     assert(from < to);
     assert(step);
@@ -222,7 +221,8 @@ private:
         if (frames.back().constant_values.find(hash) ==
             frames.back().constant_values.end()) {
           logger.log_affine_map(affineMap);
-          logger.error("CANNOT FIND {0:x}", std::size_t(mlir::hash_value(operands[i])));
+          logger.error("CANNOT FIND {0:x}",
+                       std::size_t(mlir::hash_value(operands[i])));
           exit(-1);
         } else {
           assert(frames.back().constant_values.find(hash) !=

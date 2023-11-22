@@ -39,7 +39,6 @@ namespace nil {
 namespace blueprint {
 class logger {
 public:
-
   enum class level {
     INFO,
     DEBUG,
@@ -108,26 +107,7 @@ public:
     spdlog::debug(str);
   }
 
-  void log_instruction(const llvm::Instruction *inst) {
-    if (lvl < level::DEBUG) {
-      return;
-    }
-    if (inst->getFunction() != current_function) {
-      current_function = inst->getFunction();
-      spdlog::debug("{}:", current_function->getName().str());
-    }
-    if (inst->getParent() != current_block) {
-      current_block = inst->getParent();
-      spdlog::debug("\t{}: ", current_block->getNameOrAsOperand());
-    }
-    std::string str;
-    llvm::raw_string_ostream ss(str);
-    inst->print(ss);
-    spdlog::debug("\t\t{}", str);
-  }
-
-  template<typename T>
-  void operator<<(const T &Val) {
+  template <typename T> void operator<<(const T &Val) {
     if (lvl < level::DEBUG) {
       return;
     }
@@ -137,8 +117,7 @@ public:
     spdlog::debug("{}", str);
   }
 
-  template<typename T>
-  void operator<<(const llvm::ArrayRef<T> &Val) {
+  template <typename T> void operator<<(const llvm::ArrayRef<T> &Val) {
     if (lvl < level::DEBUG) {
       return;
     }
@@ -153,8 +132,6 @@ public:
   }
 
 private:
-  const llvm::BasicBlock *current_block = nullptr;
-  const llvm::Function *current_function = nullptr;
   level lvl = level::INFO;
 };
 } // namespace blueprint
