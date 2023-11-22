@@ -101,7 +101,7 @@ public:
     mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
     pm.addPass(zk_ml_toolchain::createAssignMLIRPass<BlueprintFieldType,
                                                      ArithmetizationParams>(
-        bp, assignmnt, public_input));
+        bp, assignmnt, public_input, PrintCircuitOutput, log));
     if (mlir::failed(pm.run(module))) {
       llvm::errs() << "Passmanager failed to run!\n";
       return false;

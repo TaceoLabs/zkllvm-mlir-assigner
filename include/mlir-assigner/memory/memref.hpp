@@ -117,11 +117,9 @@ template <typename VarType> struct memref {
   }
 
   nil::blueprint::memref<VarType>
-  reinterpret_as(llvm::ArrayRef<int64_t> new_dims, mlir::Type new_type) {
-    for (auto d : new_dims) {
-      llvm::outs() << d << "\n";
-    }
-    llvm::outs() << "new type: " << new_type << "\n";
+  reinterpret_as(llvm::ArrayRef<int64_t> new_dims, mlir::Type new_type, nil::blueprint::logger &logger) {
+    logger << new_dims;
+    logger << new_type;
     // build a new memref
     nil::blueprint::memref<VarType> new_memref(new_dims, new_type);
     ASSERT(new_memref.size() == this->size());

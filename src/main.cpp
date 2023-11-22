@@ -221,15 +221,15 @@ int main(int argc, char *argv[]) {
   // clang-format off
     options_desc.add_options()("help,h", "Display help message")
             ("version,v", "Display version")
+            ("check", "Check satisfiability of the generated circuit")
+            ("verbose", "Print detailed log")
+            ("print_circuit_output", "print output of the circuit")
             ("bytecode,b", boost::program_options::value<std::string>(), "Bytecode input file")
             ("public-input,i", boost::program_options::value<std::string>(), "Public input file")
             ("assignment-table,t", boost::program_options::value<std::string>(), "Assignment table output file")
             ("circuit,c", boost::program_options::value<std::string>(), "Circuit output file")
             ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12-381)")
             ("stack-size,s", boost::program_options::value<long>(), "Stack size in bytes")
-            ("check", "Check satisfiability of the generated circuit")
-            ("verbose", "Print detailed log")
-            ("print_circuit_output", "print output of the circuit")
             ("policy", boost::program_options::value<std::string>(), "Policy for creating circuits. Possible values: default");
   // clang-format on
 
@@ -345,6 +345,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
   }
+
 
   switch (curve_options[elliptic_curve]) {
   case 0: {

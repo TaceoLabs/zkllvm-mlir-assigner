@@ -223,8 +223,6 @@ public:
     // if (values.size() != 1)
     //   return false;
     // frame.scalars[fixedpoint_arg] = values[0];
-    llvm::outs() << "parsed input: " << arg << "\n";
-    m.print(llvm::outs(), assignmnt);
 
     auto res = frame.memrefs.insert({mlir::hash_value(arg), m});
     ASSERT(res.second); // we do not want to override stuff here
@@ -385,10 +383,8 @@ public:
       }
 
       auto arg = args[i];
-      llvm::outs() << hash_value(arg) << "\n";
 
       mlir::Type arg_type = func_type.getInput(i);
-      llvm::outs() << arg_type << "\n";
 
       const boost::json::object &current_value =
           public_input[i - ret_gap].as_object();
