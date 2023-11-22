@@ -31,6 +31,7 @@
               pkgs.zstd
               pkgs.libxml2
               pkgs.icu70
+              pkgs.just
               zkllvm_with_mlir
               # (pkgs.callPackage ./nix/zkllvm/default.nix { inherit pkgs; })
               (pkgs.boost180.override { enableShared = false; })
