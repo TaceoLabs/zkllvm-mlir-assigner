@@ -162,8 +162,7 @@ public:
   AssignMLIRPass(nil::blueprint::circuit<ArithmetizationType> &circuit,
                  nil::blueprint::assignment<ArithmetizationType> &assignment,
                  const boost::json::array &public_input,
-                 bool PrintCircuitOutput,
-                 nil::blueprint::logger &logger)
+                 bool PrintCircuitOutput, nil::blueprint::logger &logger)
       : bp(circuit), assignmnt(assignment), public_input(public_input),
         PrintCircuitOutput(PrintCircuitOutput), logger(logger) {}
 
@@ -214,7 +213,7 @@ private:
       logger.debug("for done! go next iteration..");
     }
     frames.back().constant_values.erase(counterHash);
-    logger.debug("deleting: {0:x}", counterHash);
+    logger.debug("deleting: {0:x}", std::size_t(counterHash));
   }
 
   int64_t evaluateForParameter(AffineMap &affineMap,
@@ -226,11 +225,12 @@ private:
       llvm::SmallVector<int64_t> inVector(affineMap.getNumInputs());
       for (unsigned i = 0; i < affineMap.getNumInputs(); ++i) {
         llvm::hash_code hash = mlir::hash_value(operands[i]);
-        logger.debug("looking for: {x:0}", hash);
+        logger.debug("looking for: {0:x}", std::size_t(hash));
         if (frames.back().constant_values.find(hash) ==
             frames.back().constant_values.end()) {
           logger.log_affine_map(affineMap);
-          logger.error("CANNOT FIND {x:0}", mlir::hash_value(operands[i]));
+          logger.error("CANNOT FIND {0:x}",
+                       std::size_t(mlir::hash_value(operands[i])));
           exit(-1);
         } else {
           assert(frames.back().constant_values.find(hash) !=
@@ -739,7 +739,8 @@ std::unique_ptr<Pass> createAssignMLIRPass(
         BlueprintFieldType, ArithmetizationParams>> &circuit,
     nil::blueprint::assignment<nil::crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
-    const boost::json::array &public_input, bool PrintCircuitOutput, nil::blueprint::logger &logger) {
+    const boost::json::array &public_input, bool PrintCircuitOutput,
+    nil::blueprint::logger &logger) {
   return std::make_unique<
       AssignMLIRPass<BlueprintFieldType, ArithmetizationParams>>(
       circuit, assignment, public_input, PrintCircuitOutput, logger);
