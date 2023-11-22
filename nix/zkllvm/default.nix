@@ -27,10 +27,12 @@ clangStdenv.mkDerivation {
     "-DLLVM_ENABLE_ASSERTIONS=ON"
     "-DLLVM_ENABLE_RTTI=ON"
     "-DLLVM_ENABLE_LIBEDIT=OFF"
+    "-DLLVM_INSTALL_UTILS=ON"
     "-DZKLLVM_VERSION=v0.1.9"
   ];
-  installPhase = ''
-    mkdir -p $out
-    cp -r $src/* $out
+  postInstall = ''
+    rm -r $out/lib/cmake/crypto3_algebra
+    rm -r $out/lib/cmake/crypto3_multiprecision
+    rm -r $out/lib/cmake/crypto3_zk
   '';
 }
