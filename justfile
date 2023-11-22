@@ -13,7 +13,7 @@ run-fast-tests: build
 
 # runs all tests. This will take A LONG time
 run-tests: build
-  python tests/run.py --fast
+  python tests/run.py 
 
 # runs the basic mnist model and prints the output to stdout
 run-basic-mnist: build
