@@ -1,5 +1,5 @@
-#ifndef ZK_ML_TOOLCHAIN_ASSIGN_MLIR_PASS
-#define ZK_ML_TOOLCHAIN_ASSIGN_MLIR_PASS
+#ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
+#define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
@@ -148,10 +148,7 @@ template <class T> T castFromAttr(Attribute attr) {
 using namespace detail;
 
 template <typename BlueprintFieldType, typename ArithmetizationParams>
-class AssignMLIRPass
-    : public mlir::PassWrapper<
-          AssignMLIRPass<BlueprintFieldType, ArithmetizationParams>,
-          mlir::OperationPass<>> {
+class evaluator {
 public:
   using ArithmetizationType =
       nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
@@ -159,16 +156,15 @@ public:
   using VarType = nil::crypto3::zk::snark::plonk_variable<
       typename BlueprintFieldType::value_type>;
 
-  AssignMLIRPass(nil::blueprint::circuit<ArithmetizationType> &circuit,
-                 nil::blueprint::assignment<ArithmetizationType> &assignment,
-                 const boost::json::array &public_input,
-                 bool PrintCircuitOutput,
-                 nil::blueprint::logger &logger)
+  evaluator(nil::blueprint::circuit<ArithmetizationType> &circuit,
+            nil::blueprint::assignment<ArithmetizationType> &assignment,
+            const boost::json::array &public_input, bool PrintCircuitOutput,
+            nil::blueprint::logger &logger)
       : bp(circuit), assignmnt(assignment), public_input(public_input),
         PrintCircuitOutput(PrintCircuitOutput), logger(logger) {}
 
   // copy constructor
-  AssignMLIRPass(const AssignMLIRPass &pass)
+  evaluator(const evaluator &pass)
       : bp(pass.bp), assignmnt(pass.assignmnt), public_input(pass.public_input),
         PrintCircuitOutput(pass.PrintCircuitOutput), logger(pass.logger) {
     // since we misappropreate the pass runner for our assignment, assume it the
@@ -176,21 +172,17 @@ public:
     // PassWrapper
     UNREACHABLE("copy constructor should not be called atm");
   }
-  AssignMLIRPass(AssignMLIRPass &&pass) = default;
-  AssignMLIRPass &operator=(const AssignMLIRPass &pass) = delete;
+  evaluator(evaluator &&pass) = default;
+  evaluator &operator=(const evaluator &pass) = delete;
+
+  void evaluate(mlir::OwningOpRef<mlir::ModuleOp> module) {
+    handleRegion(module->getBodyRegion());
+  }
 
 private:
   bool PrintCircuitOutput;
   nil::blueprint::logger &logger;
 
-  virtual StringRef getArgument() const final { return "assign-mlir"; }
-  virtual StringRef getDescription() const final {
-    return "Assigns the MLIR to a Blueprint trace.";
-  }
-  void runOnOperation() override {
-    Operation *op = this->getOperation();
-    handleOperation(op);
-  }
 
   void doAffineFor(AffineForOp &op, int64_t from, int64_t to, int64_t step) {
     assert(from < to);
@@ -214,7 +206,7 @@ private:
       logger.debug("for done! go next iteration..");
     }
     frames.back().constant_values.erase(counterHash);
-    logger.debug("deleting: {0:x}", counterHash);
+    logger.debug("deleting: {0:x}", std::size_t(counterHash));
   }
 
   int64_t evaluateForParameter(AffineMap &affineMap,
@@ -226,11 +218,11 @@ private:
       llvm::SmallVector<int64_t> inVector(affineMap.getNumInputs());
       for (unsigned i = 0; i < affineMap.getNumInputs(); ++i) {
         llvm::hash_code hash = mlir::hash_value(operands[i]);
-        logger.debug("looking for: {x:0}", hash);
+        logger.debug("looking for: {0:x}", std::size_t(hash));
         if (frames.back().constant_values.find(hash) ==
             frames.back().constant_values.end()) {
           logger.log_affine_map(affineMap);
-          logger.error("CANNOT FIND {x:0}", mlir::hash_value(operands[i]));
+          logger.error("CANNOT FIND {0:x}", std::size_t(mlir::hash_value(operands[i])));
           exit(-1);
         } else {
           assert(frames.back().constant_values.find(hash) !=
@@ -352,10 +344,6 @@ private:
       int64_t to = evaluateForParameter(toMap, operandsToV, false);
       doAffineFor(operation, from, to, step);
     } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
-      // affine.load
-      // llvm::outs() << "affine.load:" <<
-      // mlir::hash_value(operation.getMemref())
-      //              << "\n";
       auto memref =
           frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
       assert(memref != frames.back().memrefs.end());
@@ -366,10 +354,8 @@ private:
       indicesV.reserve(indices.size());
       for (auto a : indices) {
         // look for indices in constant_values
-        // llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
         auto res = frames.back().constant_values.find(mlir::hash_value(a));
         assert(res != frames.back().constant_values.end());
-        // llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       auto value = memref->second.get(indicesV);
@@ -385,11 +371,8 @@ private:
       std::vector<int64_t> indicesV;
       indicesV.reserve(indices.size());
       for (auto a : indices) {
-        // look for indices in constant_values
-        // llvm::outs() << a << "," << mlir::hash_value(a) << "\n";
         auto res = frames.back().constant_values.find(mlir::hash_value(a));
         assert(res != frames.back().constant_values.end());
-        // llvm::outs() << res->second << "\n";
         indicesV.push_back(res->second);
       }
       // grab the element from the locals array
@@ -589,7 +572,7 @@ private:
     }
 
     if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
-      logger.debug("global op\n");
+      logger.debug("global op");
       logger << operation;
       logger << operation.getOutput();
       logger << operation.getShape();
@@ -611,7 +594,6 @@ private:
              "Krnl Global must always have a value");
       auto value = operation.getValue().value();
       if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
-        // llvm::outs() << attr << "\n";
 
         // TODO handle other types
         auto floats = attr.tryGetValues<APFloat>();
@@ -732,18 +714,6 @@ private:
   VarType undef_var;
   VarType zero_var;
 };
-
-template <typename BlueprintFieldType, typename ArithmetizationParams>
-std::unique_ptr<Pass> createAssignMLIRPass(
-    nil::blueprint::circuit<nil::crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &circuit,
-    nil::blueprint::assignment<nil::crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &assignment,
-    const boost::json::array &public_input, bool PrintCircuitOutput, nil::blueprint::logger &logger) {
-  return std::make_unique<
-      AssignMLIRPass<BlueprintFieldType, ArithmetizationParams>>(
-      circuit, assignment, public_input, PrintCircuitOutput, logger);
-}
 } // namespace zk_ml_toolchain
 
-#endif // ZK_ML_TOOLCHAIN_ASSIGN_MLIR_PASS
+#endif // CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP

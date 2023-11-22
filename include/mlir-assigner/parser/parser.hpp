@@ -37,10 +37,10 @@
 #include <mlir-assigner/helper/logger.hpp>
 
 // ONNX_MLIR stuff, fix include paths
+#include "evaluator.hpp"
 #include "src/Compiler/CompilerUtils.hpp"
 
-// passes
-#include <mlir-assigner/parser/AssignMLIRPass.hpp>
+#include <mlir-assigner/parser/evaluator.hpp>
 
 #include <mlir-assigner/policy/policy_manager.hpp>
 
@@ -95,17 +95,15 @@ public:
     return module;
   }
 
-  bool evaluate(const mlir::ModuleOp &module,
+  bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module,
                 const boost::json::array &public_input) {
 
-    mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
-    pm.addPass(zk_ml_toolchain::createAssignMLIRPass<BlueprintFieldType,
-                                                     ArithmetizationParams>(
-        bp, assignmnt, public_input, PrintCircuitOutput, log));
-    if (mlir::failed(pm.run(module))) {
-      llvm::errs() << "Passmanager failed to run!\n";
-      return false;
-    }
+    zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(bp, assignmnt, public_input, PrintCircuitOutput, log);
+    evaluator.evaluate(std::move(module));
+    // if (mlir::failed(pm.run(module))) {
+    //   llvm::errs() << "Passmanager failed to run!\n";
+    //   return false;
+    // }
 
     llvm::outs() << assignmnt.rows_amount() << " rows\n";
 

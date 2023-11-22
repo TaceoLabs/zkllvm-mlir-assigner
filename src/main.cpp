@@ -164,7 +164,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     return 1;
   }
 
-  if (!parser_instance.evaluate(*module, input_json_value.as_array())) {
+  if (!parser_instance.evaluate(std::move(module), input_json_value.as_array())) {
     return 1;
   }
 
