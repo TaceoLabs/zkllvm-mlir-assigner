@@ -26,16 +26,17 @@
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
-#include <mlir-assigner/components/fixedpoint/abs.hpp>
-#include <mlir-assigner/components/fixedpoint/floor.hpp>
-#include <mlir-assigner/components/fixedpoint/ceil.hpp>
-#include <mlir-assigner/components/fixedpoint/addition.hpp>
-#include <mlir-assigner/components/fixedpoint/subtraction.hpp>
-#include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
-#include <mlir-assigner/components/fixedpoint/division.hpp>
-#include <mlir-assigner/components/fixedpoint/exp.hpp>
 #include <mlir-assigner/components/comparison/fixed_comparison.hpp>
 #include <mlir-assigner/components/comparison/select.hpp>
+#include <mlir-assigner/components/fixedpoint/abs.hpp>
+#include <mlir-assigner/components/fixedpoint/addition.hpp>
+#include <mlir-assigner/components/fixedpoint/ceil.hpp>
+#include <mlir-assigner/components/fixedpoint/division.hpp>
+#include <mlir-assigner/components/fixedpoint/exp.hpp>
+#include <mlir-assigner/components/fixedpoint/floor.hpp>
+#include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
+#include <mlir-assigner/components/fixedpoint/remainder.hpp>
+#include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -253,6 +254,9 @@ private:
     } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
       handle_fixedpoint_division_component(operation, frames.back(), bp,
                                            assignmnt, start_row);
+    } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
+      handle_fixedpoint_remainder_component(operation, frames.back(), bp,
+                                            assignmnt, start_row);
     } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
       handle_fixedpoint_comparison_component(operation, frames.back(), bp,
                                              assignmnt, start_row);
@@ -324,6 +328,12 @@ private:
     } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
       handle_fixedpoint_floor_component(operation, frames.back(), bp, assignmnt,
                                         start_row);
+    } else if (math::CopySignOp operation =
+                   llvm::dyn_cast<math::CopySignOp>(op)) {
+      // TODO: do nothing for now since it only comes up during mod, and there
+      // the component handles this correctly; do we need this later on?
+      frames.back().locals[mlir::hash_value(operation.getResult())] =
+          frames.back().locals[mlir::hash_value(operation.getLhs())];
     } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
       UNREACHABLE("TODO: sqrt");
     } else {
