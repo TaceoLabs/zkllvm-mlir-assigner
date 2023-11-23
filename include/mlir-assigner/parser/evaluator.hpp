@@ -543,6 +543,8 @@ private:
   }
 
   void handleOperation(Operation *op) {
+    logger.debug("visiting operation: {}", op->getName().getIdentifier().str());
+    logger.debug("current start row: {}", assignmnt.allocated_rows());
     Dialect *dial = op->getDialect();
     if (!dial) {
       logger.error("Encountered an unregistered Dialect");
