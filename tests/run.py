@@ -45,7 +45,7 @@ def test_folder(test_suite, folder, timeout, verbose):
         item_path = os.path.join(folder, item)
         if os.path.isdir(item_path):
             subfolders.append(item)
-
+    subfolders.sort()
     print(f"################### Testing {test_suite} ###################")
     # Iterate over each subfolder
     for subfolder in subfolders:
@@ -53,6 +53,7 @@ def test_folder(test_suite, folder, timeout, verbose):
         # Get a list of all files within the subfolder
         files = os.listdir(subfolder_path)
         # Iterate over the files and grab those ending in ".mlir"
+        files.sort()
         for file in files:
             if file.endswith(".mlir"):
                 # read output file
