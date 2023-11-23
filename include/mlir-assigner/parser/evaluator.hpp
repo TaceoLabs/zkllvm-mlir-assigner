@@ -35,6 +35,7 @@
 #include <mlir-assigner/components/fixedpoint/exp.hpp>
 #include <mlir-assigner/components/fixedpoint/floor.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
+#include <mlir-assigner/components/fixedpoint/neg.hpp>
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 
@@ -264,6 +265,9 @@ private:
                    llvm::dyn_cast<arith::SelectOp>(op)) {
       handle_select_component(operation, frames.back(), bp, assignmnt,
                               start_row);
+    } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
+      handle_fixedpoint_neg_component(operation, frames.back(), bp, assignmnt,
+                                      start_row);
     } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
 
       // TODO: ATM, handle only the case where we work on indices that are
