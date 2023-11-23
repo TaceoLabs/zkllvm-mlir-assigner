@@ -74,6 +74,22 @@ handle_f_comparison_component(
                      1>::get_public_inputs(),
       1, 1);
 
+  if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
+    auto lookup_tables = component_instance.component_custom_lookup_tables();
+    for (auto &t : lookup_tables) {
+      bp.register_lookup_table(
+          std::shared_ptr<nil::crypto3::zk::snark::detail::
+                              lookup_table_definition<BlueprintFieldType>>(t));
+    }
+  };
+
+  if constexpr (nil::blueprint::use_lookups<component_type>()) {
+    auto lookup_tables = component_instance.component_lookup_tables();
+    for (auto &[k, v] : lookup_tables) {
+      bp.reserve_table(k);
+    }
+  };
+
   components::generate_circuit(component_instance, bp, assignment, {x, y},
                                start_row);
   auto cmp_result = components::generate_assignments(

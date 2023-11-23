@@ -39,15 +39,29 @@ handle_fixedpoint_mul_rescale_component(
                                                   ArithmetizationParams>,
       BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
   const auto p = PolicyManager::get_parameters(
-      ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(
-          0));
+      ManifestReader<component_type, ArithmetizationParams, 1>::get_witness(0));
   component_type component_instance(
       p.witness,
-      ManifestReader<component_type, ArithmetizationParams, 1,
-                     1>::get_constants(),
-      ManifestReader<component_type, ArithmetizationParams, 1,
+      ManifestReader<component_type, ArithmetizationParams, 1>::get_constants(),
+      ManifestReader<component_type, ArithmetizationParams,
                      1>::get_public_inputs(),
       1);
+
+  if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
+    auto lookup_tables = component_instance.component_custom_lookup_tables();
+    for (auto &t : lookup_tables) {
+      bp.register_lookup_table(
+          std::shared_ptr<nil::crypto3::zk::snark::detail::
+                              lookup_table_definition<BlueprintFieldType>>(t));
+    }
+  };
+
+  if constexpr (nil::blueprint::use_lookups<component_type>()) {
+    auto lookup_tables = component_instance.component_lookup_tables();
+    for (auto &[k, v] : lookup_tables) {
+      bp.reserve_table(k);
+    }
+  };
 
   // TACEO_TODO in the previous line I hardcoded 1 for now!!! CHANGE THAT
   // TACEO_TODO make an assert that both have the same scale?
