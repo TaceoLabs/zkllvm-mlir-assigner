@@ -27,6 +27,8 @@
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
 #include <mlir-assigner/components/fixedpoint/abs.hpp>
+#include <mlir-assigner/components/fixedpoint/floor.hpp>
+#include <mlir-assigner/components/fixedpoint/ceil.hpp>
 #include <mlir-assigner/components/fixedpoint/addition.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
@@ -316,6 +318,12 @@ private:
     } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
       handle_fixedpoint_abs_component(operation, frames.back(), bp, assignmnt,
                                       start_row);
+    } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
+      handle_fixedpoint_ceil_component(operation, frames.back(), bp, assignmnt,
+                                       start_row);
+    } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
+      handle_fixedpoint_floor_component(operation, frames.back(), bp, assignmnt,
+                                        start_row);
     } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
       UNREACHABLE("TODO: sqrt");
     } else {
