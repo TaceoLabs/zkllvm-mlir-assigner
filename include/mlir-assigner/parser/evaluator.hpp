@@ -26,6 +26,7 @@
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
+#include <mlir-assigner/components/fixedpoint/abs.hpp>
 #include <mlir-assigner/components/fixedpoint/addition.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
@@ -312,6 +313,9 @@ private:
     if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
       handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt,
                                       start_row);
+    } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
+      handle_fixedpoint_abs_component(operation, frames.back(), bp, assignmnt,
+                                      start_row);
     } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
       UNREACHABLE("TODO: sqrt");
     } else {
@@ -560,8 +564,8 @@ private:
     if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
       auto ops = operation.getOperands();
       assert(ops.size() == 1); // only handle single return value atm
-      // the ops[0] is something that we can hash_value to grab the result from
-      // maps
+      // the ops[0] is something that we can hash_value to grab the result
+      // from maps
       auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
       assert(retval != frames.back().memrefs.end());
       if (PrintCircuitOutput) {

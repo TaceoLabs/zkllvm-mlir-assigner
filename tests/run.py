@@ -2,6 +2,7 @@ import os
 import sys
 from os.path import isfile, isdir
 from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
+import argparse
 
 class bcolors:
     HEADER = '\033[95m'
@@ -26,7 +27,7 @@ def build_error_object(file, reason):
     })
 
 
-def test_folder(test_suite, folder, timeout):
+def test_folder(test_suite, folder, timeout, verbose):
     
     global run_tests 
     global success_tests
@@ -60,7 +61,7 @@ def test_folder(test_suite, folder, timeout):
                 if not isfile(output_file):
                     print(f"{bcolors.FAIL} error{bcolors.ENDC}")
                     errors.append(build_error_object(file, f"cannot find output file"))
-                    error_tests += 1;
+                    error_tests += 1
                     continue
                 with open(output_file,mode='r') as f:
                     should_output = f.read().strip()
@@ -70,6 +71,8 @@ def test_folder(test_suite, folder, timeout):
                 # Call the assigner binary with the input files
                 run_tests += 1
                 args = [assigner_binary, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "--print_circuit_output"]
+                if verbose:
+                    print("running: '" + " ".join(args) + "'...", end="", flush=True)
                 try:
                     is_output = check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
                     if is_output == should_output:
@@ -89,12 +92,22 @@ def test_folder(test_suite, folder, timeout):
                         errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
 
 
-slow_test = len(sys.argv) != 2
 
-test_folder("SingleOps", "tests/Ops/", 15)
+parser = argparse.ArgumentParser()
+parser.add_argument('--fast', action='store_true', help='Run fast tests only')
+parser.add_argument('--verbose', action='store_true', help='Print detailed output')
+
+args = parser.parse_args()
+
+if args.fast:
+    slow_test = False
+else:
+    slow_test = True
+
+# Rest of your code...
+test_folder("SingleOps", "tests/Ops/", 15, args.verbose)
 if slow_test:
-    test_folder("Models", "tests/Models/", 500)
-
+    test_folder("Models", "tests/Models/", 500, args.verbose)
 
 # cleanup
 os.remove("circuit")
