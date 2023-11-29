@@ -10,8 +10,10 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/MathExtras.h"
+#include "mlir/Dialect/zkml/IR/DotProduct.h"
 
 #include <cstddef>
+#include <cstdlib>
 #include <mlir/Dialect/Affine/IR/AffineOps.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Math/IR/Math.h>
@@ -38,6 +40,7 @@
 #include <mlir-assigner/components/fixedpoint/neg.hpp>
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
+#include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -518,7 +521,12 @@ private:
       auto value = memref->second.get(indicesV);
       frames.back().locals[mlir::hash_value(operation.getResult())] = value;
 
-    } else if (memref::ReinterpretCastOp operation =
+    } else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
+      logger.debug("deallocing memref");
+      //TACEO_TODO
+      return;
+    } 
+    else if (memref::ReinterpretCastOp operation =
                    llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
       auto source = operation.getSource();
       auto result = operation.getResult();
@@ -648,6 +656,19 @@ private:
       }
       frames.back().memrefs.insert(
           {mlir::hash_value(operation.getOutput()), m});
+      return;
+    }
+
+    if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
+      mlir::Value lhs = operation.getLhs();
+      mlir::Value rhs = operation.getRhs();
+      assert(lhs.getType() == rhs.getType() &&
+             "memrefs must be same type for DotProduct");
+      mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
+      assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
+      logger.debug("computing DotProduct with {0:d} x {0:d}", MemRefType.getShape().back());
+      handle_fixedpoint_dot_product_component(operation, zero_var, frames.back(), bp,
+                                              assignmnt);
       return;
     }
 

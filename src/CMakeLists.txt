@@ -68,6 +68,8 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
 
                       OMCompilerUtils
 
+                      MLIRZkMlDialect
+
                       marshalling::core
                       marshalling::crypto3_algebra
                       marshalling::crypto3_multiprecision
@@ -76,9 +78,12 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
                       ${Boost_LIBRARIES}
                       spdlog::spdlog_header_only)
 
+                    
 target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                            ${CMAKE_CURRENT_SOURCE_DIR}/../include
+                           ${CMAKE_SOURCE_DIR}/libs/zk-ml-dialect/include
+                           ${CMAKE_BINARY_DIR}/libs/zk-ml-dialect/tablegen
 
                            $<$<BOOL:${Boost_FOUND}>:${Boost_INCLUDE_DIRS}>)
