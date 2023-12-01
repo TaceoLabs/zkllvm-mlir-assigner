@@ -5,6 +5,9 @@
 /*.json
 /*.sol
 
+# Direnv
+.direnv/
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof

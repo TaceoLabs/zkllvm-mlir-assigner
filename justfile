@@ -5,7 +5,7 @@ build:
 # setsup the build folder
 setup-build:
   mkdir -p build
-  cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON -Bbuild -S.
+  cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -Bbuild -S.
 
 # runs only the small model tests (single onnx operations)
 run-fast-tests: build

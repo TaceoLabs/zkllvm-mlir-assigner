@@ -39,6 +39,7 @@
 // ONNX_MLIR stuff, fix include paths
 #include "evaluator.hpp"
 #include "src/Compiler/CompilerUtils.hpp"
+#include "mlir/Dialect/zkml/ZkMlDialect.h"
 
 #include <mlir-assigner/parser/evaluator.hpp>
 
@@ -57,6 +58,8 @@ struct parser {
     }
     detail::PolicyManager::set_policy(kind);
     onnx_mlir::registerDialects(context);
+    context.getOrLoadDialect<zkml::ZkMlDialect>();
+
   }
 
   using ArithmetizationType =

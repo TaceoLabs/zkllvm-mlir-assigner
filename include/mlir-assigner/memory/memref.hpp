@@ -1,6 +1,7 @@
 #ifndef MLIR_ASSIGNER_MEMORY_MEMREF_HPP
 #define MLIR_ASSIGNER_MEMORY_MEMREF_HPP
 
+#include <cstdint>
 #include <mlir-assigner/helper/asserts.hpp>
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
@@ -127,6 +128,15 @@ template <typename VarType> struct memref {
     // just copy over data
     new_memref.data = this->data;
     return new_memref;
+  }
+
+  std::vector<VarType>& getData() {
+    ASSERT(dims.size() == 1 && "When obtaining data, must be one-dim");
+    return data;
+  }
+
+  std::vector<int64_t>& getDims() {
+    return dims;
   }
 
 private:
