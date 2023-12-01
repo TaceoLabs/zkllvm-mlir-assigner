@@ -106,7 +106,7 @@ else:
     slow_test = True
 
 # Rest of your code...
-test_folder("SingleOps", "tests/Ops/", 15, args.verbose)
+test_folder("SingleOps", "tests/Ops/", 30, args.verbose)
 if slow_test:
     test_folder("Models", "tests/Models/", 500, args.verbose)
 
