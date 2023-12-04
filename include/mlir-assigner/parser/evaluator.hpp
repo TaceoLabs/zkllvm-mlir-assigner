@@ -622,9 +622,11 @@ private:
       // maybe print output?
       return;
     } else if(KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
-      llvm::outs() << "I am krnl acos uwu\n";
-      exit(0);
-    }else {
+      UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
+    } else if(KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
+      UNREACHABLE(std::string("TODO KrnlAcosh: link to bluebrint component"));
+    }
+    else {
       std::string opName = op->getName().getIdentifier().str();
       UNREACHABLE(std::string("unhandled krnl operation: ") + opName);
     }
