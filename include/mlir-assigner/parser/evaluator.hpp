@@ -304,7 +304,7 @@ private:
       frames.back().constant_values[mlir::hash_value(operation.getResult())] =
           result;
 
-    }else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
+    } else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
       assert(operation.getLhs().getType().isa<IndexType>());
       assert(operation.getRhs().getType().isa<IndexType>());
 
@@ -321,8 +321,7 @@ private:
       frames.back().constant_values[mlir::hash_value(operation.getResult())] =
           result;
 
-    } 
-    else if (arith::ConstantOp operation =
+    } else if (arith::ConstantOp operation =
                    llvm::dyn_cast<arith::ConstantOp>(op)) {
       TypedAttr constantValue = operation.getValueAttr();
       if (constantValue.isa<IntegerAttr>()) {
@@ -408,7 +407,8 @@ private:
           llvm::SmallVector<Value>(operandsTo.begin(), operandsTo.end());
       int64_t from = evaluateForParameter(fromMap, operandsFromV, true);
       int64_t to = evaluateForParameter(toMap, operandsToV, false);
-      // llvm::outs() << "starting for with: " << from << "->" << to << " (step) " << step << "\n";
+      // llvm::outs() << "starting for with: " << from << "->" << to << " (step)
+      // " << step << "\n";
       doAffineFor(operation, from, to, step);
     } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
       auto memref =
@@ -431,8 +431,7 @@ private:
       // affine.store
       auto memRefHash = mlir::hash_value(operation.getMemref());
       logger.debug("looking for MemRef {0:x}", size_t(memRefHash));
-      auto memref =
-          frames.back().memrefs.find(memRefHash);
+      auto memref = frames.back().memrefs.find(memRefHash);
       assert(memref != frames.back().memrefs.end());
 
       // grab the indices and build index vector
@@ -508,215 +507,11 @@ private:
     }
   }
 
-  void handleZkMlOperation(Operation *op) {
-    if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
-      mlir::Value lhs = operation.getLhs();
-      mlir::Value rhs = operation.getRhs();
-      assert(lhs.getType() == rhs.getType() &&
-             "memrefs must be same type for DotProduct");
-      mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
-      assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
-      logger.debug("computing DotProduct with {0:d} x {0:d}", MemRefType.getShape().back());
-      handle_fixedpoint_dot_product_component(operation, zero_var, frames.back(), bp,
-                                              assignmnt);
-      return;
-    } else {
-      std::string opName = op->getName().getIdentifier().str();
-      UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
-    }
-  }
-
-
-  void handleMemRefOperation(Operation *op) {
-
-    if (memref::AllocOp operation = llvm::dyn_cast<memref::AllocOp>(op)) {
-      logger.debug("allocating memref");
-      logger << operation;
-      MemRefType type = operation.getType();
-      auto uses = operation->getResult(0).getUsers();
-      auto res = operation->getResult(0);
-      auto res2 = operation.getMemref();
-      //check for dynamic size
-      std::vector<int64_t> dims;
-      auto operands = operation.getOperands();
-      unsigned dynamicCounter = 0;
-      for (auto dim : type.getShape()) {
-        if (dim == mlir::ShapedType::kDynamic) {
-          assert(dynamicCounter < operands.size() && "not enough operands for dynamic memref"); 
-          auto index = frames.back().constant_values.find(mlir::hash_value(operands[dynamicCounter++])); 
-          assert(index != frames.back().constant_values.end());
-          dims.emplace_back(index->second);
-          // llvm::outs() << "dynamic size is: " << index->second << "\n";
-        } else {
-          dims.emplace_back(dim);
-        }
-      }
-      auto m = nil::blueprint::memref<VarType>(dims,
-                                               type.getElementType());
-      auto hash = mlir::hash_value(operation.getMemref());
-      auto insert_res = frames.back().memrefs.insert(
-          {hash, m});
-      assert(insert_res.second); // Reallocating over an existing memref
-                                 // should not happen ATM
-      logger.debug("inserting memref with hash {0:x}", size_t(hash));
-    } else if (memref::AllocaOp operation =
-                   llvm::dyn_cast<memref::AllocaOp>(op)) {
-      // TACEO_TODO: handle cleanup of these stack memrefs
-      // TACEO_TODO: deduplicate with above
-      logger.debug("allocating (stack) memref");
-      MemRefType type = operation.getType();
-      logger << type.getElementType();
-      logger << type.getShape();
-      auto res = operation->getResult(0);
-      auto res2 = operation.getMemref();
-      logger << res;
-      logger << res2;
-      auto m = nil::blueprint::memref<VarType>(type.getShape(),
-                                               type.getElementType());
-      auto insert_res = frames.back().memrefs.insert(
-          {mlir::hash_value(operation.getMemref()), m});
-      assert(insert_res.second); // Reallocating over an existing memref
-                                 // should not happen ATM
-    } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
-      // TODO: deduplicate with affine.load
-      auto memref =
-          frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
-      assert(memref != frames.back().memrefs.end());
-
-      // grab the indices and build index vector
-      auto indices = operation.getIndices();
-      std::vector<int64_t> indicesV;
-      indicesV.reserve(indices.size());
-      for (auto a : indices) {
-        // look for indices in constant_values
-        auto res = frames.back().constant_values.find(mlir::hash_value(a));
-        assert(res != frames.back().constant_values.end());
-        indicesV.push_back(res->second);
-      }
-      auto value = memref->second.get(indicesV);
-      frames.back().locals[mlir::hash_value(operation.getResult())] = value;
-
-    } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
-      // TODO: deduplicate with affine.load
-      auto memRefHash = mlir::hash_value(operation.getMemref());
-      logger.debug("looking for MemRef {0:x}", size_t(memRefHash));
-      auto memref =
-          frames.back().memrefs.find(memRefHash);
-      assert(memref != frames.back().memrefs.end());
-
-      // grab the indices and build index vector
-      auto indices = operation.getIndices();
-      std::vector<int64_t> indicesV;
-      indicesV.reserve(indices.size());
-      for (auto a : indices) {
-        auto res = frames.back().constant_values.find(mlir::hash_value(a));
-        assert(res != frames.back().constant_values.end());
-        indicesV.push_back(res->second);
-        // llvm::outs() << "found " << res->second << "\n";
-      }
-      // grab the element from the locals array 
-      auto value =
-          frames.back().locals.find(mlir::hash_value(operation.getValue()));
-      assert(value != frames.back().locals.end());
-      // put the element from the memref using index vector
-      memref->second.put(indicesV, value->second);
-    }
-    else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
-      logger.debug("deallocing memref");
-      auto hash = mlir::hash_value(operation.getMemref());
-      assert(frames.back().memrefs.find(hash) != frames.back().memrefs.end());
-      frames.back().memrefs.erase(hash);
-      
-      //TACEO_TODO
-      return;
-    } 
-    else if (memref::ReinterpretCastOp operation =
-                   llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
-      auto source = operation.getSource();
-      auto result = operation.getResult();
-      auto result_type = operation.getType();
-      logger.debug("reinterpret cast");
-      logger << source;
-      logger << result;
-      logger << result_type;
-
-      auto old_memref = frames.back().memrefs.find(mlir::hash_value(source));
-      assert(old_memref != frames.back().memrefs.end());
-      auto new_memref = old_memref->second.reinterpret_as(
-          result_type.getShape(), result_type.getElementType(), logger);
-      auto insert_res = frames.back().memrefs.insert(
-          {mlir::hash_value(operation.getResult()), new_memref});
-      assert(insert_res.second); // Reallocating over an existing memref
-                                 // should not happen ATM
-    } else {
-      std::string opName = op->getName().getIdentifier().str();
-      UNREACHABLE(std::string("unhandled memref operation: ") + opName);
-    }
-  }
-
-  void handleOperation(Operation *op) {
-    logger.debug("visiting operation: {}", op->getName().getIdentifier().str());
-    logger.debug("current start row: {}", assignmnt.allocated_rows());
-    Dialect *dial = op->getDialect();
-    if (!dial) {
-      logger.error("Encountered an unregistered Dialect");
-      exit(-1);
-    }
-
-    if (llvm::isa<mlir::arith::ArithDialect>(dial)) {
-      handleArithOperation(op);
-      return;
-    }
-
-    if (llvm::isa<mlir::math::MathDialect>(dial)) {
-      handleMathOperation(op);
-      return;
-    }
-
-    if (llvm::isa<AffineDialect>(dial)) {
-      handleAffineOperation(op);
-      return;
-    }
-
-    if (llvm::isa<mlir::memref::MemRefDialect>(dial)) {
-      handleMemRefOperation(op);
-      return;
-    }
-
-
-    if (llvm::isa<zkml::ZkMlDialect>(dial)) {
-      handleZkMlOperation(op);
-      return;
-    }
-
-    if (mlir::ModuleOp operation = llvm::dyn_cast<mlir::ModuleOp>(op)) {
-      // this is the toplevel operation of the IR
-      // TODO: handle attributes if needed
-      handleRegion(operation.getBodyRegion());
-      return;
-    }
-
-    if (func::FuncOp operation = llvm::dyn_cast<func::FuncOp>(op)) {
-      auto res = functions.insert({operation.getSymName().str(), operation});
-      assert(res.second); // Redefining an existing function should not
-                          // happen ATM
-      return;
-    }
-
-    if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
-      auto ops = operation.getOperands();
-      assert(ops.size() == 1); // only handle single return value atm
-      // the ops[0] is something that we can hash_value to grab the result
-      // from maps
-      auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
-      assert(retval != frames.back().memrefs.end());
-      if (PrintCircuitOutput) {
-        llvm::outs() << "Result:\n";
-        retval->second.print(llvm::outs(), assignmnt);
-      }
-      return;
-    }
-
+  void handleKrnlOpeeration(Operation *op) {
+    // Print the operation itself and some of its properties
+    // Print the operation attributes
+    std::string opName = op->getName().getIdentifier().str();
+    logger.debug("visiting {}", opName);
     if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
       logger.debug("global op");
       logger << operation;
@@ -767,10 +562,8 @@ private:
       frames.back().memrefs.insert(
           {mlir::hash_value(operation.getOutput()), m});
       return;
-    }
-
-
-    if (KrnlEntryPointOp operation = llvm::dyn_cast<KrnlEntryPointOp>(op)) {
+    } else if (KrnlEntryPointOp operation =
+                   llvm::dyn_cast<KrnlEntryPointOp>(op)) {
       int32_t numInputs = -1;
       int32_t numOutputs = -1;
       std::string func = "";
@@ -828,10 +621,230 @@ private:
       // TODO: what to do when done...
       // maybe print output?
       return;
+    } else if(KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
+      llvm::outs() << "I am krnl acos uwu\n";
+      exit(0);
+    }else {
+      std::string opName = op->getName().getIdentifier().str();
+      UNREACHABLE(std::string("unhandled krnl operation: ") + opName);
+    }
+  }
+
+  void handleZkMlOperation(Operation *op) {
+    if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
+      mlir::Value lhs = operation.getLhs();
+      mlir::Value rhs = operation.getRhs();
+      assert(lhs.getType() == rhs.getType() &&
+             "memrefs must be same type for DotProduct");
+      mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
+      assert(MemRefType.getShape().size() == 1 &&
+             "DotProduct must have tensors of rank 1");
+      logger.debug("computing DotProduct with {0:d} x {0:d}",
+                   MemRefType.getShape().back());
+      handle_fixedpoint_dot_product_component(operation, zero_var,
+                                              frames.back(), bp, assignmnt);
+      return;
+    } else {
+      std::string opName = op->getName().getIdentifier().str();
+      UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
+    }
+  }
+
+  void handleMemRefOperation(Operation *op) {
+
+    if (memref::AllocOp operation = llvm::dyn_cast<memref::AllocOp>(op)) {
+      logger.debug("allocating memref");
+      logger << operation;
+      MemRefType type = operation.getType();
+      auto uses = operation->getResult(0).getUsers();
+      auto res = operation->getResult(0);
+      auto res2 = operation.getMemref();
+      // check for dynamic size
+      std::vector<int64_t> dims;
+      auto operands = operation.getOperands();
+      unsigned dynamicCounter = 0;
+      for (auto dim : type.getShape()) {
+        if (dim == mlir::ShapedType::kDynamic) {
+          assert(dynamicCounter < operands.size() &&
+                 "not enough operands for dynamic memref");
+          auto index = frames.back().constant_values.find(
+              mlir::hash_value(operands[dynamicCounter++]));
+          assert(index != frames.back().constant_values.end());
+          dims.emplace_back(index->second);
+          // llvm::outs() << "dynamic size is: " << index->second << "\n";
+        } else {
+          dims.emplace_back(dim);
+        }
+      }
+      auto m = nil::blueprint::memref<VarType>(dims, type.getElementType());
+      auto hash = mlir::hash_value(operation.getMemref());
+      auto insert_res = frames.back().memrefs.insert({hash, m});
+      assert(insert_res.second); // Reallocating over an existing memref
+                                 // should not happen ATM
+      logger.debug("inserting memref with hash {0:x}", size_t(hash));
+    } else if (memref::AllocaOp operation =
+                   llvm::dyn_cast<memref::AllocaOp>(op)) {
+      // TACEO_TODO: handle cleanup of these stack memrefs
+      // TACEO_TODO: deduplicate with above
+      logger.debug("allocating (stack) memref");
+      MemRefType type = operation.getType();
+      logger << type.getElementType();
+      logger << type.getShape();
+      auto res = operation->getResult(0);
+      auto res2 = operation.getMemref();
+      logger << res;
+      logger << res2;
+      auto m = nil::blueprint::memref<VarType>(type.getShape(),
+                                               type.getElementType());
+      auto insert_res = frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getMemref()), m});
+      assert(insert_res.second); // Reallocating over an existing memref
+                                 // should not happen ATM
+    } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
+      // TODO: deduplicate with affine.load
+      auto memref =
+          frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
+      assert(memref != frames.back().memrefs.end());
+
+      // grab the indices and build index vector
+      auto indices = operation.getIndices();
+      std::vector<int64_t> indicesV;
+      indicesV.reserve(indices.size());
+      for (auto a : indices) {
+        // look for indices in constant_values
+        auto res = frames.back().constant_values.find(mlir::hash_value(a));
+        assert(res != frames.back().constant_values.end());
+        indicesV.push_back(res->second);
+      }
+      auto value = memref->second.get(indicesV);
+      frames.back().locals[mlir::hash_value(operation.getResult())] = value;
+
+    } else if (memref::StoreOp operation =
+                   llvm::dyn_cast<memref::StoreOp>(op)) {
+      // TODO: deduplicate with affine.load
+      auto memRefHash = mlir::hash_value(operation.getMemref());
+      logger.debug("looking for MemRef {0:x}", size_t(memRefHash));
+      auto memref = frames.back().memrefs.find(memRefHash);
+      assert(memref != frames.back().memrefs.end());
+
+      // grab the indices and build index vector
+      auto indices = operation.getIndices();
+      std::vector<int64_t> indicesV;
+      indicesV.reserve(indices.size());
+      for (auto a : indices) {
+        auto res = frames.back().constant_values.find(mlir::hash_value(a));
+        assert(res != frames.back().constant_values.end());
+        indicesV.push_back(res->second);
+        // llvm::outs() << "found " << res->second << "\n";
+      }
+      // grab the element from the locals array
+      auto value =
+          frames.back().locals.find(mlir::hash_value(operation.getValue()));
+      assert(value != frames.back().locals.end());
+      // put the element from the memref using index vector
+      memref->second.put(indicesV, value->second);
+    } else if (memref::DeallocOp operation =
+                   llvm::dyn_cast<memref::DeallocOp>(op)) {
+      logger.debug("deallocing memref");
+      auto hash = mlir::hash_value(operation.getMemref());
+      assert(frames.back().memrefs.find(hash) != frames.back().memrefs.end());
+      frames.back().memrefs.erase(hash);
+
+      // TACEO_TODO
+      return;
+    } else if (memref::ReinterpretCastOp operation =
+                   llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
+      auto source = operation.getSource();
+      auto result = operation.getResult();
+      auto result_type = operation.getType();
+      logger.debug("reinterpret cast");
+      logger << source;
+      logger << result;
+      logger << result_type;
+
+      auto old_memref = frames.back().memrefs.find(mlir::hash_value(source));
+      assert(old_memref != frames.back().memrefs.end());
+      auto new_memref = old_memref->second.reinterpret_as(
+          result_type.getShape(), result_type.getElementType(), logger);
+      auto insert_res = frames.back().memrefs.insert(
+          {mlir::hash_value(operation.getResult()), new_memref});
+      assert(insert_res.second); // Reallocating over an existing memref
+                                 // should not happen ATM
+    } else {
+      std::string opName = op->getName().getIdentifier().str();
+      UNREACHABLE(std::string("unhandled memref operation: ") + opName);
+    }
+  }
+
+  void handleOperation(Operation *op) {
+    logger.debug("visiting operation: {}", op->getName().getIdentifier().str());
+    logger.debug("current start row: {}", assignmnt.allocated_rows());
+    Dialect *dial = op->getDialect();
+    if (!dial) {
+      logger.error("Encountered an unregistered Dialect");
+      exit(-1);
     }
 
+    if (llvm::isa<mlir::arith::ArithDialect>(dial)) {
+      handleArithOperation(op);
+      return;
+    }
+
+    if (llvm::isa<mlir::math::MathDialect>(dial)) {
+      handleMathOperation(op);
+      return;
+    }
+
+    if (llvm::isa<AffineDialect>(dial)) {
+      handleAffineOperation(op);
+      return;
+    }
+
+    if (llvm::isa<mlir::memref::MemRefDialect>(dial)) {
+      handleMemRefOperation(op);
+      return;
+    }
+
+    if (llvm::isa<zkml::ZkMlDialect>(dial)) {
+      handleZkMlOperation(op);
+      return;
+    }
+
+    if (llvm::isa<mlir::KrnlDialect>(dial)) {
+      handleKrnlOpeeration(op);
+      return;
+    }
+
+    if (mlir::ModuleOp operation = llvm::dyn_cast<mlir::ModuleOp>(op)) {
+      // this is the toplevel operation of the IR
+      // TODO: handle attributes if needed
+      handleRegion(operation.getBodyRegion());
+      return;
+    }
+
+    if (func::FuncOp operation = llvm::dyn_cast<func::FuncOp>(op)) {
+      auto res = functions.insert({operation.getSymName().str(), operation});
+      assert(res.second); // Redefining an existing function should not
+                          // happen ATM
+      return;
+    }
+
+    if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
+      auto ops = operation.getOperands();
+      assert(ops.size() == 1); // only handle single return value atm
+      // the ops[0] is something that we can hash_value to grab the result
+      // from maps
+      auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
+      assert(retval != frames.back().memrefs.end());
+      if (PrintCircuitOutput) {
+        llvm::outs() << "Result:\n";
+        retval->second.print(llvm::outs(), assignmnt);
+      }
+      return;
+    }
 
     std::string opName = op->getName().getIdentifier().str();
+    llvm::outs() << op->getDialect()->getNamespace() << "\n";
     UNREACHABLE(std::string("unhandled operation: ") + opName);
   }
 
