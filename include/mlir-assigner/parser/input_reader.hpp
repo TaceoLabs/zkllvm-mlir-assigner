@@ -26,6 +26,8 @@
 #ifndef CRYPTO3_ASSIGNER_PUBLIC_INPUT_HPP
 #define CRYPTO3_ASSIGNER_PUBLIC_INPUT_HPP
 
+#include <boost/json/kind.hpp>
+#include <cstdint>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
@@ -71,6 +73,13 @@ public:
     nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
     out = fixed.get_value();
     return true;
+  }
+
+ bool parse_bool(const boost::json::value &value,
+                        typename BlueprintFieldType::value_type &out) {
+    ASSERT(value.kind() == boost::json::kind::int64 && "bools must be 0 or 1");
+    ASSERT((value.as_int64() >= 0 && value.as_int64() <= 1) && "bools must be 0 or 1");
+    return parse_scalar(value, out);
   }
 
   bool parse_scalar(const boost::json::value &value,
@@ -214,8 +223,7 @@ public:
     }
     auto dims = parse_dim_array(mo.at("dims").as_array());
     std::string type = mo.at("type").as_string().c_str();
-
-    parse_memref_data(m, mo.at("data").as_array());
+    parse_memref_data(m, mo.at("data").as_array(), type);
 
     // TODO: process data in memref
     // auto values = process_fixedpoint(
@@ -230,16 +238,31 @@ public:
   }
 
   bool parse_memref_data(memref<var> &data,
-                         const boost::json::array &tensor_arr) {
+                         const boost::json::array &tensor_arr,
+                         std::string &type) {
 
-    for (size_t i = 0; i < tensor_arr.size(); ++i) {
-      if (!parse_fixedpoint(tensor_arr[i],
-                            assignmnt.public_input(0, public_input_idx))) {
-        llvm::errs() << "expect fixedpoints in tensor\n";
-        return false;
+    if (type == "f32") {
+      for (size_t i = 0; i < tensor_arr.size(); ++i) {
+        if (!parse_fixedpoint(tensor_arr[i],
+                              assignmnt.public_input(0, public_input_idx))) {
+          llvm::errs() << "expect fixedpoints in tensor\n";
+          return false;
+        }
+        data.put_flat(i, var(0, public_input_idx++, false,
+                             var::column_type::public_input));
       }
-      data.put_flat(
-          i, var(0, public_input_idx++, false, var::column_type::public_input));
+    } else if (type == "bool") {
+      for (size_t i = 0; i < tensor_arr.size(); ++i) {
+        if (!parse_bool(tensor_arr[i],
+                              assignmnt.public_input(0, public_input_idx))) {
+          llvm::errs() << "expect fixedpoints in tensor\n";
+          return false;
+        }
+        data.put_flat(i, var(0, public_input_idx++, false,
+                             var::column_type::public_input));
+      }
+    } else {
+      UNREACHABLE(std::string("unsupported memref type: ") + type);
     }
     return true;
   }

@@ -273,6 +273,8 @@ private:
     } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
       handle_fixedpoint_neg_component(operation, frames.back(), bp, assignmnt,
                                       start_row);
+    } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
+      UNREACHABLE("TODO component not finished at nils side");
     } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
 
       // TODO: ATM, handle only the case where we work on indices that are
@@ -621,12 +623,11 @@ private:
       // TODO: what to do when done...
       // maybe print output?
       return;
-    } else if(KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
+    } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
       UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
-    } else if(KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
+    } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
       UNREACHABLE(std::string("TODO KrnlAcosh: link to bluebrint component"));
-    }
-    else {
+    } else {
       std::string opName = op->getName().getIdentifier().str();
       UNREACHABLE(std::string("unhandled krnl operation: ") + opName);
     }
