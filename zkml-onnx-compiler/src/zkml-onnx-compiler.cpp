@@ -13,7 +13,7 @@
 
 #define STDOUT_MARKER "stdout"
 
-enum EmitLevel { ONNX, MLIR, zkMLIR, LLVMIR };
+enum EmitLevel { zkMLIR, ONNX, MLIR, LLVMIR };
 
 llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional,
                                          llvm::cl::desc("<input file>"),
@@ -141,7 +141,7 @@ translateToLLVMIR(mlir::ModuleOp module, llvm::LLVMContext &llvm_context) {
   if (!llvm_module) {
     llvm::errs() << "Failed to translate module to LLVMIR.\n";
   }
-  return std::move(llvm_module);
+  return llvm_module;
 }
 
 int main(int argc, char **argv) {
@@ -200,6 +200,7 @@ int main(int argc, char **argv) {
   if (EmitLevel == EmitLevel::ONNX) {
     onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR);
   } else {
+    llvm::outs() << "doing zk: " << (EmitLevel == EmitLevel::zkMLIR) << "\n";
     onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, EmitLevel == EmitLevel::zkMLIR);
     pm.addPass(zk_ml_toolchain::createElimCopySignPass());
     if (!EmitMLIR) {
