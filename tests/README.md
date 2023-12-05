@@ -1,14 +1,25 @@
 # zkML TestSuite
 This document serves two purposes. 
-- It explains how to run the tests for the zkML pipeline and its state.
+- It explains how to run the tests for the zkML pipeline.
 - It keeps track of the supported ONNX operations, along with the current pinned version of ONNX-MLIR.
 
-## TLDR Run fast check
-In the home directory of this repository, after building the project, run
+## TLDR: How run Test Suize
+In the home directory of this repository, after building the project, run the following command for quick-check:
 ```
     python tests/run.py --fast
 ```
-This script executes all tests in the `tests/Ops/` folder.
+
+If you have some time run the same script without the `--fast` flag (again in the home directory, after building) and grab a coffee:
+```
+    python tests/run.py 
+```
+
+## Quick Check
+Inside the `/tests` folder (where you found this README.md) is a python script and two subfolders. 
+- **Models** test
+- **Ops** test
+- **run.py** test
+- **README.md** this readme
 
 # Supported ONNX Operations
 The current LLVM version of zkLLVM (`zkllcm-circifier`) is based on 16.0.0-rc4. Therefore we use onnx-mlir [at this commit](https://github.com/onnx/onnx-mlir/tree/a04f518c1b0b8e4971d554c399bb54efc00b81db) as it incorporated with this version of LLVM. This document keeps track of the supported ONNX operations of the zkML frontend and its limitations. 
