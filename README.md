@@ -53,17 +53,39 @@ To test your build, have a look in the [test folder](tests).
 
 ## Example
 
-This section shows how to use the zkML frontend for zkLLVM. In this example, we guide you through every step to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. We expect that you already built the two binaries `build/bin/zk-ml-opt` and `build/bin/mlir-assigner` from source or obtained them in another way. If not, follow the [build instructions](#build).
+This section shows how to use the zkML frontend for zkLLVM. In this example, we
+guide you through every step to proof the
+[CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist)
+found in `tests/Models/ConvMnist/mnist-12.onnx`.
 
-1) Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
+We expect that you already built the two binaries `build/bin/zk-ml-opt` and
+`build/bin/mlir-assigner` from source or obtained them in another way. If not,
+follow the [build instructions](#build).
 
-2) Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet. Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident. Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut ea consectetur et est culpa et culpa duis.
+1. Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum
+   sint consectetur cupidatat.
 
-3) Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet. Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident. Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut ea consectetur et est culpa et culpa duis.
+2. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
+   labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
+   Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum
+   Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident.
+   Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex
+   occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat
+   officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in
+   Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non
+   excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut
+   ea consectetur et est culpa et culpa duis.
 
-
-
-
+3. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
+   labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
+   Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum
+   Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident.
+   Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex
+   occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat
+   officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in
+   Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non
+   excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut
+   ea consectetur et est culpa et culpa duis.
 
 To run an example for a basic MNIST model:
 
