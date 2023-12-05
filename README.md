@@ -53,7 +53,7 @@ To test your build, have a look in the [test folder](tests).
 
 ## Example
 
-This section shows how to use zkML frontend. In this example, we guide you through every step to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. 
+This section shows how to use zkML frontend. In this example, we guide you through every step to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. We expect that you followed the build instructions above and can find the two binaries `build/bin/zk-ml-opt` and `build/bin/mlir-assigner`. If not, follow the build instructions [Go to Real Cool Heading section](#build)
 
 
 
