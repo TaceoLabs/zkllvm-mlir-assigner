@@ -4,7 +4,7 @@ This document serves two purposes.
 - It keeps track of the supported ONNX operations, along with the current pinned version of ONNX-MLIR.
 
 ## TLDR: How run Test Suize
-In the home directory of this repository, after building the project, run the following command for quick-check:
+In the home directory of this repository, after building the project, run the following command for quick check:
 ```
     python tests/run.py --fast
 ```
@@ -16,10 +16,18 @@ If you have some time run the same script without the `--fast` flag (in the home
 
 ## Folder Structure
 Inside the `/tests` folder (where you found this README.md) is a python script and two subfolders. 
-- **Models** Inside this folder are test cases for pre-trained models. At the moment, there are tests for two MNIST models, whereas one is a CNN.
-- **Ops** Inside this folder you can find specific test casses for supported ONNX operations. 
-- **run.py** A python script that executes the tests and gathers the information of a run of the test suite. Add the additional flag `--fast` to run only the tests in the `/Ops` folder.
-- **README.md** This README
+- `/Models` Inside this folder are test cases for pre-trained models. At the moment, there are tests for two MNIST models, whereas one is a CNN.
+- `/Ops` Inside this folder you can find specific test casses for supported ONNX operations. 
+- `run.py` A python script that executes the tests and gathers the information of a run of the test suite. Add the additional flag `--fast` to run only the tests in the `/Ops` folder. If you omit the flag, it will also run the tests in the `/Models` folder. Testing the pre-trained models will take some time.
+- `README.md` This README
+
+### Quick Check
+In contrast to the pre-trained existing models in the `/Models` folder, the "models" in the `/Ops` folder test a single ONNX operation. For every supported ONNX operation you can find a subfolder that holds compiled ONNX models that only consist of the specific operation. E.g., the file `/Ops/Add/AddSimple.mlir` is compiled from an "ONNX model" only consisting of a single [ONNX Add operation](https://github.com/onnx/onnx/blob/main/docs/Operators.md#Add). 
+
+Some of the more involved operations have additional attributes to define their semantics. In such cases, you can find more than a single test case in the folder. 
+
+The rest of the document exhaustively defines all supported ONNX operations with known limitations.
+
 
 # Supported ONNX Operations
 The current LLVM version of zkLLVM (`zkllcm-circifier`) is based on 16.0.0-rc4. Therefore we use onnx-mlir [at this commit](https://github.com/onnx/onnx-mlir/tree/a04f518c1b0b8e4971d554c399bb54efc00b81db) as it incorporated with this version of LLVM. This document keeps track of the supported ONNX operations of the zkML frontend and its limitations. 
