@@ -16,18 +16,20 @@ This project builds two binaries, namely:
 - `mlir-assigner` A VM that interprets `.mlir` and produces a plonkish circuit
   and an assigned table.
 
-We list the currently supported ONNX operations and limitations [here](tests/README.md).
+We list the currently supported ONNX operations and limitations
+[here](tests/README.md).
+
 ## Build
 
-We heavily encourage to use the `nix` devshell when working with or building
+We heavily encourage to use the `nix` devshell when working with, or building
 from source. It is possible to build the project on Linux (tested with Ubuntu
 22.04), but the build process can be involved.
 
 ### Build in nix devshell
 
 The included nix flake sets up a devshell with all dependencies for building the
-`mlir-assigner`. Since it also fetches and builds the bundled LLVM in zkLLVM, this
-may take some time, so we recommend to pass `--cores 16` or similar to the
+`mlir-assigner`. Since it also fetches and builds the bundled LLVM in zkLLVM,
+this may take some time, so we recommend to pass `--cores 16` or similar to the
 initial invocation of `nix develop`.
 
 ```bash
@@ -39,11 +41,19 @@ cmake -DMLIR_DIR=$MLIR_DIR ..
 make -j
 ```
 
-### Testing
-To test your build, have a look in the [test folder](tests/README.md).
+You can find the binaries in the `build/bin` folder.
 
+### Build on Ubuntu 22.04
 
+TODO
 
+## Testing
+
+To test your build, have a look in the [test folder](tests).
+
+## Example
+
+This section will show you step by step how to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. 
 To run an example for a basic MNIST model:
 
 ```bash
