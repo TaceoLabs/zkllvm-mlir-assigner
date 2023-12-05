@@ -64,214 +64,214 @@ supported ONNX operations of the zkML frontend and its limitations.
 For further information on the operations, see the
 [ONNX documentation](https://github.com/onnx/onnx/blob/main/docs/Operators.md).
 
-| Op                            | zkML Support | ONNX-MLIR support  | Limitations                                                                                                                                        |
-| ----------------------------- | :----------: | :----------------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Abs**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Acos**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Acosh**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Adagrad**                   |     :x:      |        :x:         |                                                                                                                                                    |
-| **Adam**                      |     :x:      |        :x:         |                                                                                                                                                    |
-| **Add**                       |     :x:      | :white_check_mark: | No support for short integers.                                                                                                                     |
-| **And**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ArgMax**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ArgMin**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ArrayFeatureExtractor**     |     :x:      |        :x:         |                                                                                                                                                    |
-| **Asin**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Asinh**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Atan**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Atanh**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **AveragePool**               |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **BatchNormalization**        |     :x:      | :white_check_mark: | Training not supported.                                                                                                                            |
-| **Bernoulli**                 |     :x:      |        :x:         |                                                                                                                                                    |
-| **Binarizer**                 |     :x:      |        :x:         |                                                                                                                                                    |
-| **BitShift**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **BitwiseAnd**                |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **BitwiseNot**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **BitwiseOr**                 |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **BitwiseXor**                |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **BlackmanWindow**            |     :x:      |        :x:         |                                                                                                                                                    |
-| **Cast**                      |     :x:      | :white_check_mark: | Cast only between float and double types. Only ppc63le and MacOS platforms support float16.                                                        |
-| **CastLike**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **CastMap**                   |     :x:      |        :x:         |                                                                                                                                                    |
-| **CategoryMapper**            |     :x:      |        :x:         |                                                                                                                                                    |
-| **Ceil**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Celu**                      |     :x:      |        :x:         |                                                                                                                                                    |
-| **CenterCropPad**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **Clip**                      |     :x:      | :white_check_mark: | No support for short integers.                                                                                                                     |
-| **Col2Im**                    |     :x:      |        :x:         |                                                                                                                                                    |
-| **Compress**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Concat**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ConcatFromSequence**        |     :x:      |        :x:         |                                                                                                                                                    |
-| **Constant**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ConstantOfShape**           |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Conv**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ConvInteger**               |     :x:      |        :x:         |                                                                                                                                                    |
-| **ConvTranspose**             |     :x:      | :white_check_mark: | Unknown dimension in spatial dimensions (such as H and W) not supported.                                                                           |
-| **Cos**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Cosh**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **CumSum**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **DFT**                       |     :x:      |        :x:         |                                                                                                                                                    |
-| **DeformConv**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **DepthToSpace**              |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **DequantizeLinear**          |     :x:      | :white_check_mark: | Only support for per-tensor or layer dequantization. No support for per-axis dequantization.                                                       |
-| **Det**                       |     :x:      |        :x:         |                                                                                                                                                    |
-| **DictVectorizer**            |     :x:      |        :x:         |                                                                                                                                                    |
-| **Div**                       |     :x:      | :white_check_mark: | No support for short integers.                                                                                                                     |
-| **Dropout**                   |     :x:      | :white_check_mark: | Does not support masked and training.                                                                                                              |
-| **DynamicQuantizeLinear**     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Einsum**                    |     :x:      | :white_check_mark: | Limited to the types supported by ReduceSum and MatMul (which we decompose to in most cases) which exclude integers with width < 31.               |
-| **Elu**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Equal**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Erf**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Exp**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Expand**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **EyeLike**                   |     :x:      |        :x:         |                                                                                                                                                    |
-| **FeatureVectorizer**         |     :x:      |        :x:         |                                                                                                                                                    |
-| **Flatten**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Floor**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GRU**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Gather**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GatherElements**            |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GatherND**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Gemm**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GlobalAveragePool**         |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GlobalLpPool**              |     :x:      |        :x:         |                                                                                                                                                    |
-| **GlobalMaxPool**             |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Gradient**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **Greater**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GreaterOrEqual**            |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **GridSample**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **GroupNormalization**        |     :x:      |        :x:         |                                                                                                                                                    |
-| **HammingWindow**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **HannWindow**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **HardSigmoid**               |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **HardSwish**                 |     :x:      |        :x:         |                                                                                                                                                    |
-| **Hardmax**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Identity**                  |     :x:      | :white_check_mark: | Sequence identity not supported.                                                                                                                   |
-| **If**                        |     :x:      | :white_check_mark: | Sequence and Optional outputs are not supported.                                                                                                   |
-| **Imputer**                   |     :x:      |        :x:         |                                                                                                                                                    |
-| **InstanceNormalization**     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **IsInf**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **IsNaN**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LRN**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LSTM**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LabelEncoder**              |     :x:      |        :x:         |                                                                                                                                                    |
-| **LayerNormalization**        |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LeakyRelu**                 |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Less**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LessOrEqual**               |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LinearClassifier**          |     :x:      |        :x:         |                                                                                                                                                    |
-| **LinearRegressor**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **Log**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LogSoftmax**                |     :x:      |                    | :white_check_mark: Axis -1, 1, and default currently disabled due to changes in ONNX 1.8.1/Opset 13.                                               |
-| **Loop**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **LpNormalization**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **LpPool**                    |     :x:      |        :x:         |                                                                                                                                                    |
-| **MatMul**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **MatMulInteger**             |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Max**                       |     :x:      | :white_check_mark: | No support for unsigned int. Only ppc63le and MacOS platforms support float16.                                                                     |
-| **MaxPool**                   |     :x:      | :white_check_mark: | Does not support argmax and short ints. Support single output only.                                                                                |
-| **MaxRoiPool**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **MaxUnpool**                 |     :x:      |        :x:         |                                                                                                                                                    |
-| **Mean**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **MeanVarianceNormalization** |     :x:      |        :x:         |                                                                                                                                                    |
-| **MelWeightMatrix**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **Min**                       |     :x:      | :white_check_mark: | Does not support unsigned numbers. Only ppc63le and MacOS platforms support float16.                                                               |
-| **Mish**                      |     :x:      |        :x:         |                                                                                                                                                    |
-| **Mod**                       |     :x:      | :white_check_mark: | Support float and double only. Only ppc63le and MacOS platforms support float16.                                                                   |
-| **Momentum**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **Mul**                       |     :x:      | :white_check_mark: | Does not support short integers.                                                                                                                   |
-| **Multinomial**               |     :x:      |        :x:         |                                                                                                                                                    |
-| **Neg**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **NegativeLogLikelihoodLoss** |     :x:      |        :x:         |                                                                                                                                                    |
-| **NonMaxSuppression**         |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **NonZero**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Normalizer**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **Not**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **OneHot**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **OneHotEncoder**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **Optional**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **OptionalGetElement**        |     :x:      |        :x:         |                                                                                                                                                    |
-| **OptionalHasElement**        |     :x:      |        :x:         |                                                                                                                                                    |
-| **Or**                        |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **PRelu**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Pad**                       |     :x:      | :white_check_mark: | axes input not supported.                                                                                                                          |
-| **Pow**                       |     :x:      | :white_check_mark: | No support for power with integer types.                                                                                                           |
-| **QLinearConv**               |     :x:      |        :x:         |                                                                                                                                                    |
-| **QLinearMatMul**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **QuantizeLinear**            |     :x:      | :white_check_mark: | Do not support per-axis and i7 quantization.                                                                                                       |
-| **RNN**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **RandomNormal**              |     :x:      |        :x:         |                                                                                                                                                    |
-| **RandomNormalLike**          |     :x:      |        :x:         |                                                                                                                                                    |
-| **RandomUniform**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **RandomUniformLike**         |     :x:      |        :x:         |                                                                                                                                                    |
-| **Range**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Reciprocal**                |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ReduceL1**                  |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceL2**                  |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceLogSum**              |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceLogSumExp**           |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceMax**                 |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceMean**                |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceMin**                 |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceProd**                |     :x:      | :white_check_mark: | do_not_keep_dim not supported.                                                                                                                     |
-| **ReduceSum**                 |     :x:      | :white_check_mark: | Default axis and do_not_keep_dim not supported.                                                                                                    |
-| **ReduceSumSquare**           |     :x:      | :white_check_mark: | Default axis and do_not_keep_dim not supported.                                                                                                    |
-| **Relu**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Reshape**                   |     :x:      | :white_check_mark: | allowzero not supported.                                                                                                                           |
-| **Resize**                    |     :x:      | :white_check_mark: | Missing support for linear, cubic, crop, pytorch_half_pixel, and floor. Attributes antialias, axes and keep_aspect_ratio_policy are not supported. |
-| **ReverseSequence**           |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **RoiAlign**                  |     :x:      |        :x:         |                                                                                                                                                    |
-| **Round**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **STFT**                      |     :x:      |        :x:         |                                                                                                                                                    |
-| **SVMClassifier**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **SVMRegressor**              |     :x:      |        :x:         |                                                                                                                                                    |
-| **Scaler**                    |     :x:      |        :x:         |                                                                                                                                                    |
-| **Scan**                      |     :x:      | :white_check_mark: | Does not support dynamic shapes.                                                                                                                   |
-| **Scatter**                   |     :x:      |        :x:         |                                                                                                                                                    |
-| **ScatterElements**           |     :x:      | :white_check_mark: | Does not support duplicate indices.                                                                                                                |
-| **ScatterND**                 |     :x:      | :white_check_mark: | Does not support scatternd add/multiply.                                                                                                           |
-| **Selu**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **SequenceAt**                |     :x:      |        :x:         |                                                                                                                                                    |
-| **SequenceConstruct**         |     :x:      |        :x:         |                                                                                                                                                    |
-| **SequenceEmpty**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **SequenceErase**             |     :x:      |        :x:         |                                                                                                                                                    |
-| **SequenceInsert**            |     :x:      | :white_check_mark: | Does not support unranked sequence element.                                                                                                        |
-| **SequenceLength**            |     :x:      |        :x:         |                                                                                                                                                    |
-| **SequenceMap**               |     :x:      |        :x:         |                                                                                                                                                    |
-| **Shape**                     |     :x:      | :white_check_mark: | Does not support start and end attributes.                                                                                                         |
-| **Shrink**                    |     :x:      |        :x:         |                                                                                                                                                    |
-| **Sigmoid**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Sign**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Sin**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Sinh**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Size**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Slice**                     |     :x:      | :white_check_mark: | Axis must be a constant argument.                                                                                                                  |
-| **Softmax**                   |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **SoftmaxCrossEntropyLoss**   |     :x:      |        :x:         |                                                                                                                                                    |
-| **Softplus**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Softsign**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **SpaceToDepth**              |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Split**                     |     :x:      | :white_check_mark: | Does not support static and dynamic shape, zero size splits.                                                                                       |
-| **SplitToSequence**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **Sqrt**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Squeeze**                   |     :x:      | :white_check_mark: | Does not support static and dynamic shape.                                                                                                         |
-| **StringNormalizer**          |     :x:      |        :x:         |                                                                                                                                                    |
-| **Sub**                       |     :x:      | :white_check_mark: | Does not support short integers.                                                                                                                   |
-| **Sum**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Tan**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Tanh**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **TfIdfVectorizer**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **ThresholdedRelu**           |     :x:      |        :x:         |                                                                                                                                                    |
-| **Tile**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **TopK**                      |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Transpose**                 |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **TreeEnsembleClassifier**    |     :x:      |        :x:         |                                                                                                                                                    |
-| **TreeEnsembleRegressor**     |     :x:      |        :x:         |                                                                                                                                                    |
-| **Trilu**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Unique**                    |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Unsqueeze**                 |     :x:      | :white_check_mark: | Does not support static and dynamic shape.                                                                                                         |
-| **Upsample**                  |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Where**                     |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **Xor**                       |     :x:      | :white_check_mark: |                                                                                                                                                    |
-| **ZipMap**                    |     :x:      |        :x:         |                                                                                                                                                    |
+| Op                            |    zkML Support    | ONNX-MLIR support  | Limitations                               |
+| ----------------------------- | :----------------: | :----------------: | ----------------------------------------- |
+| **Abs**                       | :white_check_mark: | :white_check_mark: |                                           |
+| **Acos**                      |        :x:         | :white_check_mark: | Supported in assigner, no backend support |
+| **Acosh**                     |        :x:         | :white_check_mark: | Supported in assigner, no backend support |
+| **Adagrad**                   |        :x:         |        :x:         |                                           |
+| **Adam**                      |        :x:         |        :x:         |                                           |
+| **Add**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **And**                       |        :x:         | :white_check_mark: |                                           |
+| **ArgMax**                    |        :x:         | :white_check_mark: |                                           |
+| **ArgMin**                    |        :x:         | :white_check_mark: |                                           |
+| **ArrayFeatureExtractor**     |        :x:         |        :x:         |                                           |
+| **Asin**                      |        :x:         | :white_check_mark: |                                           |
+| **Asinh**                     |        :x:         | :white_check_mark: |                                           |
+| **Atan**                      |        :x:         | :white_check_mark: |                                           |
+| **Atanh**                     |        :x:         | :white_check_mark: |                                           |
+| **AveragePool**               |        :x:         | :white_check_mark: |                                           |
+| **BatchNormalization**        |        :x:         | :white_check_mark: |                                           |
+| **Bernoulli**                 |        :x:         |        :x:         |                                           |
+| **Binarizer**                 |        :x:         |        :x:         |                                           |
+| **BitShift**                  |        :x:         |        :x:         |                                           |
+| **BitwiseAnd**                |        :x:         | :white_check_mark: |                                           |
+| **BitwiseNot**                |        :x:         |        :x:         |                                           |
+| **BitwiseOr**                 |        :x:         | :white_check_mark: |                                           |
+| **BitwiseXor**                |        :x:         | :white_check_mark: |                                           |
+| **BlackmanWindow**            |        :x:         |        :x:         |                                           |
+| **Cast**                      |        :x:         | :white_check_mark: |                                           |
+| **CastLike**                  |        :x:         |        :x:         |                                           |
+| **CastMap**                   |        :x:         |        :x:         |                                           |
+| **CategoryMapper**            |        :x:         |        :x:         |                                           |
+| **Ceil**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Celu**                      |        :x:         |        :x:         |                                           |
+| **CenterCropPad**             |        :x:         |        :x:         |                                           |
+| **Clip**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Col2Im**                    |        :x:         |        :x:         |                                           |
+| **Compress**                  |        :x:         | :white_check_mark: |                                           |
+| **Concat**                    |        :x:         | :white_check_mark: |                                           |
+| **ConcatFromSequence**        |        :x:         |        :x:         |                                           |
+| **Constant**                  |        :x:         | :white_check_mark: |                                           |
+| **ConstantOfShape**           |        :x:         | :white_check_mark: |                                           |
+| **Conv**                      |        :x:         | :white_check_mark: |                                           |
+| **ConvInteger**               |        :x:         |        :x:         |                                           |
+| **ConvTranspose**             |        :x:         | :white_check_mark: |                                           |
+| **Cos**                       |        :x:         | :white_check_mark: |                                           |
+| **Cosh**                      |        :x:         | :white_check_mark: |                                           |
+| **CumSum**                    |        :x:         | :white_check_mark: |                                           |
+| **DFT**                       |        :x:         |        :x:         |                                           |
+| **DeformConv**                |        :x:         |        :x:         |                                           |
+| **DepthToSpace**              |        :x:         | :white_check_mark: |                                           |
+| **DequantizeLinear**          |        :x:         | :white_check_mark: |                                           |
+| **Det**                       |        :x:         |        :x:         |                                           |
+| **DictVectorizer**            |        :x:         |        :x:         |                                           |
+| **Div**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Dropout**                   |        :x:         | :white_check_mark: |                                           |
+| **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: |                                           |
+| **Einsum**                    |        :x:         | :white_check_mark: |                                           |
+| **Elu**                       |        :x:         | :white_check_mark: |                                           |
+| **Equal**                     |        :x:         | :white_check_mark: |                                           |
+| **Erf**                       |        :x:         | :white_check_mark: |                                           |
+| **Exp**                       |        :x:         | :white_check_mark: |                                           |
+| **Expand**                    |        :x:         | :white_check_mark: |                                           |
+| **EyeLike**                   |        :x:         |        :x:         |                                           |
+| **FeatureVectorizer**         |        :x:         |        :x:         |                                           |
+| **Flatten**                   |        :x:         | :white_check_mark: |                                           |
+| **Floor**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **GRU**                       |        :x:         | :white_check_mark: |                                           |
+| **Gather**                    |        :x:         | :white_check_mark: |                                           |
+| **GatherElements**            |        :x:         | :white_check_mark: |                                           |
+| **GatherND**                  |        :x:         | :white_check_mark: |                                           |
+| **Gemm**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **GlobalAveragePool**         |        :x:         | :white_check_mark: |                                           |
+| **GlobalLpPool**              |        :x:         |        :x:         |                                           |
+| **GlobalMaxPool**             |        :x:         | :white_check_mark: |                                           |
+| **Gradient**                  |        :x:         |        :x:         |                                           |
+| **Greater**                   |        :x:         | :white_check_mark: |                                           |
+| **GreaterOrEqual**            |        :x:         | :white_check_mark: |                                           |
+| **GridSample**                |        :x:         |        :x:         |                                           |
+| **GroupNormalization**        |        :x:         |        :x:         |                                           |
+| **HammingWindow**             |        :x:         |        :x:         |                                           |
+| **HannWindow**                |        :x:         |        :x:         |                                           |
+| **HardSigmoid**               |        :x:         | :white_check_mark: |                                           |
+| **HardSwish**                 |        :x:         |        :x:         |                                           |
+| **Hardmax**                   |        :x:         | :white_check_mark: |                                           |
+| **Identity**                  |        :x:         | :white_check_mark: |                                           |
+| **If**                        |        :x:         | :white_check_mark: |                                           |
+| **Imputer**                   |        :x:         |        :x:         |                                           |
+| **InstanceNormalization**     |        :x:         | :white_check_mark: |                                           |
+| **IsInf**                     |        :x:         | :white_check_mark: |                                           |
+| **IsNaN**                     |        :x:         | :white_check_mark: |                                           |
+| **LRN**                       |        :x:         | :white_check_mark: |                                           |
+| **LSTM**                      |        :x:         | :white_check_mark: |                                           |
+| **LabelEncoder**              |        :x:         |        :x:         |                                           |
+| **LayerNormalization**        |        :x:         | :white_check_mark: |                                           |
+| **LeakyRelu**                 |        :x:         | :white_check_mark: |                                           |
+| **Less**                      |        :x:         | :white_check_mark: |                                           |
+| **LessOrEqual**               |        :x:         | :white_check_mark: |                                           |
+| **LinearClassifier**          |        :x:         |        :x:         |                                           |
+| **LinearRegressor**           |        :x:         |        :x:         |                                           |
+| **Log**                       |        :x:         | :white_check_mark: |                                           |
+| **LogSoftmax**                |        :x:         | :white_check_mark: |                                           |
+| **Loop**                      |        :x:         | :white_check_mark: |                                           |
+| **LpNormalization**           |        :x:         |        :x:         |                                           |
+| **LpPool**                    |        :x:         |        :x:         |                                           |
+| **MatMul**                    | :white_check_mark: | :white_check_mark: |                                           |
+| **MatMulInteger**             |        :x:         | :white_check_mark: |                                           |
+| **Max**                       |        :x:         | :white_check_mark: |                                           |
+| **MaxPool**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **MaxRoiPool**                |        :x:         |        :x:         |                                           |
+| **MaxUnpool**                 |        :x:         |        :x:         |                                           |
+| **Mean**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **MeanVarianceNormalization** |        :x:         |        :x:         |                                           |
+| **MelWeightMatrix**           |        :x:         |        :x:         |                                           |
+| **Min**                       |        :x:         | :white_check_mark: |                                           |
+| **Mish**                      |        :x:         |        :x:         |                                           |
+| **Mod**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Momentum**                  |        :x:         |        :x:         |                                           |
+| **Mul**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Multinomial**               |        :x:         |        :x:         |                                           |
+| **Neg**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **NegativeLogLikelihoodLoss** |        :x:         |        :x:         |                                           |
+| **NonMaxSuppression**         |        :x:         | :white_check_mark: |                                           |
+| **NonZero**                   |        :x:         | :white_check_mark: |                                           |
+| **Normalizer**                |        :x:         |        :x:         |                                           |
+| **Not**                       |        :x:         | :white_check_mark: |                                           |
+| **OneHot**                    |        :x:         | :white_check_mark: |                                           |
+| **OneHotEncoder**             |        :x:         |        :x:         |                                           |
+| **Optional**                  |        :x:         |        :x:         |                                           |
+| **OptionalGetElement**        |        :x:         |        :x:         |                                           |
+| **OptionalHasElement**        |        :x:         |        :x:         |                                           |
+| **Or**                        |        :x:         | :white_check_mark: |                                           |
+| **PRelu**                     |        :x:         | :white_check_mark: |                                           |
+| **Pad**                       |        :x:         | :white_check_mark: |                                           |
+| **Pow**                       |        :x:         | :white_check_mark: |                                           |
+| **QLinearConv**               |        :x:         |        :x:         |                                           |
+| **QLinearMatMul**             |        :x:         |        :x:         |                                           |
+| **QuantizeLinear**            |        :x:         | :white_check_mark: |                                           |
+| **RNN**                       |        :x:         | :white_check_mark: |                                           |
+| **RandomNormal**              |        :x:         |        :x:         |                                           |
+| **RandomNormalLike**          |        :x:         |        :x:         |                                           |
+| **RandomUniform**             |        :x:         |        :x:         |                                           |
+| **RandomUniformLike**         |        :x:         |        :x:         |                                           |
+| **Range**                     |        :x:         | :white_check_mark: |                                           |
+| **Reciprocal**                | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **ReduceL1**                  |        :x:         | :white_check_mark: |                                           |
+| **ReduceL2**                  |        :x:         | :white_check_mark: |                                           |
+| **ReduceLogSum**              |        :x:         | :white_check_mark: |                                           |
+| **ReduceLogSumExp**           |        :x:         | :white_check_mark: |                                           |
+| **ReduceMax**                 |        :x:         | :white_check_mark: |                                           |
+| **ReduceMean**                |        :x:         | :white_check_mark: |                                           |
+| **ReduceMin**                 |        :x:         | :white_check_mark: |                                           |
+| **ReduceProd**                |        :x:         | :white_check_mark: |                                           |
+| **ReduceSum**                 |        :x:         | :white_check_mark: |                                           |
+| **ReduceSumSquare**           |        :x:         | :white_check_mark: |                                           |
+| **Relu**                      | :white_check_mark: | :white_check_mark: |                                           |
+| **Reshape**                   |        :x:         | :white_check_mark: |                                           |
+| **Resize**                    |        :x:         | :white_check_mark: |                                           |
+| **ReverseSequence**           |        :x:         | :white_check_mark: |                                           |
+| **RoiAlign**                  |        :x:         |        :x:         |                                           |
+| **Round**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **STFT**                      |        :x:         |        :x:         |                                           |
+| **SVMClassifier**             |        :x:         |        :x:         |                                           |
+| **SVMRegressor**              |        :x:         |        :x:         |                                           |
+| **Scaler**                    |        :x:         |        :x:         |                                           |
+| **Scan**                      |        :x:         | :white_check_mark: |                                           |
+| **Scatter**                   |        :x:         |        :x:         |                                           |
+| **ScatterElements**           |        :x:         | :white_check_mark: |                                           |
+| **ScatterND**                 |        :x:         | :white_check_mark: |                                           |
+| **Selu**                      |        :x:         | :white_check_mark: |                                           |
+| **SequenceAt**                |        :x:         |        :x:         |                                           |
+| **SequenceConstruct**         |        :x:         |        :x:         |                                           |
+| **SequenceEmpty**             |        :x:         |        :x:         |                                           |
+| **SequenceErase**             |        :x:         |        :x:         |                                           |
+| **SequenceInsert**            |        :x:         | :white_check_mark: |                                           |
+| **SequenceLength**            |        :x:         |        :x:         |                                           |
+| **SequenceMap**               |        :x:         |        :x:         |                                           |
+| **Shape**                     |        :x:         | :white_check_mark: |                                           |
+| **Shrink**                    |        :x:         |        :x:         |                                           |
+| **Sigmoid**                   |        :x:         | :white_check_mark: |                                           |
+| **Sign**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Sin**                       |        :x:         | :white_check_mark: |                                           |
+| **Sinh**                      |        :x:         | :white_check_mark: |                                           |
+| **Size**                      |        :x:         | :white_check_mark: |                                           |
+| **Slice**                     |        :x:         | :white_check_mark: |                                           |
+| **Softmax**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **SoftmaxCrossEntropyLoss**   |        :x:         |        :x:         |                                           |
+| **Softplus**                  |        :x:         | :white_check_mark: |                                           |
+| **Softsign**                  |        :x:         | :white_check_mark: |                                           |
+| **SpaceToDepth**              |        :x:         | :white_check_mark: |                                           |
+| **Split**                     |        :x:         | :white_check_mark: |                                           |
+| **SplitToSequence**           |        :x:         |        :x:         |                                           |
+| **Sqrt**                      |        :x:         | :white_check_mark: |                                           |
+| **Squeeze**                   |        :x:         | :white_check_mark: |                                           |
+| **StringNormalizer**          |        :x:         |        :x:         |                                           |
+| **Sub**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Sum**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
+| **Tan**                       |        :x:         | :white_check_mark: |                                           |
+| **Tanh**                      |        :x:         | :white_check_mark: |                                           |
+| **TfIdfVectorizer**           |        :x:         |        :x:         |                                           |
+| **ThresholdedRelu**           |        :x:         |        :x:         |                                           |
+| **Tile**                      |        :x:         | :white_check_mark: |                                           |
+| **TopK**                      |        :x:         | :white_check_mark: |                                           |
+| **Transpose**                 |        :x:         | :white_check_mark: |                                           |
+| **TreeEnsembleClassifier**    |        :x:         |        :x:         |                                           |
+| **TreeEnsembleRegressor**     |        :x:         |        :x:         |                                           |
+| **Trilu**                     |        :x:         | :white_check_mark: |                                           |
+| **Unique**                    |        :x:         | :white_check_mark: |                                           |
+| **Unsqueeze**                 |        :x:         | :white_check_mark: |                                           |
+| **Upsample**                  |        :x:         | :white_check_mark: |                                           |
+| **Where**                     |        :x:         | :white_check_mark: |                                           |
+| **Xor**                       |        :x:         | :white_check_mark: |                                           |
+| **ZipMap**                    |        :x:         |        :x:         |                                           |
