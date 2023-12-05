@@ -1,12 +1,12 @@
-# zkML TestSuite
+# zkML Test Suite
 
 This document serves two purposes.
 
 - It explains how to run tests for the zkML pipeline.
-- It keeps track of the supported ONNX operations and the current pinned
-  version of ONNX-MLIR.
+- It keeps track of the supported ONNX operations and the current pinned version
+  of ONNX-MLIR.
 
-## TLDR: How to run Test Suite
+## TLDR: How to run the Test Suite
 
 In the home directory of this repository, after building the project, run the
 following command for a quick check:
@@ -15,8 +15,8 @@ following command for a quick check:
 python tests/run.py --fast
 ```
 
-If you have some time, run the same script without the `--fast` flag (in the home
-directory, after building). Moreover, grab a coffee. This takes some time:
+If you have some time, run the same script without the `--fast` flag (in the
+home directory, after building). Moreover, grab a coffee. This takes some time:
 
 ```
 python tests/run.py
@@ -27,7 +27,8 @@ python tests/run.py
 Inside the `/tests` folder (where you found this README.md) is a Python script
 and two subfolders.
 
-- `/Models` Inside this folder are test cases for pre-trained models. Currently, there are tests for two MNIST models, one of which is a CNN.
+- `/Models` Inside this folder are test cases for pre-trained models. Currently,
+  there are tests for two MNIST models, one of which is a CNN.
 - `/Ops` Inside this folder, you can find specific test cases for supported ONNX
   operations.
 - `run.py` A python script that executes the tests and gathers the information
@@ -67,8 +68,8 @@ For further information on the operations, see the
 [ONNX documentation](https://github.com/onnx/onnx/blob/main/docs/Operators.md).
 
 **Note:** This project is under active development. Expect drastic changes in
-the future. We aim to support every ONNX operation supported by ONNX-MLIR
-(as long as it is applicable for ZK).
+the future. We aim to support every ONNX operation supported by ONNX-MLIR (as
+long as it is applicable for ZK).
 
 | Op                            |    zkML Support    | ONNX-MLIR support  | Limitations                               |
 | ----------------------------- | :----------------: | :----------------: | ----------------------------------------- |
