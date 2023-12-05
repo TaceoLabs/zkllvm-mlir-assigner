@@ -5,7 +5,7 @@
 This project extends the [zkLLVM](https://github.com/NilFoundation/zkLLVM)
 compiler with an [ONNX](https://github.com/onnx/onnx#readme) frontend,
 leveraging the
-[ONNX-MLIR compiler technology](https://github.com/onnx/onnx-mlir). This allows
+[ONNX-MLIR compiler technology](https://github.com/onnx/onnx-mlir). It allows
 developers to compile and assign ZK circuits from their pre-trained `onnx`
 models and proof them with the `Placeholder` proof system (see `zkLLVM`
 documentation).
@@ -40,6 +40,7 @@ make -j
 ```
 
 ### Testing
+To test your build, have a look in the [test folder](tests/README.md).
 
 
 
