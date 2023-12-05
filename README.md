@@ -53,7 +53,10 @@ To test your build, have a look in the [test folder](tests).
 
 ## Example
 
-This section will show you step by step how to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. 
+This section shows how to use zkML frontend. In this example, we guide you through every step to proof the [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist) found in `tests/Models/ConvMnist/mnist-12.onnx`. 
+
+
+
 To run an example for a basic MNIST model:
 
 ```bash
