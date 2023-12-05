@@ -56,7 +56,5 @@ if(BUILD_TESTS)
     cm_find_package(Boost COMPONENTS REQUIRED unit_test_framework)
 endif()
 
-project(zkllvm-mlir-parser)
-#add_subdirectory(libs)
 add_subdirectory(src)
 #add_subdirectory(tests)
