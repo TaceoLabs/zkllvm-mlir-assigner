@@ -64,12 +64,12 @@ that we inherite all limitations from ONNX-MLIR as well. To inspect their
 limitations, click
 [this link](https://github.com/onnx/onnx-mlir/blob/a04f518c1b0b8e4971d554c399bb54efc00b81db/docs/SupportedONNXOps-cpu.md).
 
+For further information on the operations, see the
+[ONNX documentation](https://github.com/onnx/onnx/blob/main/docs/Operators.md).
+
 **Note:** This project is under active development. Expect drastic changes in
 the future. Our goal is to support every ONNX operation supported by ONNX-MLIR
 (as long as it is applicable for ZK).
-
-For further information on the operations, see the
-[ONNX documentation](https://github.com/onnx/onnx/blob/main/docs/Operators.md).
 
 | Op                            |    zkML Support    | ONNX-MLIR support  | Limitations                               |
 | ----------------------------- | :----------------: | :----------------: | ----------------------------------------- |
