@@ -1,0 +1,34 @@
+name: Run tests
+
+on:
+  # Triggers the workflow on pull request events but only for the master branch
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v23
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Cmake and build
+        run: |
+          mkdir build
+          nix develop -c bash -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=$MLIR_DIR ."
+
+      - name: Build
+        working-directory: ./build
+        run: nix develop .. -c cmake --build . -t mlir-assigner -t zkml-onnx-compiler
+
+      - name: Run test
+        run: nix develop -c bash -c "just run-tests"
