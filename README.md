@@ -46,7 +46,7 @@ You can find the binaries in the `build/bin` folder.
 
 ### Build on Ubuntu 22.04
 
-We stress again that the preferred approach is to use the `nix` devshell. If you
+We stress again to use the preferred approach, the `nix` devshell. If you
 still want to built on your native machine, follow these steps.
 
 1. Download the source:
@@ -65,7 +65,7 @@ git clone --recurse-submodules -j8 git@github.com:TaceoLabs/zkllvm-mlir-assigner
 
 3. At this point your environment variable `MLIR_DIR` should point to a MLIR cmake module. Verify that by writing
 ```bash
-echo $MLIR_DIR`
+echo $MLIR_DIR
 ```
 
 4. Setup cmake and build
