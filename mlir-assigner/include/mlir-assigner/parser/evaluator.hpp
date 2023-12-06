@@ -1,6 +1,8 @@
 #ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 #define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
+#define TEST_WITHOUT_LOOKUP_TABLES
+
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
 #include "mlir/Dialect/zkml/ZkMlDialect.h"
