@@ -69,7 +69,7 @@ follow the [build instructions](#build).
 mkdir CNN-Mnist
 cp build/bin/mlir-assigner CNN-Mnist && cp build/bin/zkml-onnx-compiler CNN-Mnist
 cd CNN-Mnist
-wget https://github.com/onnx/models/blob/main/vision/classification/mnist/model/mnist-12.onnx
+wget https://github.com/onnx/models/raw/main/vision/classification/mnist/model/mnist-12.onnx
 ```
 
 In case you have another model you want to proof, use that instead of the
@@ -79,7 +79,7 @@ CNN-Mnist model.
    `zkml-onnx-compiler` to compile the model to `.mlir`.
 
 ```bash
-zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir
+./zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir
 ```
 
 The emitted `.mlir` consists of the dialects defined by ONNX-MLIR and an
