@@ -14,7 +14,7 @@ This project builds two binaries, namely:
 
 - `zkml-onnx-compiler` A compiler that lowers `.onnx` files. (name is subject to
   change)
-- `mlir-assigner` A VM that interprets `.mlir` and produces a plonkish circuit
+- `mlir-assigner` An assigner that interprets `.mlir` dialect files and produces a plonkish circuit
   and an assigned table.
 
 We list the currently supported ONNX operations and limitations
