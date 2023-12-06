@@ -62,8 +62,8 @@ We expect that you already built the two binaries `build/bin/zk-ml-opt` and
 `build/bin/mlir-assigner` from source or obtained them in another way. If not,
 follow the [build instructions](#build).
 
-1. **Setup:** We start by creating an empty folder here we place our binaries and our
-   model. So when you built from source we do:
+1. **Setup:** We start by creating an empty folder here we place our binaries
+   and our model. So when you built from source we do:
 
 ```bash
 mkdir CNN-Mnist
@@ -75,7 +75,24 @@ wget https://github.com/onnx/models/blob/main/vision/classification/mnist/model/
 In case you have another model you want to proof, use that instead of the
 CNN-Mnist model.
 
-2. **Compile ONNX to MLIR:** test
+2. **Compile ONNX to MLIR:** Having your pre-trained model at place, we use the
+   `zkml-onnx-compiler` to compile the model to `.mlir`.
+
+```bash
+zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir
+```
+
+The emitted `.mlir` consists of the dialects defined by ONNX-MLIR and an
+additional dialect defined by this project with the namespace `zkML`. This
+dialect defines operations which need special handling in contrast to the
+default lowering provided by ONNX-MLIR, e.g., as seen during the lowering of
+[MatMuls](https://github.com/onnx/onnx/blob/main/docs/Operators.md#MatMul),
+[Gemms](https://github.com/onnx/onnx/blob/main/docs/Operators.md#Gemm), or
+[Convolutions](https://github.com/onnx/onnx/blob/main/docs/Operators.md#Conv).
+Natively lowering matrix multiplications leads to polluted traces with a lot of
+additions and multiplications. For that we introduced the operation
+`zkml.Dot-Product` which improves performance drastically.
+
 ![compile](docs/pics/GitHubReadMeStep2.svg)
 
 3. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
