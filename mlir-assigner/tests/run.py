@@ -34,7 +34,7 @@ def test_folder(test_suite, folder, timeout, verbose):
     global failed_tests
     global error_tests
     global errors 
-    assigner_binary = "build/src/mlir-assigner"
+    assigner_binary = "build/bin/mlir-assigner"
 
     # Get a list of all files and folders within the "ops" folder
     items = os.listdir(folder)
@@ -106,9 +106,9 @@ else:
     slow_test = True
 
 # Rest of your code...
-test_folder("SingleOps", "tests/Ops/", 30, args.verbose)
+test_folder("SingleOps", "mlir-assigner/tests/Ops/", 30, args.verbose)
 if slow_test:
-    test_folder("Models", "tests/Models/", 500, args.verbose)
+    test_folder("Models", "mlir-assigner/tests/Models/", 500, args.verbose)
 
 # cleanup
 os.remove("circuit")

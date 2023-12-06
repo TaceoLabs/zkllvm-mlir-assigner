@@ -9,6 +9,7 @@
 #include <nil/blueprint/component.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/dot_rescale_2_gates.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp> // TODO: check if there is a new mechanism for this in nil upstream
 
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -26,11 +27,14 @@ typename components::fix_dot_rescale_2_gates<
     BlueprintFieldType,
     basic_non_native_policy<BlueprintFieldType>>::result_type
 handle_fixedpoint_dot_product_component(
-    memref<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>>
+    memref<crypto3::zk::snark::plonk_variable<
+        typename BlueprintFieldType::value_type>>
         x,
-    memref<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>>
+    memref<crypto3::zk::snark::plonk_variable<
+        typename BlueprintFieldType::value_type>>
         y,
-    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &zero_var,
+    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
+        &zero_var,
     circuit<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
     assignment<crypto3::zk::snark::plonk_constraint_system<
@@ -48,16 +52,18 @@ handle_fixedpoint_dot_product_component(
       ManifestReader<component_type, ArithmetizationParams, 1, 1>;
   auto dims = x.getDims();
   ASSERT(dims.size() == 1 && "must be one-dim for dot product");
-  const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), 1));
+  const auto p = PolicyManager::get_parameters(
+      manifest_reader::get_witness(0, dims.front(), 1));
   component_type component_instance(p.witness, manifest_reader::get_constants(),
-                                    manifest_reader::get_public_inputs(), dims.front(), 1);
+                                    manifest_reader::get_public_inputs(),
+                                    dims.front(), 1);
 
   if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
     auto lookup_tables = component_instance.component_custom_lookup_tables();
     for (auto &t : lookup_tables) {
       bp.register_lookup_table(
-          std::shared_ptr<nil::crypto3::zk::snark::detail::
-                              lookup_table_definition<BlueprintFieldType>>(t));
+          std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<
+              BlueprintFieldType>>(t));
     }
   };
 
@@ -68,9 +74,9 @@ handle_fixedpoint_dot_product_component(
     }
   };
 
-  using DotProductInputType = const typename components::plonk_fixedpoint_dot_rescale_2_gates<
-                        BlueprintFieldType, ArithmetizationParams>::input_type;
-
+  using DotProductInputType =
+      const typename components::plonk_fixedpoint_dot_rescale_2_gates<
+          BlueprintFieldType, ArithmetizationParams>::input_type;
 
   // TACEO_TODO in the previous line I hardcoded 1 for now!!! CHANGE THAT
   // TACEO_TODO make an assert that both have the same scale?
@@ -81,7 +87,7 @@ handle_fixedpoint_dot_product_component(
   components::generate_circuit(component_instance, bp, assignment, input,
                                start_row);
   return components::generate_assignments(component_instance, assignment, input,
-                                           start_row);
+                                          start_row);
 }
 
 } // namespace detail
@@ -89,8 +95,8 @@ handle_fixedpoint_dot_product_component(
 template <typename BlueprintFieldType, typename ArithmetizationParams>
 void handle_fixedpoint_dot_product_component(
     mlir::zkml::DotProductOp &operation,
-    crypto3::zk::snark::plonk_variable<
-            typename BlueprintFieldType::value_type> &zero_var,
+    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
+        &zero_var,
     stack_frame<crypto3::zk::snark::plonk_variable<
         typename BlueprintFieldType::value_type>> &frame,
     circuit<crypto3::zk::snark::plonk_constraint_system<

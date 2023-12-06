@@ -31,6 +31,7 @@
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cmp_extended.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp> // TODO: check if there is a new mechanism for this in nil upstream
 
 #include <nil/blueprint/component.hpp>
 
@@ -78,8 +79,8 @@ handle_f_comparison_component(
     auto lookup_tables = component_instance.component_custom_lookup_tables();
     for (auto &t : lookup_tables) {
       bp.register_lookup_table(
-          std::shared_ptr<nil::crypto3::zk::snark::detail::
-                              lookup_table_definition<BlueprintFieldType>>(t));
+          std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<
+              BlueprintFieldType>>(t));
     }
   };
 

@@ -8,6 +8,7 @@
 #include <nil/blueprint/component.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/div.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp> // TODO: check if there is a new mechanism for this in nil upstream
 
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -53,8 +54,8 @@ handle_fixedpoint_division_component(
     auto lookup_tables = component_instance.component_custom_lookup_tables();
     for (auto &t : lookup_tables) {
       bp.register_lookup_table(
-          std::shared_ptr<nil::crypto3::zk::snark::detail::
-                              lookup_table_definition<BlueprintFieldType>>(t));
+          std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<
+              BlueprintFieldType>>(t));
     }
   };
 
