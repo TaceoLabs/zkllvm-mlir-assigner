@@ -62,26 +62,20 @@ We expect that you already built the two binaries `build/bin/zk-ml-opt` and
 `build/bin/mlir-assigner` from source or obtained them in another way. If not,
 follow the [build instructions](#build).
 
-1. We start by creating an empty folder and where we place our binaries and our
+1. **Setup:** We start by creating an empty folder here we place our binaries and our
    model. So when you built from source we do:
 
 ```bash
 mkdir CNN-Mnist
-cp build/bin/mlir-assigner CNN-MNIST && cp build/bin/zkml-onnx-compiler CNN-MNIST
+cp build/bin/mlir-assigner CNN-Mnist && cp build/bin/zkml-onnx-compiler CNN-Mnist
 cd CNN-Mnist
 wget https://github.com/onnx/models/blob/main/vision/classification/mnist/model/mnist-12.onnx
 ```
 
-2. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
-   labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
-   Nisi anim cupidatat excepteur officia. Reprehenderit nostrud nostrud ipsum
-   Lorem est aliquip amet voluptate voluptate dolor minim nulla est proident.
-   Nostrud officia pariatur ut officia. Sit irure elit esse ea nulla sunt ex
-   occaecat reprehenderit commodo officia dolor Lorem duis laboris cupidatat
-   officia voluptate. Culpa proident adipisicing id nulla nisi laboris ex in
-   Lorem sunt duis officia eiusmod. Aliqua reprehenderit commodo ex non
-   excepteur duis sunt velit enim. Voluptate laboris sint cupidatat ullamco ut
-   ea consectetur et est culpa et culpa duis.
+In case you have another model you want to proof, use that instead of the
+CNN-Mnist model.
+
+2. **Compile ONNX to MLIR:** test
 
 3. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
    labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
