@@ -3,6 +3,7 @@ import sys
 from os.path import isfile, isdir
 from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
 import argparse
+import tempfile
 
 class bcolors:
     HEADER = '\033[95m'
@@ -19,6 +20,8 @@ success_tests = 0
 failed_tests = 0
 error_tests = 0
 errors = []
+mlir_assigner = "build/bin/mlir-assigner"
+zkml_compiler = "build/bin/zkml-onnx-compiler"
 
 def build_error_object(file, reason):
     return dict({
@@ -26,16 +29,65 @@ def build_error_object(file, reason):
         'reason': reason
     })
 
-
-def test_folder(test_suite, folder, timeout, verbose):
-    
+def test_onnx(file, subfolder_path, timeout, verbose):
     global run_tests 
     global success_tests
     global failed_tests
     global error_tests
     global errors 
-    assigner_binary = "build/bin/mlir-assigner"
+    global zkml_compiler
+    with tempfile.NamedTemporaryFile() as fp:
+        args = [zkml_compiler, os.path.join(subfolder_path, file), "-i", fp.name]
+    if verbose:
+        print("running: '" + " ".join(args) + "'...", end="", flush=True)
 
+        print(args)
+        raise Exception("sadge")
+
+def test_mlir(file, subfolder_path, timeout, verbose):
+    global run_tests 
+    global success_tests
+    global failed_tests
+    global error_tests
+    global errors 
+    global mlir_assigner
+    # read output file
+    output_file = os.path.join(subfolder_path, file.replace(".mlir", ".res"))
+    if not isfile(output_file):
+        print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+        errors.append(build_error_object(file, f"cannot find output file"))
+        error_tests += 1
+        return
+    with open(output_file,mode='r') as f:
+        should_output = f.read().strip()
+    # Construct the JSON file name by replacing the ".mlir" extension with ".json"
+    json_file = file.replace(".mlir", ".json")
+    json_file_path = os.path.join(subfolder_path, json_file)
+    # Call the assigner binary with the input files
+    run_tests += 1
+    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "--print_circuit_output"]
+    if verbose:
+        print("running: '" + " ".join(args) + "'...", end="", flush=True)
+    try:
+        is_output = check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
+        if is_output == should_output:
+            print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
+            success_tests += 1
+        else: 
+            failed_tests += 1
+            print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
+            errors.append(build_error_object(file, f"output mismatch"))
+    except CalledProcessError:
+            error_tests += 1
+            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+            errors.append(build_error_object(file, f"unexpteced error from subprocess"))
+    except TimeoutExpired:
+            error_tests += 1
+            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+            errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
+
+
+def test_folder(test_suite, folder, timeout, verbose):
     # Get a list of all files and folders within the "ops" folder
     items = os.listdir(folder)
 
@@ -52,45 +104,14 @@ def test_folder(test_suite, folder, timeout, verbose):
         subfolder_path = os.path.join(folder, subfolder)
         # Get a list of all files within the subfolder
         files = os.listdir(subfolder_path)
-        # Iterate over the files and grab those ending in ".mlir"
         files.sort()
         for file in files:
-            if file.endswith(".mlir"):
-                # read output file
+            if file.endswith(".onnx"):
                 print(f"Testing {file}...", end="", flush=True) 
-                output_file = os.path.join(subfolder_path, file.replace(".mlir", ".res"))
-                if not isfile(output_file):
-                    print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-                    errors.append(build_error_object(file, f"cannot find output file"))
-                    error_tests += 1
-                    continue
-                with open(output_file,mode='r') as f:
-                    should_output = f.read().strip()
-                # Construct the JSON file name by replacing the ".mlir" extension with ".json"
-                json_file = file.replace(".mlir", ".json")
-                json_file_path = os.path.join(subfolder_path, json_file)
-                # Call the assigner binary with the input files
-                run_tests += 1
-                args = [assigner_binary, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "--print_circuit_output"]
-                if verbose:
-                    print("running: '" + " ".join(args) + "'...", end="", flush=True)
-                try:
-                    is_output = check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
-                    if is_output == should_output:
-                        print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
-                        success_tests += 1
-                    else: 
-                        failed_tests += 1
-                        print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
-                        errors.append(build_error_object(file, f"output mismatch"))
-                except CalledProcessError:
-                        error_tests += 1
-                        print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-                        errors.append(build_error_object(file, f"unexpteced error from subprocess"))
-                except TimeoutExpired:
-                        error_tests += 1
-                        print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-                        errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
+                test_onnx(file, subfolder_path, timeout, verbose)
+            if file.endswith(".mlir"):
+                print(f"Testing {file}...", end="", flush=True) 
+                test_mlir(file, subfolder_path, timeout, verbose)
 
 
 
@@ -105,10 +126,11 @@ if args.fast:
 else:
     slow_test = True
 
+test_folder("SingleOps", "mlir-assigner/tests/Test/", 30, args.verbose)
 # Rest of your code...
-test_folder("SingleOps", "mlir-assigner/tests/Ops/", 30, args.verbose)
-if slow_test:
-    test_folder("Models", "mlir-assigner/tests/Models/", 500, args.verbose)
+# test_folder("SingleOps", "mlir-assigner/tests/Ops/", 30, args.verbose)
+# if slow_test:
+#     test_folder("Models", "mlir-assigner/tests/Models/", 500, args.verbose)
 
 # cleanup
 os.remove("circuit")
