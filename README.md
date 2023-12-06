@@ -52,7 +52,7 @@ still want to built on your native machine, follow these steps.
 1. Download the source:
 
 ```bash
-git clone --recurse-submodules -j8 git@github.com:TaceoLabs/zkllvm-mlir-assigner.git
+git clone --recurse-submodules -j8 git@github.com:TaceoLabs/zkllvm-mlir-assigner.git && cd zkllvm-mlir-assigner
 ```
 
 2. One of our dependencies is ONNX-MLIR (`libs/onnx-mlir`).
