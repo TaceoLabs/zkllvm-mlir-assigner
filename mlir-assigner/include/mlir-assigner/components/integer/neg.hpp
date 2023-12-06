@@ -6,6 +6,7 @@
 #include <nil/blueprint/component.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/neg.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp>
 
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/policy/policy_manager.hpp>
@@ -49,8 +50,8 @@ handle_integer_neg_component(
     auto lookup_tables = component_instance.component_custom_lookup_tables();
     for (auto &t : lookup_tables) {
       bp.register_lookup_table(
-          std::shared_ptr<nil::crypto3::zk::snark::detail::
-                              lookup_table_definition<BlueprintFieldType>>(t));
+          std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<
+              BlueprintFieldType>>(t));
     }
   };
 
