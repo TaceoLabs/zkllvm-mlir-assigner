@@ -200,7 +200,6 @@ int main(int argc, char **argv) {
   if (EmitLevel == EmitLevel::ONNX) {
     onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR);
   } else {
-    llvm::outs() << "doing zk: " << (EmitLevel == EmitLevel::zkMLIR) << "\n";
     onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, EmitLevel == EmitLevel::zkMLIR);
     pm.addPass(zk_ml_toolchain::createElimCopySignPass());
     if (!EmitMLIR) {
