@@ -12,7 +12,7 @@ documentation).
 
 This project builds two binaries, namely:
 
-- `zk-ml-opt` A compiler that lowers `.onnx` files. (name is subject to change)
+- `zkml-onnx-compiler` A compiler that lowers `.onnx` files. (name is subject to change)
 - `mlir-assigner` A VM that interprets `.mlir` and produces a plonkish circuit
   and an assigned table.
 
@@ -108,5 +108,12 @@ cp ../mlir-assigner/tests/Models/ConvMnist/mnist-12.json .
 ```bash
 ./mlir-assigner -b mnist-12.mlir -i mnist-12.json -e pallas -c circuit.crt -t assignment.tbl --print_circuit_output --check
 ```
+> Again, have a look on the configurations of the `mlir-assigner` by adding the `--help` flag.
+
 You can find the unassigned circuit now in the file `circuit.crt` and the assignment in `assignment.tbl`, as you are used to from `zkLLVM`. We refer to the documentation from [zkLLVM](https://github.com/NilFoundation/zkLLVM#usage) on how to compute proofs.
 
+
+
+## Disclaimer
+
+This is **experimental software** and is provided on an "as is" and "as available" basis. We do **not give any warranties** and will **not be liable for any losses** incurred through any use of this code base.
