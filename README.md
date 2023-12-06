@@ -56,14 +56,21 @@ To test your build, have a look in the [test folder](mlir-assigner/tests).
 This section shows how to use the zkML frontend for zkLLVM. In this example, we
 guide you through every step to proof the
 [CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist)
-found in `tests/Models/ConvMnist/mnist-12.onnx`.
+from the ONNX model zoo on Ubuntu 22.04.
 
 We expect that you already built the two binaries `build/bin/zk-ml-opt` and
 `build/bin/mlir-assigner` from source or obtained them in another way. If not,
 follow the [build instructions](#build).
 
-1. Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum
-   sint consectetur cupidatat.
+1. We start by creating an empty folder and where we place our binaries and our
+   model. So when you built from source we do:
+
+```bash
+mkdir CNN-Mnist
+cp build/bin/mlir-assigner CNN-MNIST && cp build/bin/zkml-onnx-compiler CNN-MNIST
+cd CNN-Mnist
+wget https://github.com/onnx/models/blob/main/vision/classification/mnist/model/mnist-12.onnx
+```
 
 2. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
    labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
