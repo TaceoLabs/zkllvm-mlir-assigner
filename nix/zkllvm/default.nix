@@ -4,8 +4,8 @@ clangStdenv.mkDerivation {
   name = "zkllvm_with_mlir";
   src = fetchgit {
     url = "https://github.com/NilFoundation/zkllvm";
-    rev = "refs/tags/v0.1.9"; # also change hash + version below in cmakeflags
-    sha256 = "1639szlda7jdcag90qdzvkkyq02n10h9ljhz0drzw233vz2y7qsq";
+    rev = "c1bc3aa86905a9e8548514779a51aee27187b90d"; # also change hash + version below in cmakeflags
+    sha256 = "0q8qbmj8kvfsif8g41sw1nvs2r7jddg181nv7vk9h4flhhmw8f7z";
     fetchSubmodules = true;
   };
   enableParallelBuilding = true;
@@ -28,7 +28,7 @@ clangStdenv.mkDerivation {
     "-DLLVM_ENABLE_RTTI=ON"
     "-DLLVM_ENABLE_LIBEDIT=OFF"
     "-DLLVM_INSTALL_UTILS=ON"
-    "-DZKLLVM_VERSION=v0.1.9"
+    "-DZKLLVM_VERSION=v0.1.10"
   ];
   postInstall = ''
     rm -r $out/lib/cmake/crypto3_algebra
