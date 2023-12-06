@@ -76,6 +76,7 @@ In case you have another model you want to proof, use that instead of the
 CNN-Mnist model.
 
 2. **Compile ONNX to MLIR:** test
+![compile](docs/pics/GitHubReadMeStep2.png)
 
 3. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
    labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
