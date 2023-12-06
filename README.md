@@ -49,7 +49,7 @@ TODO
 
 ## Testing
 
-To test your build, have a look in the [test folder](tests).
+To test your build, have a look in the [test folder](mlir-assigner/tests).
 
 ## Example
 
