@@ -12,7 +12,8 @@ documentation).
 
 This project builds two binaries, namely:
 
-- `zkml-onnx-compiler` A compiler that lowers `.onnx` files. (name is subject to change)
+- `zkml-onnx-compiler` A compiler that lowers `.onnx` files. (name is subject to
+  change)
 - `mlir-assigner` A VM that interprets `.mlir` and produces a plonkish circuit
   and an assigned table.
 
@@ -45,7 +46,34 @@ You can find the binaries in the `build/bin` folder.
 
 ### Build on Ubuntu 22.04
 
-TODO
+We stress again that the preferred approach is to use the `nix` devshell. If you
+still want to built on your native machine, follow these steps.
+
+1. Download the source:
+
+```bash
+git clone --recurse-submodules -j8 git@github.com:TaceoLabs/zkllvm-mlir-assigner.git
+```
+
+2. One of our dependencies is ONNX-MLIR (`libs/onnx-mlir`).
+   [Here](https://github.com/onnx/onnx-mlir/tree/a04f518c1b0b8e4971d554c399bb54efc00b81db#setting-up-onnx-mlir-directly)
+   you can find the requirements and built instructions for ONNX-MLIR. You do
+   not have to built it, but every thing needs to be setup correctly. This
+   includes a build tree of MLIR (not ONNX-MLIR) as part of the LLVM project, as
+   seen
+   [here](https://github.com/onnx/onnx-mlir/blob/a04f518c1b0b8e4971d554c399bb54efc00b81db/docs/BuildOnLinuxOSX.md).
+
+3. At this point your environment variable `MLIR_DIR` should point to a MLIR cmake module. Verify that by writing
+```bash
+echo $MLIR_DIR`
+```
+
+4. Setup cmake and build
+```bash
+mkdir build && cd build
+cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON ..
+make -j 
+```
 
 ## Testing
 
@@ -98,22 +126,36 @@ Natively lowering matrix multiplications leads to polluted traces with a lot of
 additions and multiplications. For that we introduced the operation
 `zkml.Dot-Product` which improves performance drastically.
 
-3. **Prepare your input:** The `mlir-assigner` expects the input for inference in `json` format. Have a look at e.g., [the input to this small model](mlir-assigner/tests/Ops/Add/AddSimple.json) to see how you should prepare your input. For this example, we have an input file prepared. Therefore, we just copy it to our folder:
+3. **Prepare your input:** The `mlir-assigner` expects the input for inference
+   in `json` format. Have a look at e.g.,
+   [the input to this small model](mlir-assigner/tests/Ops/Add/AddSimple.json)
+   to see how you should prepare your input. For this example, we have an input
+   file prepared. Therefore, we just copy it to our folder:
+
 ```bash
 cp ../mlir-assigner/tests/Models/ConvMnist/mnist-12.json .
 ```
 
-![inference](docs/pics/GitHubReadMeStep3.svg)
-4. **Perform inference and assign circuit:** The next step may take some time depending on your model. We have to perform inference of the model and the provided input within the plonkish arithmetization of the proof system. We do this by calling:
+![inference](docs/pics/GitHubReadMeStep3.svg) 4. **Perform inference and assign
+circuit:** The next step may take some time depending on your model. We have to
+perform inference of the model and the provided input within the plonkish
+arithmetization of the proof system. We do this by calling:
+
 ```bash
 ./mlir-assigner -b mnist-12.mlir -i mnist-12.json -e pallas -c circuit.crt -t assignment.tbl --print_circuit_output --check
 ```
-> Again, have a look on the configurations of the `mlir-assigner` by adding the `--help` flag.
 
-You can find the unassigned circuit now in the file `circuit.crt` and the assignment in `assignment.tbl`, as you are used to from `zkLLVM`. We refer to the documentation from [zkLLVM](https://github.com/NilFoundation/zkLLVM#usage) on how to compute proofs.
+> Again, have a look on the configurations of the `mlir-assigner` by adding the
+> `--help` flag.
 
-
+You can find the unassigned circuit in the file `circuit.crt` and the assignment
+in `assignment.tbl`, as you are used to from `zkLLVM`. We refer to the
+documentation from [zkLLVM](https://github.com/NilFoundation/zkLLVM#usage) on
+how to produce proofs with `Placeholder` and/or publish your circuits to the
+proof market.
 
 ## Disclaimer
 
-This is **experimental software** and is provided on an "as is" and "as available" basis. We do **not give any warranties** and will **not be liable for any losses** incurred through any use of this code base.
+This is **experimental software** and is provided on an "as is" and "as
+available" basis. We do **not give any warranties** and will **not be liable for
+any losses** incurred through any use of this code base.
