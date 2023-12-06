@@ -17,7 +17,7 @@ This project builds two binaries, namely:
   and an assigned table.
 
 We list the currently supported ONNX operations and limitations
-[here](tests/README.md).
+[here](mlir-assigner/tests/README.md).
 
 ## Build
 
