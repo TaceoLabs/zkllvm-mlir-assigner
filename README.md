@@ -77,10 +77,13 @@ CNN-Mnist model.
 
 2. **Compile ONNX to MLIR:** Having your pre-trained model at place, we use the
    `zkml-onnx-compiler` to compile the model to `.mlir`.
+![compile](docs/pics/GitHubReadMeStep2.svg)
+You can do this by calling the `zkml-onnx-compiler` like:
 
 ```bash
 ./zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir
 ```
+> Lorem ipsum dolor sit amet, qui minim labore adipisicing minim sint cillum sint consectetur cupidatat.
 
 The emitted `.mlir` consists of the dialects defined by ONNX-MLIR and an
 additional dialect defined by this project with the namespace `zkML`. This
@@ -93,7 +96,6 @@ Natively lowering matrix multiplications leads to polluted traces with a lot of
 additions and multiplications. For that we introduced the operation
 `zkml.Dot-Product` which improves performance drastically.
 
-![compile](docs/pics/GitHubReadMeStep2.svg)
 
 3. Lorem ipsum dolor sit amet, officia excepteur ex fugiat reprehenderit enim
    labore culpa sint ad nisi Lorem pariatur mollit ex esse exercitation amet.
