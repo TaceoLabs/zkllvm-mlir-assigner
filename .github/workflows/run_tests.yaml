@@ -24,7 +24,7 @@ jobs:
       - name: Cmake and build
         run: |
           mkdir build
-          nix develop -c cmake -B build -DCMAKE_ .
+          nix develop -c bash -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=$MLIR_DIR ."
 
       - name: Build
         working-directory: ./build
