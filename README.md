@@ -72,7 +72,7 @@ echo $MLIR_DIR
 ```bash
 mkdir build && cd build
 cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON ..
-make -j 
+make -j zkml-onnx-compiler mlir-assigner
 ```
 
 ## Testing
