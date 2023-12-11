@@ -33,92 +33,97 @@
 #include <string_view>
 #include <llvm/IR/Instructions.h>
 
-#include <spdlog/spdlog.h>
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/format.hpp>
 
 namespace nil {
 namespace blueprint {
 class logger {
 public:
-  enum class level {
-    INFO,
-    DEBUG,
-    ERROR,
-  };
-
-  logger() {
-    // spdlog::set_pattern("%L %v");
-
-    spdlog::set_pattern("[%H:%M:%S %z] [%^-%L-%$] %v");
-    spdlog::set_level(spdlog::level::info);
+  logger(boost::log::trivial::severity_level lvl = boost::log::trivial::info)
+      : lvl(lvl) {
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= lvl);
   }
 
-  void set_level(level lvl) {
+  void set_level(boost::log::trivial::severity_level lvl) {
     this->lvl = lvl;
-    switch (lvl) {
-    case level::DEBUG:
-      spdlog::set_level(spdlog::level::debug);
-      break;
-    case level::INFO:
-      spdlog::set_level(spdlog::level::info);
-      break;
-    case level::ERROR:
-      spdlog::set_level(spdlog::level::err);
-      break;
-    }
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= lvl);
   }
 
-  template <typename... Args>
-  void debug(std::string_view fmt, const Args &...args) {
-    spdlog::debug(fmt, args...);
+  template <typename... Args> void trace(const char *fmt, const Args &...args) {
+    // https://stackoverflow.com/questions/25859672/boostformat-with-variadic-template-arguments
+    BOOST_LOG_TRIVIAL(trace) << boost::str((boost::format(fmt) % ... % args));
   }
 
-  template <typename... Args>
-  void error(std::string_view fmt, const Args &...args) {
-    spdlog::error(fmt, args...);
+  template <typename... Args> void debug(const char *fmt, const Args &...args) {
+    // https://stackoverflow.com/questions/25859672/boostformat-with-variadic-template-arguments
+    BOOST_LOG_TRIVIAL(debug) << boost::str((boost::format(fmt) % ... % args));
+  }
+
+  template <typename... Args> void info(const char *fmt, const Args &...args) {
+    // https://stackoverflow.com/questions/25859672/boostformat-with-variadic-template-arguments
+    BOOST_LOG_TRIVIAL(info) << boost::str((boost::format(fmt) % ... % args));
+  }
+
+  template <typename... Args> void error(const char *fmt, const Args &...args) {
+    // https://stackoverflow.com/questions/25859672/boostformat-with-variadic-template-arguments
+    BOOST_LOG_TRIVIAL(error) << boost::str((boost::format(fmt) % ... % args));
+  }
+
+  // TODO: these two functions can be substituted by one when std::format is
+  // widely supported
+  void debug(boost::basic_format<char> formated_debug_message) {
+    BOOST_LOG_TRIVIAL(debug) << boost::str(formated_debug_message);
+  }
+
+  void debug(std::string_view debug_message) {
+    BOOST_LOG_TRIVIAL(debug) << debug_message;
   }
 
   void log_value(const mlir::Value &Value) {
-    if (lvl < level::DEBUG) {
+    if (lvl > boost::log::trivial::debug) {
       return;
     }
     std::string str;
     llvm::raw_string_ostream ss(str);
     ss << Value;
-    spdlog::debug(str);
+    BOOST_LOG_TRIVIAL(debug) << str;
   }
 
   void log_affine_map(const mlir::AffineMap &AffineMap) {
-    if (lvl < level::DEBUG) {
+    if (lvl > boost::log::trivial::debug) {
       return;
     }
     std::string str;
     llvm::raw_string_ostream ss(str);
     ss << AffineMap;
-    spdlog::debug(str);
+    BOOST_LOG_TRIVIAL(debug) << str;
   }
 
   void log_attribute(const mlir::Attribute &Attr) {
-    if (lvl < level::DEBUG) {
+    if (lvl > boost::log::trivial::debug) {
       return;
     }
     std::string str;
     llvm::raw_string_ostream ss(str);
     ss << Attr;
-    spdlog::debug(str);
+    BOOST_LOG_TRIVIAL(debug) << str;
   }
 
   template <typename T> void operator<<(const T &Val) {
-    if (lvl < level::DEBUG) {
+    if (lvl > boost::log::trivial::debug) {
       return;
     }
     std::string str;
     llvm::raw_string_ostream ss(str);
     ss << Val;
-    spdlog::debug("{}", str);
+    BOOST_LOG_TRIVIAL(debug) << str;
   }
 
   template <typename T> void operator<<(const llvm::ArrayRef<T> &Val) {
-    if (lvl < level::DEBUG) {
+    if (lvl > boost::log::trivial::debug) {
       return;
     }
     std::string str;
@@ -128,11 +133,11 @@ public:
       ss << V << ", ";
     }
     ss << "]";
-    spdlog::debug("{}", str);
+    BOOST_LOG_TRIVIAL(debug) << str;
   }
 
 private:
-  level lvl = level::INFO;
+  boost::log::trivial::severity_level lvl;
 };
 } // namespace blueprint
 } // namespace nil

@@ -26,7 +26,6 @@
               pkgs.git
               pkgs.ripgrep
               pkgs.protobuf3_20
-              pkgs.spdlog
               pkgs.zlib
               pkgs.zstd
               pkgs.libxml2
