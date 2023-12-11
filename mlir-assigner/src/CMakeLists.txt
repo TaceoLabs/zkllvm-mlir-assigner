@@ -28,8 +28,6 @@ elseif(CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
-find_package(spdlog REQUIRED)
-
 string(TOUPPER ${CURRENT_PROJECT_NAME} UPPER_CURRENT_PROJECT_NAME)
 
 # get header files; only needed by CMake generators,
@@ -76,7 +74,7 @@ target_link_libraries(${CURRENT_PROJECT_NAME}
                       marshalling::crypto3_zk
 
                       ${Boost_LIBRARIES}
-                      spdlog::spdlog_header_only)
+                      )
 
                     
 target_include_directories(${CURRENT_PROJECT_NAME} PUBLIC

@@ -61,17 +61,7 @@ struct parser {
       throw std::runtime_error("Currently only one prover is supported, please "
                                "set max_num_provers to 1");
     }
-    switch (log_level) {
-    case boost::log::trivial::severity_level::info:
-      log.set_level(logger::level::INFO);
-      break;
-    case boost::log::trivial::severity_level::debug:
-      log.set_level(logger::level::DEBUG);
-      break;
-    case boost::log::trivial::severity_level::error:
-    default:
-      log.set_level(logger::level::ERROR);
-    }
+    log.set_level(log_level);
     detail::PolicyManager::set_policy(kind);
 
     onnx_mlir::registerDialects(context);

@@ -50,7 +50,6 @@
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/parser/input_reader.hpp>
 
-#include <spdlog/common.h>
 #include <unordered_map>
 #include <map>
 #include <unistd.h>
@@ -193,23 +192,22 @@ private:
     // atm handle only simple loops with one region,block and argument
     assert(op.getRegion().hasOneBlock());
     assert(op.getRegion().getArguments().size() == 1);
-    logger.debug("for ({0:d} -> {1:d} step {2:d})", from, to, step);
+    logger.trace("for (%d -> %d step %d)", from, to, step);
     llvm::hash_code counterHash = mlir::hash_value(op.getInductionVar());
-    logger.debug("inserting hash: {0:x}:{1:d}", std::size_t(counterHash), from);
+    logger.trace("inserting hash: %x:%d", std::size_t(counterHash), from);
     auto res = frames.back().constant_values.insert({counterHash, from});
     assert(res.second); // we do not want overrides here, since we delete it
                         // after loop this should never happen
     while (from < to) {
       handleRegion(op.getLoopBody());
       from += step;
-      logger.debug("updating hash: {0:x}:{1:d}", std::size_t(counterHash),
-                   from);
+      logger.trace("updating hash: %x:%d", std::size_t(counterHash), from);
       frames.back().constant_values[counterHash] = from;
-      logger.debug("{0:d} -> {1:d}", from, to);
-      logger.debug("for done! go next iteration..");
+      logger.trace("%d -> %d", from, to);
+      logger.trace("for done! go next iteration..");
     }
     frames.back().constant_values.erase(counterHash);
-    logger.debug("deleting: {0:x}", std::size_t(counterHash));
+    logger.trace("deleting: %x", std::size_t(counterHash));
   }
 
   int64_t evaluateForParameter(AffineMap &affineMap,
@@ -221,11 +219,11 @@ private:
       llvm::SmallVector<int64_t> inVector(affineMap.getNumInputs());
       for (unsigned i = 0; i < affineMap.getNumInputs(); ++i) {
         llvm::hash_code hash = mlir::hash_value(operands[i]);
-        logger.debug("looking for: {0:x}", std::size_t(hash));
+        logger.trace("looking for: %x", std::size_t(hash));
         if (frames.back().constant_values.find(hash) ==
             frames.back().constant_values.end()) {
           logger.log_affine_map(affineMap);
-          logger.error("CANNOT FIND {0:x}",
+          logger.error("CANNOT FIND %x",
                        std::size_t(mlir::hash_value(operands[i])));
           exit(-1);
         } else {
@@ -385,7 +383,7 @@ private:
     // Print the operation itself and some of its properties
     // Print the operation attributes
     std::string opName = op->getName().getIdentifier().str();
-    logger.debug("visiting {}", opName);
+    logger.debug("visiting %s", opName);
     if (AffineForOp operation = llvm::dyn_cast<AffineForOp>(op)) {
       logger.debug("visiting affine for!");
       assert(op->getAttrs().size() == 3);
@@ -426,7 +424,7 @@ private:
     } else if (AffineStoreOp operation = llvm::dyn_cast<AffineStoreOp>(op)) {
       // affine.store
       auto memRefHash = mlir::hash_value(operation.getMemref());
-      logger.debug("looking for MemRef {0:x}", size_t(memRefHash));
+      logger.debug("looking for MemRef %x", size_t(memRefHash));
       auto memref = frames.back().memrefs.find(memRefHash);
       assert(memref != frames.back().memrefs.end());
 
@@ -507,7 +505,7 @@ private:
     // Print the operation itself and some of its properties
     // Print the operation attributes
     std::string opName = op->getName().getIdentifier().str();
-    logger.debug("visiting {}", opName);
+    logger.debug("visiting %s", opName);
     if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
       logger.debug("global op");
       logger << operation;
@@ -636,7 +634,7 @@ private:
       mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
       assert(MemRefType.getShape().size() == 1 &&
              "DotProduct must have tensors of rank 1");
-      logger.debug("computing DotProduct with {0:d} x {0:d}",
+      logger.debug("computing DotProduct with %d x %d",
                    MemRefType.getShape().back());
       handle_fixedpoint_dot_product_component(operation, zero_var,
                                               frames.back(), bp, assignmnt);
@@ -678,7 +676,7 @@ private:
       auto insert_res = frames.back().memrefs.insert({hash, m});
       assert(insert_res.second); // Reallocating over an existing memref
                                  // should not happen ATM
-      logger.debug("inserting memref with hash {0:x}", size_t(hash));
+      logger.debug("inserting memref with hash %x", size_t(hash));
     } else if (memref::AllocaOp operation =
                    llvm::dyn_cast<memref::AllocaOp>(op)) {
       // TACEO_TODO: handle cleanup of these stack memrefs
@@ -720,7 +718,7 @@ private:
                    llvm::dyn_cast<memref::StoreOp>(op)) {
       // TODO: deduplicate with affine.load
       auto memRefHash = mlir::hash_value(operation.getMemref());
-      logger.debug("looking for MemRef {0:x}", size_t(memRefHash));
+      logger.debug("looking for MemRef %x", size_t(memRefHash));
       auto memref = frames.back().memrefs.find(memRefHash);
       assert(memref != frames.back().memrefs.end());
 
@@ -774,8 +772,8 @@ private:
   }
 
   void handleOperation(Operation *op) {
-    logger.debug("visiting operation: {}", op->getName().getIdentifier().str());
-    logger.debug("current start row: {}", assignmnt.allocated_rows());
+    logger.debug("visiting operation: %s", op->getName().getIdentifier().str());
+    logger.debug("current start row: %d", assignmnt.allocated_rows());
     Dialect *dial = op->getDialect();
     if (!dial) {
       logger.error("Encountered an unregistered Dialect");
