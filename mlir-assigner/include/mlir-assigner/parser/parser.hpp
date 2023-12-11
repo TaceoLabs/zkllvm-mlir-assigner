@@ -21,10 +21,12 @@
 #include <stack>
 #include <variant>
 
-#include <nil/blueprint/blueprint/plonk/assignment.hpp>
-#include <nil/blueprint/blueprint/plonk/circuit.hpp>
+#include <boost/log/trivial.hpp>
 
-#include "llvm/Support/Path.h"
+#include <nil/blueprint/blueprint/plonk/assignment_proxy.hpp>
+#include <nil/blueprint/blueprint/plonk/circuit_proxy.hpp>
+
+#include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 
 #include <mlir/IR/BuiltinOps.h>
@@ -52,14 +54,33 @@ template <typename BlueprintFieldType, typename ArithmetizationParams,
           bool PrintCircuitOutput>
 struct parser {
 
-  parser(long stack_size, bool detailed_logging, const std::string &kind = "") {
-    if (detailed_logging) {
+  parser(long stack_size, boost::log::trivial::severity_level log_level,
+         std::uint32_t max_num_provers, const std::string &kind = "")
+      : max_num_provers(max_num_provers) {
+    if (max_num_provers != 1) {
+      throw std::runtime_error("Currently only one prover is supported, please "
+                               "set max_num_provers to 1");
+    }
+    switch (log_level) {
+    case boost::log::trivial::severity_level::info:
+      log.set_level(logger::level::INFO);
+      break;
+    case boost::log::trivial::severity_level::debug:
       log.set_level(logger::level::DEBUG);
+      break;
+    case boost::log::trivial::severity_level::error:
+    default:
+      log.set_level(logger::level::ERROR);
     }
     detail::PolicyManager::set_policy(kind);
+
     onnx_mlir::registerDialects(context);
     context.getOrLoadDialect<zkml::ZkMlDialect>();
 
+    assignment_ptr = std::make_shared<assignment<ArithmetizationType>>();
+    bp_ptr = std::make_shared<circuit<ArithmetizationType>>();
+    assignments.emplace_back(assignment_ptr, 0);
+    circuits.emplace_back(bp_ptr, 0);
   }
 
   using ArithmetizationType =
@@ -68,8 +89,8 @@ struct parser {
   using var = crypto3::zk::snark::plonk_variable<
       typename BlueprintFieldType::value_type>;
 
-  circuit<ArithmetizationType> bp;
-  assignment<ArithmetizationType> assignmnt;
+  std::vector<circuit_proxy<ArithmetizationType>> circuits;
+  std::vector<assignment_proxy<ArithmetizationType>> assignments;
 
 private:
 public:
@@ -101,14 +122,16 @@ public:
   bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module,
                 const boost::json::array &public_input) {
 
-    zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(bp, assignmnt, public_input, PrintCircuitOutput, log);
+    zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams>
+        evaluator(circuits[0], assignments[0], public_input, PrintCircuitOutput,
+                  log);
     evaluator.evaluate(std::move(module));
     // if (mlir::failed(pm.run(module))) {
     //   llvm::errs() << "Passmanager failed to run!\n";
     //   return false;
     // }
 
-    llvm::outs() << assignmnt.rows_amount() << " rows\n";
+    llvm::outs() << assignments[0].rows_amount() << " rows\n";
 
     return true;
   }
@@ -117,6 +140,9 @@ private:
   mlir::MLIRContext context;
   bool finished = false;
   logger log;
+  std::uint32_t max_num_provers;
+  std::shared_ptr<circuit<ArithmetizationType>> bp_ptr;
+  std::shared_ptr<assignment<ArithmetizationType>> assignment_ptr;
 };
 
 } // namespace blueprint

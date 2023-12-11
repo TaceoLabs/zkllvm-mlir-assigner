@@ -29,9 +29,9 @@ handle_fixedpoint_mul_rescale_component(
         x,
     crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
         y,
-    circuit<crypto3::zk::snark::plonk_constraint_system<
+    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment<crypto3::zk::snark::plonk_constraint_system<
+    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
 
@@ -80,9 +80,9 @@ void handle_fixedpoint_mul_rescale_component(
     mlir::arith::MulFOp &operation,
     stack_frame<crypto3::zk::snark::plonk_variable<
         typename BlueprintFieldType::value_type>> &frame,
-    circuit<crypto3::zk::snark::plonk_constraint_system<
+    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment<crypto3::zk::snark::plonk_constraint_system<
+    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
 

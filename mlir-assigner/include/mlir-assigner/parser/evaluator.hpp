@@ -27,8 +27,8 @@
 #include "src/Dialect/Krnl/KrnlOps.hpp"
 #include "src/Support/KrnlSupport.hpp"
 
-#include <nil/blueprint/blueprint/plonk/assignment.hpp>
-#include <nil/blueprint/blueprint/plonk/circuit.hpp>
+#include <nil/blueprint/blueprint/plonk/assignment_proxy.hpp>
+#include <nil/blueprint/blueprint/plonk/circuit_proxy.hpp>
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
@@ -168,23 +168,15 @@ public:
   using VarType = nil::crypto3::zk::snark::plonk_variable<
       typename BlueprintFieldType::value_type>;
 
-  evaluator(nil::blueprint::circuit<ArithmetizationType> &circuit,
-            nil::blueprint::assignment<ArithmetizationType> &assignment,
+  evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
+            nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
             const boost::json::array &public_input, bool PrintCircuitOutput,
             nil::blueprint::logger &logger)
       : bp(circuit), assignmnt(assignment), public_input(public_input),
         PrintCircuitOutput(PrintCircuitOutput), logger(logger) {}
 
-  // copy constructor
-  evaluator(const evaluator &pass)
-      : bp(pass.bp), assignmnt(pass.assignmnt), public_input(pass.public_input),
-        PrintCircuitOutput(pass.PrintCircuitOutput), logger(pass.logger) {
-    // since we misappropreate the pass runner for our assignment, assume it the
-    // CC is not called we cannot delete it since it is required by the
-    // PassWrapper
-    UNREACHABLE("copy constructor should not be called atm");
-  }
-  evaluator(evaluator &&pass) = default;
+  evaluator(const evaluator &pass) = delete;
+  evaluator(evaluator &&pass) = delete;
   evaluator &operator=(const evaluator &pass) = delete;
 
   void evaluate(mlir::OwningOpRef<mlir::ModuleOp> module) {
@@ -873,8 +865,8 @@ private:
   // std::map<llvm::hash_code, memref<VarType>> globals;
   std::vector<nil::blueprint::stack_frame<VarType>> frames;
   std::map<std::string, func::FuncOp> functions;
-  nil::blueprint::circuit<ArithmetizationType> &bp;
-  nil::blueprint::assignment<ArithmetizationType> &assignmnt;
+  nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
+  nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
   const boost::json::array &public_input;
   size_t public_input_idx = 0;
   VarType undef_var;

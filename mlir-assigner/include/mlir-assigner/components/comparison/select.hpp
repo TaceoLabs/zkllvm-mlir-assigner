@@ -55,9 +55,9 @@ handle_select_component(
         typename BlueprintFieldType::value_type> &x,
     const typename crypto3::zk::snark::plonk_variable<
         typename BlueprintFieldType::value_type> &y,
-    circuit<crypto3::zk::snark::plonk_constraint_system<
+    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment<crypto3::zk::snark::plonk_constraint_system<
+    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
   using non_native_policy_type = basic_non_native_policy<BlueprintFieldType>;
@@ -86,9 +86,9 @@ void handle_select_component(
     mlir::arith::SelectOp &operation,
     stack_frame<crypto3::zk::snark::plonk_variable<
         typename BlueprintFieldType::value_type>> &frame,
-    circuit<crypto3::zk::snark::plonk_constraint_system<
+    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment<crypto3::zk::snark::plonk_constraint_system<
+    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
 
