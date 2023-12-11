@@ -43,12 +43,12 @@ namespace nil {
 
         [[noreturn]] void unreachable(const char *msg, const char *filename, unsigned line) {
             std::cerr << "UNREACHABLE at " << filename << ":" << line << std::endl;
-            std::cerr <<'\t' << msg << std::endl;
+            std::cerr << '\t' << msg << std::endl;
             abort_process();
         }
 
         [[noreturn]] void unreachable(const std::string &msg, const char *filename, unsigned line) {
-            unreachable(msg.c_str(),filename, line);
+            unreachable(msg.c_str(), filename, line);
         }
 
         void assert_check(bool expr, const char *expr_str, const char *filename, unsigned line, const char *msg = "") {
@@ -62,7 +62,7 @@ namespace nil {
                 abort_process();
             }
         }
-    }
-}
+    }    // namespace blueprint
+}    // namespace nil
 
-#endif  // CRYPTO3_ASSIGNER_NIL_BLUEPRINT_ASSERTS_HPP
+#endif    // CRYPTO3_ASSIGNER_NIL_BLUEPRINT_ASSERTS_HPP

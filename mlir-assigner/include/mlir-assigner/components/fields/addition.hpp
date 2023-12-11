@@ -42,47 +42,41 @@
 #include <mlir-assigner/policy/policy_manager.hpp>
 
 namespace nil {
-namespace blueprint {
-namespace detail {
+    namespace blueprint {
+        namespace detail {
 
-template <typename BlueprintFieldType, typename ArithmetizationParams>
-typename components::addition<
-    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                ArithmetizationParams>,
-    BlueprintFieldType,
-    basic_non_native_policy<BlueprintFieldType>>::result_type
-handle_native_field_addition_component(
-    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
-        x,
-    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
-        y,
-    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &assignment,
-    std::uint32_t start_row) {
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            typename components::addition<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
+                handle_native_field_addition_component(
+                    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
+                        x,
+                    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
+                        y,
+                    circuit_proxy<
+                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
+                                                                                 ArithmetizationParams>> &assignment,
+                    std::uint32_t start_row) {
 
-  using component_type = components::addition<
-      crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                  ArithmetizationParams>,
-      BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-  const auto p = PolicyManager::get_parameters(
-      ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
-  component_type component_instance(
-      p.witness,
-      ManifestReader<component_type, ArithmetizationParams>::get_constants(),
-      ManifestReader<component_type,
-                     ArithmetizationParams>::get_public_inputs());
+                using component_type = components::addition<
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                const auto p = PolicyManager::get_parameters(
+                    ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
+                component_type component_instance(
+                    p.witness,
+                    ManifestReader<component_type, ArithmetizationParams>::get_constants(),
+                    ManifestReader<component_type, ArithmetizationParams>::get_public_inputs());
 
-  components::generate_circuit(component_instance, bp, assignment, {x, y},
-                               start_row);
-  return components::generate_assignments(component_instance, assignment,
-                                          {x, y}, start_row);
-}
+                components::generate_circuit(component_instance, bp, assignment, {x, y}, start_row);
+                return components::generate_assignments(component_instance, assignment, {x, y}, start_row);
+            }
 
-} // namespace detail
+        }    // namespace detail
 
-} // namespace blueprint
-} // namespace nil
+    }    // namespace blueprint
+}    // namespace nil
 
-#endif // CRYPTO3_ASSIGNER_FIELD_ADDITION_HPP
+#endif    // CRYPTO3_ASSIGNER_FIELD_ADDITION_HPP

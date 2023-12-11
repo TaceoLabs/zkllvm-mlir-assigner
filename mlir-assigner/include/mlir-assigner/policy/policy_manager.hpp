@@ -31,45 +31,44 @@
 #include <mlir-assigner/policy/default_policy.hpp>
 
 namespace nil {
-namespace blueprint {
-namespace detail {
+    namespace blueprint {
+        namespace detail {
 
-enum class policy_kind { DEFAULT };
+            enum class policy_kind { DEFAULT };
 
-struct PolicyManager {
-  static FlexibleParameters
-  get_parameters(const std::vector<std::pair<std::uint32_t, std::uint32_t>>
-                     &witness_variants) {
-    if (!policy) {
-      policy.reset(new DefaultPolicy());
-    }
-    return policy->get_parameters(witness_variants);
-  }
+            struct PolicyManager {
+                static FlexibleParameters
+                    get_parameters(const std::vector<std::pair<std::uint32_t, std::uint32_t>> &witness_variants) {
+                    if (!policy) {
+                        policy.reset(new DefaultPolicy());
+                    }
+                    return policy->get_parameters(witness_variants);
+                }
 
-  static void set_policy(policy_kind kind) {
-    switch (kind) {
-    case policy_kind::DEFAULT:
-    default: {
-      policy.reset(new DefaultPolicy());
-    }
-    }
-  }
+                static void set_policy(policy_kind kind) {
+                    switch (kind) {
+                        case policy_kind::DEFAULT:
+                        default: {
+                            policy.reset(new DefaultPolicy());
+                        }
+                    }
+                }
 
-  static void set_policy(const std::string &kind_str) {
-    const auto it = policy_kind_map.find(kind_str);
-    if (it != policy_kind_map.end()) {
-      set_policy(it->second);
-    }
-  }
+                static void set_policy(const std::string &kind_str) {
+                    const auto it = policy_kind_map.find(kind_str);
+                    if (it != policy_kind_map.end()) {
+                        set_policy(it->second);
+                    }
+                }
 
-private:
-  inline static std::shared_ptr<Policy> policy = nullptr;
+            private:
+                inline static std::shared_ptr<Policy> policy = nullptr;
 
-  inline static const std::map<std::string, policy_kind> policy_kind_map = {
-      {"default", policy_kind::DEFAULT}};
-};
-} // namespace detail
-} // namespace blueprint
-} // namespace nil
+                inline static const std::map<std::string, policy_kind> policy_kind_map = {
+                    {"default", policy_kind::DEFAULT}};
+            };
+        }    // namespace detail
+    }        // namespace blueprint
+}    // namespace nil
 
-#endif // CRYPTO3_ASSIGNER_POLICY_MANAGER_HPP
+#endif    // CRYPTO3_ASSIGNER_POLICY_MANAGER_HPP

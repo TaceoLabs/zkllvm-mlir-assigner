@@ -39,79 +39,63 @@
 #include <mlir-assigner/policy/policy_manager.hpp>
 
 namespace nil {
-namespace blueprint {
-namespace detail {
+    namespace blueprint {
+        namespace detail {
 
-template <typename BlueprintFieldType, typename ArithmetizationParams>
-typename components::fix_select<
-    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                ArithmetizationParams>,
-    BlueprintFieldType,
-    basic_non_native_policy<BlueprintFieldType>>::result_type
-handle_select_component(
-    const typename crypto3::zk::snark::plonk_variable<
-        typename BlueprintFieldType::value_type> &c,
-    const typename crypto3::zk::snark::plonk_variable<
-        typename BlueprintFieldType::value_type> &x,
-    const typename crypto3::zk::snark::plonk_variable<
-        typename BlueprintFieldType::value_type> &y,
-    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &assignment,
-    std::uint32_t start_row) {
-  using non_native_policy_type = basic_non_native_policy<BlueprintFieldType>;
-  using var = crypto3::zk::snark::plonk_variable<
-      typename BlueprintFieldType::value_type>;
-  using component_type = components::fix_select<
-      crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                  ArithmetizationParams>,
-      BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-  const auto params = PolicyManager::get_parameters(
-      ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
-  component_type component_instance(
-      params.witness,
-      ManifestReader<component_type, ArithmetizationParams>::get_constants(),
-      ManifestReader<component_type,
-                     ArithmetizationParams>::get_public_inputs());
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            typename components::fix_select<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
+                handle_select_component(
+                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &c,
+                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &x,
+                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &y,
+                    circuit_proxy<
+                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
+                                                                                 ArithmetizationParams>> &assignment,
+                    std::uint32_t start_row) {
+                using non_native_policy_type = basic_non_native_policy<BlueprintFieldType>;
+                using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
+                using component_type = components::fix_select<
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                const auto params = PolicyManager::get_parameters(
+                    ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
+                component_type component_instance(
+                    params.witness,
+                    ManifestReader<component_type, ArithmetizationParams>::get_constants(),
+                    ManifestReader<component_type, ArithmetizationParams>::get_public_inputs());
 
-  components::generate_circuit(component_instance, bp, assignment, {c, x, y},
-                               start_row);
-  return components::generate_assignments(component_instance, assignment,
-                                          {c, x, y}, start_row);
-}
-} // namespace detail
-template <typename BlueprintFieldType, typename ArithmetizationParams>
-void handle_select_component(
-    mlir::arith::SelectOp &operation,
-    stack_frame<crypto3::zk::snark::plonk_variable<
-        typename BlueprintFieldType::value_type>> &frame,
-    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
-        BlueprintFieldType, ArithmetizationParams>> &assignment,
-    std::uint32_t start_row) {
+                components::generate_circuit(component_instance, bp, assignment, {c, x, y}, start_row);
+                return components::generate_assignments(component_instance, assignment, {c, x, y}, start_row);
+            }
+        }    // namespace detail
+        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        void handle_select_component(
+            mlir::arith::SelectOp &operation,
+            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
 
-  auto false_value =
-      frame.locals.find(mlir::hash_value(operation.getFalseValue()));
-  ASSERT(false_value != frame.locals.end());
-  auto true_value =
-      frame.locals.find(mlir::hash_value(operation.getTrueValue()));
-  ASSERT(true_value != frame.locals.end());
-  auto condition =
-      frame.locals.find(mlir::hash_value(operation.getCondition()));
-  ASSERT(condition != frame.locals.end());
+            auto false_value = frame.locals.find(mlir::hash_value(operation.getFalseValue()));
+            ASSERT(false_value != frame.locals.end());
+            auto true_value = frame.locals.find(mlir::hash_value(operation.getTrueValue()));
+            ASSERT(true_value != frame.locals.end());
+            auto condition = frame.locals.find(mlir::hash_value(operation.getCondition()));
+            ASSERT(condition != frame.locals.end());
 
-  auto c = condition->second;
-  auto x = true_value->second;
-  auto y = false_value->second;
+            auto c = condition->second;
+            auto x = true_value->second;
+            auto y = false_value->second;
 
-  // TACEO_TODO: check types
+            // TACEO_TODO: check types
 
-  auto result =
-      detail::handle_select_component(c, x, y, bp, assignment, start_row);
-  frame.locals[mlir::hash_value(operation.getResult())] = result.output;
-}
-} // namespace blueprint
-} // namespace nil
-#endif // CRYPTO3_ASSIGNER_SELECT_HPP
+            auto result = detail::handle_select_component(c, x, y, bp, assignment, start_row);
+            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+        }
+    }    // namespace blueprint
+}    // namespace nil
+#endif    // CRYPTO3_ASSIGNER_SELECT_HPP

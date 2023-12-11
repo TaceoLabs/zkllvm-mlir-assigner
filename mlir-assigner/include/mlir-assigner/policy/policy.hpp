@@ -30,15 +30,14 @@
 #include <mlir-assigner/components/component_manifest_utilities.hpp>
 
 namespace nil {
-namespace blueprint {
-namespace detail {
-struct Policy {
-  virtual FlexibleParameters
-  get_parameters(const std::vector<std::pair<std::uint32_t, std::uint32_t>>
-                     &witness_variants) const = 0;
-};
-} // namespace detail
-} // namespace blueprint
-} // namespace nil
+    namespace blueprint {
+        namespace detail {
+            struct Policy {
+                virtual FlexibleParameters get_parameters(
+                    const std::vector<std::pair<std::uint32_t, std::uint32_t>> &witness_variants) const = 0;
+            };
+        }    // namespace detail
+    }        // namespace blueprint
+}    // namespace nil
 
-#endif // CRYPTO3_ASSIGNER_POLICY_HPP
+#endif    // CRYPTO3_ASSIGNER_POLICY_HPP

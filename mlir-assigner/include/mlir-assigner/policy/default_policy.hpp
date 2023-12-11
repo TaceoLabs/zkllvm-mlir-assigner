@@ -30,23 +30,20 @@
 #include <mlir-assigner/policy/policy.hpp>
 
 namespace nil {
-namespace blueprint {
-namespace detail {
-struct DefaultPolicy : public Policy {
-  FlexibleParameters
-  get_parameters(const std::vector<std::pair<std::uint32_t, std::uint32_t>>
-                     &witness_variants) const override {
-    const auto witness_amount =
-        *std::min_element(witness_variants.begin(), witness_variants.end(),
-                          [](const std::pair<std::uint32_t, std::uint32_t> &a,
-                             const std::pair<std::uint32_t, std::uint32_t> &b) {
-                            return a.second < b.second;
-                          });
-    return FlexibleParameters(witness_amount.first);
-  }
-};
-} // namespace detail
-} // namespace blueprint
-} // namespace nil
+    namespace blueprint {
+        namespace detail {
+            struct DefaultPolicy : public Policy {
+                FlexibleParameters get_parameters(
+                    const std::vector<std::pair<std::uint32_t, std::uint32_t>> &witness_variants) const override {
+                    const auto witness_amount = *std::min_element(
+                        witness_variants.begin(), witness_variants.end(),
+                        [](const std::pair<std::uint32_t, std::uint32_t> &a,
+                           const std::pair<std::uint32_t, std::uint32_t> &b) { return a.second < b.second; });
+                    return FlexibleParameters(witness_amount.first);
+                }
+            };
+        }    // namespace detail
+    }        // namespace blueprint
+}    // namespace nil
 
-#endif // CRYPTO3_ASSIGNER_DEFAULT_POLICY_HPP
+#endif    // CRYPTO3_ASSIGNER_DEFAULT_POLICY_HPP
