@@ -8,13 +8,13 @@ using mlir::AffineForOp;
 using mlir::loopUnrollFull;
 
 void zk_ml::AffineFullUnrollPass::runOnOperation() {
-  getOperation().walk([&](AffineForOp op) {
-    if (failed(loopUnrollFull(op))) {
-      op.emitError("unrolling failed");
-      signalPassFailure();
-    }
-  });
+    getOperation().walk([&](AffineForOp op) {
+        if (failed(loopUnrollFull(op))) {
+            op.emitError("unrolling failed");
+            signalPassFailure();
+        }
+    });
 }
 std::unique_ptr<Pass> zk_ml::createFullUnrollPass() {
-  return std::make_unique<AffineFullUnrollPass>();
+    return std::make_unique<AffineFullUnrollPass>();
 }
