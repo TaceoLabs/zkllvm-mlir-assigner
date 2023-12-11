@@ -24,9 +24,9 @@ typename components::fix_neg<
 handle_integer_neg_component(
     crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
         x,
-    circuit<crypto3::zk::snark::plonk_constraint_system<
+    circuit_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &bp,
-    assignment<crypto3::zk::snark::plonk_constraint_system<
+    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<
         BlueprintFieldType, ArithmetizationParams>> &assignment,
     std::uint32_t start_row) {
 
