@@ -17,6 +17,12 @@ run-tests: build
 
 # runs the basic mnist model and prints the output to stdout
 run-basic-mnist: build
-  ./build/src/mlir-assigner -b mlir-assigner/tests/Models/BasicMnist/basic_mnist.mlir -i mlir-assigner/tests/Models/BasicMnist/basic_mnist.json -e pallas -c circuit -t table --print_circuit_output --check
+  ./build/bin/mlir-assigner -b mlir-assigner/tests/Models/BasicMnist/BasicMnist.mlir -i mlir-assigner/tests/Models/BasicMnist/BasicMnist.json -e pallas -c circuit -t table --print_circuit_output --check
+  rm circuit
+  rm table
+
+# runs the basic mnist model and prints the output to stdout
+run-basic-mnist-dot: build
+  ./build/bin/mlir-assigner -b mlir-assigner/tests/Models/BasicMnist/DotProductBasicMnist.mlir -i mlir-assigner/tests/Models/BasicMnist/DotProductBasicMnist.json -e pallas -c circuit -t table --print_circuit_output --check
   rm circuit
   rm table
