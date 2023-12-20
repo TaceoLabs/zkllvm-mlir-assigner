@@ -1,0 +1,28 @@
+	:ô
+
+in_a
+in_bout_a"Conv*
+auto_pad"
+SAME_UPPER *
+	dilations@@ *
+group *
+kernel_shape@@ *
+strides@@ ConvMnist12FirstZ
+in_a
+
+
+
+
+Z
+in_b
+
+
+
+
+b
+out_a
+
+
+
+
+B

@@ -4,8 +4,8 @@
 
 #include "AffineFullUnrollPass.h"
 
-using mlir::AffineForOp;
-using mlir::loopUnrollFull;
+using mlir::affine::AffineForOp;
+using mlir::affine::loopUnrollFull;
 
 void zk_ml::AffineFullUnrollPass::runOnOperation() {
     getOperation().walk([&](AffineForOp op) {
