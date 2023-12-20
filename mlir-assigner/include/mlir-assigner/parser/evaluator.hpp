@@ -39,6 +39,7 @@
 #include <mlir-assigner/components/fixedpoint/ceil.hpp>
 #include <mlir-assigner/components/fixedpoint/division.hpp>
 #include <mlir-assigner/components/fixedpoint/exp.hpp>
+#include <mlir-assigner/components/fixedpoint/log.hpp>
 #include <mlir-assigner/components/fixedpoint/floor.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
 #include <mlir-assigner/components/fixedpoint/neg.hpp>
@@ -323,6 +324,8 @@ namespace zk_ml_toolchain {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
                 handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
+                handle_fixedpoint_log_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
                 handle_fixedpoint_abs_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
@@ -336,6 +339,8 @@ namespace zk_ml_toolchain {
                     frames.back().locals[mlir::hash_value(operation.getLhs())];
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
                 UNREACHABLE("TODO: sqrt");
+            } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
+                UNREACHABLE("TODO: component for erf not ready");
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled math operation: ") + opName);

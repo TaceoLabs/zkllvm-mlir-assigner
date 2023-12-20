@@ -213,14 +213,14 @@ else:
 
 test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
 test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
-# Rest of your code...
-# test_folder("SingleOps", "mlir-assigner/tests/Ops/", 30, args.verbose)
 if slow_test:
     test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
 
 # cleanup
-os.remove("circuit")
-os.remove("table")
+if isfile("circuit"):
+    os.remove("circuit")
+if isfile("table"):
+    os.remove("table")
 print("\n")
 print(f"Test Report - run {run_tests} tests, {success_tests} success, {failed_tests} failed, {error_tests} errors, {ignored_tests} ignored")
 for error in errors:

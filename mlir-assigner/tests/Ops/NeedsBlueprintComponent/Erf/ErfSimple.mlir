@@ -1,10 +1,10 @@
-module attributes {llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu", "onnx-mlir.symbol-postfix" = "acoshsimple.0.mlir"} {
+module attributes {llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-pc-linux-gnu", "onnx-mlir.symbol-postfix" = "erfsimple.mlir"} {
   func.func @main_graph(%arg0: memref<1x10xf32>) -> memref<1x10xf32> attributes {input_names = ["in_a"], llvm.emit_c_interface, output_names = ["out_a"]} {
     %alloc = memref.alloc() {alignment = 16 : i64} : memref<1x10xf32>
     affine.for %arg1 = 0 to 1 {
       affine.for %arg2 = 0 to 10 {
         %0 = affine.load %arg0[%arg1, %arg2] : memref<1x10xf32>
-        %1 = "krnl.acosh"(%0) : (f32) -> f32
+        %1 = math.erf %0 : f32
         affine.store %1, %alloc[%arg1, %arg2] : memref<1x10xf32>
       }
     }
