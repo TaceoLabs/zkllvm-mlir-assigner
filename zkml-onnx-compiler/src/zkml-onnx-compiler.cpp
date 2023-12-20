@@ -1,12 +1,18 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
 #include "llvm/Passes/PassBuilder.h"
 
 #include "src/Compiler/CompilerOptions.hpp"
 #include "src/Compiler/CompilerPasses.hpp"
 #include "src/Compiler/CompilerUtils.hpp"
+#include "src/Builder/FrontendDialectTransformer.hpp"
+#include "src/Version/Version.hpp"
 
 #include "mlir/Dialect/zkml/ZkMlDialect.h"
 #include "Passes/mlir/Transform/ElimCopySignPass.h"
@@ -51,13 +57,7 @@ int loadOnnxFile(StringRef inputFilename, mlir::MLIRContext &context, mlir::Owni
     options.shapeInformation = onnx_mlir::shapeInformation;
     options.allowSorting = true;
     options.externalDataDir = dirName(inputFilename);
-    // does not exist at commit a04f518c1
-    // options.functionsToDecompose.insert(options.functionsToDecompose.end(),
-    //                                  onnx_mlir::functionsToDecompose.begin(),
-    //                                  onnx_mlir::functionsToDecompose.end());
-    return onnx_mlir::ImportFrontendModelFile(inputFilename, context, module, errorMessage);
-    // return onnx_mlir::ImportFrontendModelFile(inputFilename, context, module,
-    // errorMessage, options);
+    return onnx_mlir::ImportFrontendModelFile(inputFilename, context, module, errorMessage, options);
 }
 
 std::unique_ptr<llvm::Module> lowerToLLVM(llvm::LLVMContext &llvmContext, mlir::OwningOpRef<mlir::ModuleOp> &mlirModule,
@@ -65,40 +65,25 @@ std::unique_ptr<llvm::Module> lowerToLLVM(llvm::LLVMContext &llvmContext, mlir::
     std::error_code error;
 
     // TODO do we want to emit .bc? Or at least make it configureable
-    mlir::registerLLVMDialectTranslation(*mlirModule->getContext());
+    //   mlir::registerLLVMDialectTranslation(*mlirModule->getContext());
+    //   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*mlirModule, llvmContext);
+    //   if (!llvmModule) {
+    //       llvm::errs() << "Failed to translate module to LLVMIR.\n";
+    //       *error_code = -1;
+    //       return nullptr;
+    //   }
+
+    mlir::registerBuiltinDialectTranslation(*(mlirModule.get().getContext()));
+    mlir::registerLLVMDialectTranslation(*(mlirModule.get().getContext()));
     std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*mlirModule, llvmContext);
     if (!llvmModule) {
         llvm::errs() << "Failed to translate module to LLVMIR.\n";
-        *error_code = -1;
-        return nullptr;
+        exit(-1);
     }
+    // Tailor LLVMIR to add features that cannot be done with MLIR LLVMIR.
+    // tailorLLVMIR(*llvmModule);
+    // Write LLVMIR to a file.
     return llvmModule;
-}
-
-void runZkMlPasses(std::unique_ptr<llvm::Module> &llvm_module, llvm::OptimizationLevel OptimizationLevel) {
-    // create all analyses
-    // llvm::ModuleAnalysisManager MAM;
-    // llvm::LoopAnalysisManager LAM;
-    // llvm::FunctionAnalysisManager FAM;
-    // llvm::CGSCCAnalysisManager CGAM;
-
-    // llvm::PassBuilder PB;
-    //// Register all the basic analyses with the managers.
-    // PB.registerModuleAnalyses(MAM);
-    // PB.registerCGSCCAnalyses(CGAM);
-    // PB.registerFunctionAnalyses(FAM);
-    // PB.registerLoopAnalyses(LAM);
-    // PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-
-    // This one corresponds to a typical -O2 optimization pipeline.
-    // llvm::ModulePassManager MPM =
-    //     PB.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O1);
-    // // we got default Module Passmanager for corresponding OptimizationLevel
-    // // now add our passes
-    // llvm::FunctionPassManager FPM;
-    // FPM.addPass(zk_ml::AddCircuitFnAttrPass());
-    // MPM.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
-    // MPM.run(*llvm_module, MAM);
 }
 
 void outputModule(mlir::OwningOpRef<mlir::ModuleOp> &module, std::string &outputFilename,
@@ -129,32 +114,8 @@ std::unique_ptr<llvm::Module> translateToLLVMIR(mlir::ModuleOp module, llvm::LLV
 }
 
 int main(int argc, char **argv) {
-
-    /* int optLevel = std::stoi(argv[2]);
-     switch (optLevel) {
-     case 0:
-       onnx_mlir::setOptLevel(onnx_mlir::O0);
-       break;
-     case 1:
-       onnx_mlir::setOptLevel(onnx_mlir::O1);
-       break;
-     case 2:
-       onnx_mlir::setOptLevel(onnx_mlir::O2);
-       break;
-     case 3:
-       onnx_mlir::setOptLevel(onnx_mlir::O3);
-       break;
-     default:
-       llvm::outs() << "opt level must be on of {0,1,2,3}";
-       return -2;
-     }*/
     llvm::cl::ParseCommandLineOptions(argc, argv);
     std::string inputFilename = InputFilename.c_str();
-    //===========================
-    // LETS SEE IF WE NEED THIS
-
-    // copied from onnx-mlir.cpp (lets see what we need)
-    //  Register MLIR command line options.
     mlir::registerAsmPrinterCLOptions();
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
@@ -162,13 +123,18 @@ int main(int argc, char **argv) {
     mlir::registerAsmPrinterCLOptions();
 
     llvm::cl::SetVersionPrinter(onnx_mlir::getVersionPrinter);
+
+    onnx_mlir::removeUnrelatedOptions({&onnx_mlir::OnnxMlirCommonOptions, &onnx_mlir::OnnxMlirOptions});
+    onnx_mlir::initCompilerConfig();
     //===========================
     //
     mlir::MLIRContext context;
+    mlir::registerOpenMPDialectTranslation(context);
+    onnx_mlir::loadDialects(context);
     // does not exist at commit a04f518c1
     // context.appendDialectRegistry(onnx_mlir::registerDialects(onnx_mlir::maccel));
     // context.loadAllAvailableDialects();
-    onnx_mlir::registerDialects(context);
+    // onnx_mlir::registerDialects(context);
     context.getOrLoadDialect<zkml::ZkMlDialect>();
 
     mlir::OwningOpRef<mlir::ModuleOp> module;
@@ -178,17 +144,20 @@ int main(int argc, char **argv) {
         llvm::errs() << errorMessage << "\n";
         return rc;
     }
+    std::string outputFilename = OutputFilename.c_str();
+    onnx_mlir::setupModule(module, context, outputFilename);
     bool EmitMLIR = EmitLevel::zkMLIR == EmitLevel || EmitLevel::MLIR == EmitLevel;
-    mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
+    onnx_mlir::configurePasses();
+    mlir::PassManager pm(module.get()->getName(), mlir::OpPassManager::Nesting::Implicit);
     if (EmitLevel == EmitLevel::ONNX) {
-        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR);
+        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR, outputFilename);
     } else {
-        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, EmitLevel == EmitLevel::zkMLIR);
+        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, outputFilename, EmitLevel == EmitLevel::zkMLIR);
         pm.addPass(zk_ml_toolchain::createElimCopySignPass());
         if (!EmitMLIR) {
             // third parameter here is optional in onnx-mlir. Maybe we should do that
             // too?
-            onnx_mlir::addKrnlToLLVMPasses(pm, true, true);
+            onnx_mlir::addKrnlToLLVMPasses(pm, outputFilename, true);
         }
     }
 
@@ -198,7 +167,6 @@ int main(int argc, char **argv) {
         llvm::errs() << "Passmanager failed to run!\n";
         return -1;
     }
-    std::string outputFilename = OutputFilename.c_str();
 
     if (EmitMLIR || EmitLevel::ONNX == EmitLevel) {
         outputModule(module, outputFilename);

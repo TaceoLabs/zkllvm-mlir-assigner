@@ -1,0 +1,33 @@
+	:—
+…
+in_a
+in_b
+in_cout_a"Conv*
+auto_pad"
+SAME_UPPER *
+	dilations@@ *
+group *
+kernel_shape@@ *
+strides@@ ConvMnist12FirstWithBiasZ
+in_a
+
+
+
+
+Z
+in_b
+
+
+
+
+Z
+in_c
+
+
+b
+out_a
+
+
+
+
+B

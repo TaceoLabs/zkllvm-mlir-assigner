@@ -180,7 +180,7 @@ namespace zk_ml_toolchain {
         bool PrintCircuitOutput;
         nil::blueprint::logger &logger;
 
-        void doAffineFor(AffineForOp &op, int64_t from, int64_t to, int64_t step) {
+        void doAffineFor(affine::AffineForOp &op, int64_t from, int64_t to, int64_t step) {
             assert(from < to);
             assert(step);
             // atm handle only simple loops with one region,block and argument
@@ -347,7 +347,7 @@ namespace zk_ml_toolchain {
             // Print the operation attributes
             std::string opName = op->getName().getIdentifier().str();
             logger.debug("visiting %s", opName);
-            if (AffineForOp operation = llvm::dyn_cast<AffineForOp>(op)) {
+            if (affine::AffineForOp operation = llvm::dyn_cast<affine::AffineForOp>(op)) {
                 logger.debug("visiting affine for!");
                 assert(op->getAttrs().size() == 3);
                 AffineMap fromMap = operation.getLowerBoundMap();
@@ -364,7 +364,7 @@ namespace zk_ml_toolchain {
                 // llvm::outs() << "starting for with: " << from << "->" << to << " (step)
                 // " << step << "\n";
                 doAffineFor(operation, from, to, step);
-            } else if (AffineLoadOp operation = llvm::dyn_cast<AffineLoadOp>(op)) {
+            } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
                 auto memref = frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
                 assert(memref != frames.back().memrefs.end());
 
@@ -380,7 +380,7 @@ namespace zk_ml_toolchain {
                 }
                 auto value = memref->second.get(indicesV);
                 frames.back().locals[mlir::hash_value(operation.getResult())] = value;
-            } else if (AffineStoreOp operation = llvm::dyn_cast<AffineStoreOp>(op)) {
+            } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
                 // affine.store
                 auto memRefHash = mlir::hash_value(operation.getMemref());
                 logger.debug("looking for MemRef %x", size_t(memRefHash));
@@ -402,7 +402,7 @@ namespace zk_ml_toolchain {
                 // put the element from the memref using index vector
                 memref->second.put(indicesV, value->second);
 
-            } else if (AffineYieldOp operation = llvm::dyn_cast<AffineYieldOp>(op)) {
+            } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
             } else if (opName == "affine.if") {
                 logger.debug("visiting affine if!");
@@ -716,7 +716,7 @@ namespace zk_ml_toolchain {
                 return;
             }
 
-            if (llvm::isa<AffineDialect>(dial)) {
+            if (llvm::isa<affine::AffineDialect>(dial)) {
                 handleAffineOperation(op);
                 return;
             }

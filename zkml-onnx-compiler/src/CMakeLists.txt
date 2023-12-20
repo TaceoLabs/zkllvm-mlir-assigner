@@ -12,4 +12,5 @@ add_onnx_mlir_executable(zkml-onnx-compiler
   ZkMLIRTransform
   
   MLIRZkMlDialect
+  MLIROpenMPToLLVMIRTranslation
   )

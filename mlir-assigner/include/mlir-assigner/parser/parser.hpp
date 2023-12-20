@@ -29,6 +29,7 @@
 #include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 
+#include <mlir/Parser/Parser.h>
 #include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/OwningOpRef.h>
@@ -64,7 +65,8 @@ namespace nil {
                 log.set_level(log_level);
                 detail::PolicyManager::set_policy(kind);
 
-                onnx_mlir::registerDialects(context);
+                // onnx_mlir::registerDialects(context);
+                onnx_mlir::loadDialects(context);
                 context.getOrLoadDialect<zkml::ZkMlDialect>();
 
                 assignment_ptr = std::make_shared<assignment<ArithmetizationType>>();

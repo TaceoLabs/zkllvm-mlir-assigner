@@ -6,8 +6,8 @@
 
 #include "AffineFullUnrollPattern.h"
 
-using mlir::AffineForOp;
-using mlir::loopUnrollFull;
+using mlir::affine::AffineForOp;
+using mlir::affine::loopUnrollFull;
 
 namespace {
     struct AffineFullUnrollPattern : public OpRewritePattern<AffineForOp> {
