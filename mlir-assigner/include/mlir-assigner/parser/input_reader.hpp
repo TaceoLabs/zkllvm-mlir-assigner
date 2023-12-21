@@ -27,6 +27,7 @@
 #define CRYPTO3_ASSIGNER_PUBLIC_INPUT_HPP
 
 #include <boost/json/kind.hpp>
+#include "mlir-assigner/helper/asserts.hpp"
 #include <cstdint>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
@@ -78,6 +79,17 @@ namespace nil {
                 ASSERT(value.kind() == boost::json::kind::int64 && "bools must be 0 or 1");
                 ASSERT((value.as_int64() >= 0 && value.as_int64() <= 1) && "bools must be 0 or 1");
                 return parse_scalar(value, out);
+            }
+
+            bool parse_int(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
+              switch (value.kind()) {
+                case boost::json::kind::int64:
+                case boost::json::kind::uint64:
+                  return parse_scalar(value, out);
+                default:
+                  std::cerr << "unsupported int type: " << value.as_string() << std::endl;
+                  UNREACHABLE("int must be int64 or uint64");
+              };
             }
 
             bool parse_scalar(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
@@ -240,7 +252,17 @@ namespace nil {
                         }
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
                     }
-                } else if (type == "bool") {
+                } else if (type == "int") {
+                  //TODO do we have to handle uint?
+                    for (size_t i = 0; i < tensor_arr.size(); ++i) {
+                        if (!parse_int(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
+                            llvm::errs() << "expect fixedpoints in tensor\n";
+                            return false;
+                        }
+                        data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
+                    }
+                }
+                else if (type == "bool") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_bool(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";

@@ -1,6 +1,7 @@
 #ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 #define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
+#include <cassert>
 #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
@@ -46,6 +47,7 @@
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
+#include <mlir-assigner/components/boolean/and.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -248,8 +250,37 @@ namespace zk_ml_toolchain {
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
                 handle_fixedpoint_neg_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
-                UNREACHABLE("TODO component not finished at nils side");
-            } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
+                // check if logical and or bitwise and
+                mlir::Type LhsType = operation.getLhs().getType();
+                mlir::Type RhsType = operation.getRhs().getType();
+                assert(LhsType == RhsType && "must be same type for AndIOp");
+                if (LhsType.getIntOrFloatBitWidth() == 1) {
+                    handle_logic_and(operation, frames.back(), bp, assignmnt, start_row);
+                } else {
+                    UNREACHABLE("TODO add Bitwise And Gadget");
+                }
+            } else if (arith::OrIOp operation = llvm::dyn_cast<arith::OrIOp>(op)) {
+                // check if logical and or bitwise and
+                mlir::Type LhsType = operation.getLhs().getType();
+                mlir::Type RhsType = operation.getRhs().getType();
+                assert(LhsType == RhsType && "must be same type for OrIOp");
+                if (LhsType.getIntOrFloatBitWidth() == 1) {
+                    handle_logic_or(operation, frames.back(), bp, assignmnt, start_row);
+                } else {
+                    UNREACHABLE("TODO add Bitwise Or Gadget");
+                }
+            } else if (arith::XOrIOp operation = llvm::dyn_cast<arith::XOrIOp>(op)) {
+                // check if logical and or bitwise and
+                mlir::Type LhsType = operation.getLhs().getType();
+                mlir::Type RhsType = operation.getRhs().getType();
+                assert(LhsType == RhsType && "must be same type for XOrIOp");
+                if (LhsType.getIntOrFloatBitWidth() == 1) {
+                    handle_logic_xor(operation, frames.back(), bp, assignmnt, start_row);
+                } else {
+                    UNREACHABLE("TODO add Bitwise XOr Gadget");
+                }
+            }
+            else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
 
                 // TODO: ATM, handle only the case where we work on indices that are
                 // constant values
@@ -294,6 +325,9 @@ namespace zk_ml_toolchain {
                     int64_t value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
+                    llvm::outs() << value << "\n";
+                    llvm::outs() << constantValue << "\n";
+                    exit(0);
 
                     // TACEO_TODO: better separation of constant values that come from the
                     // loop bounds an normal ones, ATM just do both
@@ -763,8 +797,8 @@ namespace zk_ml_toolchain {
                 auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
                 assert(retval != frames.back().memrefs.end());
                 if (PrintCircuitOutput) {
-                    llvm::outs() << "Result:\n";
-                    retval->second.print(llvm::outs(), assignmnt);
+                    std::cout << "Result:\n";
+                    retval->second.print(std::cout, assignmnt);
                 }
                 return;
             }
