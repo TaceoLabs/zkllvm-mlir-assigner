@@ -1,6 +1,6 @@
 # build the mlir-assigner
 build: 
-  make -C build/ -j 12
+  make -C build/ -j 12 zkml-onnx-compiler mlir-assigner
 
 # setsup the build folder
 setup-build:
