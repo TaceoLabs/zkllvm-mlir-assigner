@@ -137,14 +137,14 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     try:
-        is_output = check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
-        if is_output == should_output:
+        valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+        if valid:
             print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
             success_tests += 1
         else: 
             failed_tests += 1
             print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"output mismatch"))
+            errors.append(build_error_object(file, error_string))
     except CalledProcessError:
             error_tests += 1
             print(f"{bcolors.FAIL} error{bcolors.ENDC}")
@@ -213,9 +213,9 @@ if args.fast:
 else:
     slow_test = True
 
-#test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
-# test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
-test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
+test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
+test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
+#test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
 if slow_test:
     test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
 

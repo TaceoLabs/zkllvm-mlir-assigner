@@ -2,6 +2,7 @@
 #define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
 #include <cassert>
+#include <cstdint>
 #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
@@ -279,8 +280,7 @@ namespace zk_ml_toolchain {
                 } else {
                     UNREACHABLE("TODO add Bitwise XOr Gadget");
                 }
-            }
-            else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
+            } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
 
                 // TODO: ATM, handle only the case where we work on indices that are
                 // constant values
@@ -322,15 +322,17 @@ namespace zk_ml_toolchain {
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (constantValue.isa<IntegerAttr>()) {
-                    int64_t value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
-                    llvm::outs() << value << "\n";
-                    llvm::outs() << constantValue << "\n";
-                    exit(0);
 
                     // TACEO_TODO: better separation of constant values that come from the
                     // loop bounds an normal ones, ATM just do both
+                    int64_t value;
+                    if (constantValue.isa<BoolAttr>()) {
+                        value = llvm::dyn_cast<BoolAttr>(constantValue).getValue() ? 1 : 0;
+                    } else {
+                        value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
+                    }
                     frames.back().constant_values.insert(
                         std::make_pair(mlir::hash_value(operation.getResult()), value));
 
