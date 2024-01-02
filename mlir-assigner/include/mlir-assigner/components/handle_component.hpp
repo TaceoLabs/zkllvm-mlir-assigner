@@ -26,6 +26,12 @@
 #ifndef CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 #define CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 
+#include <mlir-assigner/memory/stack_frame.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
+
 #define PREPARE_UNARY_INPUT(OP)                                                             \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
                                    typename component_type::input_type>(operation, frame, bp, assignment);
@@ -33,8 +39,7 @@
     prepare_binary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
                                    typename component_type::input_type>(operation, frame, bp, assignment);
 
-#include <mlir-assigner/memory/stack_frame.hpp>
-#include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
+
 namespace nil {
     namespace blueprint {
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename UnaryOp, typename input_type>
