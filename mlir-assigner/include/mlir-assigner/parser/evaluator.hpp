@@ -289,7 +289,6 @@ namespace zk_ml_toolchain {
                 assert(lhs != frames.back().constant_values.end());
                 assert(rhs != frames.back().constant_values.end());
                 auto result = lhs->second + rhs->second;
-                // llvm::outs() << "from " << *operation << " got " << result << "\n";
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
             } else if (arith::SubIOp operation = llvm::dyn_cast<arith::SubIOp>(op)) {
                 assert(operation.getLhs().getType().isa<IndexType>());
@@ -302,7 +301,6 @@ namespace zk_ml_toolchain {
                 assert(lhs != frames.back().constant_values.end());
                 assert(rhs != frames.back().constant_values.end());
                 auto result = lhs->second - rhs->second;
-                // llvm::outs() << "from " << *operation << " got " << result << "\n";
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
             } else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
@@ -316,7 +314,6 @@ namespace zk_ml_toolchain {
                 assert(lhs != frames.back().constant_values.end());
                 assert(rhs != frames.back().constant_values.end());
                 auto result = lhs->second * rhs->second;
-                // llvm::outs() << "from " << *operation << " got " << result << "\n";
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
@@ -374,7 +371,7 @@ namespace zk_ml_toolchain {
                 frames.back().locals[mlir::hash_value(operation.getResult())] =
                     frames.back().locals[mlir::hash_value(operation.getLhs())];
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
-                UNREACHABLE("TODO: sqrt");
+                UNREACHABLE("TODO: component for sqrt not ready");
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
                 UNREACHABLE("TODO: component for erf not ready");
             } else {
@@ -402,8 +399,6 @@ namespace zk_ml_toolchain {
                 auto operandsToV = llvm::SmallVector<Value>(operandsTo.begin(), operandsTo.end());
                 int64_t from = evaluateForParameter(fromMap, operandsFromV, true);
                 int64_t to = evaluateForParameter(toMap, operandsToV, false);
-                // llvm::outs() << "starting for with: " << from << "->" << to << " (step)
-                // " << step << "\n";
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
                 auto memref = frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
@@ -411,15 +406,16 @@ namespace zk_ml_toolchain {
 
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
-                std::vector<int64_t> indicesV;
-                indicesV.reserve(indices.size());
+                std::vector<int64_t> mapDims;
+                mapDims.reserve(indices.size());
                 for (auto a : indices) {
                     // look for indices in constant_values
                     auto res = frames.back().constant_values.find(mlir::hash_value(a));
                     assert(res != frames.back().constant_values.end());
-                    indicesV.push_back(res->second);
+                    mapDims.push_back(res->second);
                 }
-                auto value = memref->second.get(indicesV);
+                auto affineMap = castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName())).getAffineMap();
+                auto value = memref->second.get(evalAffineMap(affineMap, mapDims));
                 frames.back().locals[mlir::hash_value(operation.getResult())] = value;
             } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
                 // affine.store
@@ -430,18 +426,19 @@ namespace zk_ml_toolchain {
 
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
-                std::vector<int64_t> indicesV;
-                indicesV.reserve(indices.size());
+                std::vector<int64_t> mapDims;
+                mapDims.reserve(indices.size());
                 for (auto a : indices) {
                     auto res = frames.back().constant_values.find(mlir::hash_value(a));
                     assert(res != frames.back().constant_values.end());
-                    indicesV.push_back(res->second);
+                    mapDims.push_back(res->second);
                 }
                 // grab the element from the locals array
                 auto value = frames.back().locals.find(mlir::hash_value(operation.getValue()));
                 assert(value != frames.back().locals.end());
                 // put the element from the memref using index vector
-                memref->second.put(indicesV, value->second);
+                auto affineMap = castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName())).getAffineMap();
+                memref->second.put(evalAffineMap(affineMap, mapDims), value->second);
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
@@ -474,7 +471,6 @@ namespace zk_ml_toolchain {
                 AffineMap applyMap = castFromAttr<AffineMapAttr>(op->getAttrs()[0].getValue()).getAffineMap();
                 llvm::SmallVector<Value> operands(op->getOperands().begin(), op->getOperands().end());
                 int64_t result = evaluateForParameter(applyMap, operands, false);
-                // llvm::outs() << "from " << *op << " got result " << result << "\n";
                 frames.back().constant_values[mlir::hash_value(op->getResults()[0])] = result;
             } else if (opName == "affine.max") {
                 logger.debug("got affine.max");
@@ -483,7 +479,6 @@ namespace zk_ml_toolchain {
                 AffineMap applyMap = castFromAttr<AffineMapAttr>(op->getAttrs()[0].getValue()).getAffineMap();
                 llvm::SmallVector<Value> operands(op->getOperands().begin(), op->getOperands().end());
                 int64_t result = evaluateForParameter(applyMap, operands, true);
-                // llvm::outs() << "from " << *op << " got result " << result << "\n";
                 frames.back().constant_values[mlir::hash_value(op->getResults()[0])] = result;
             } else {
                 UNREACHABLE(std::string("unhandled affine operation: ") + opName);
@@ -642,7 +637,6 @@ namespace zk_ml_toolchain {
                         auto index = frames.back().constant_values.find(mlir::hash_value(operands[dynamicCounter++]));
                         assert(index != frames.back().constant_values.end());
                         dims.emplace_back(index->second);
-                        // llvm::outs() << "dynamic size is: " << index->second << "\n";
                     } else {
                         dims.emplace_back(dim);
                     }
@@ -701,7 +695,6 @@ namespace zk_ml_toolchain {
                     auto res = frames.back().constant_values.find(mlir::hash_value(a));
                     assert(res != frames.back().constant_values.end());
                     indicesV.push_back(res->second);
-                    // llvm::outs() << "found " << res->second << "\n";
                 }
                 // grab the element from the locals array
                 auto value = frames.back().locals.find(mlir::hash_value(operation.getValue()));
