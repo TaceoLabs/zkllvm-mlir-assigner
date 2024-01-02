@@ -26,13 +26,33 @@
 #ifndef CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 #define CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 
-#define PREPARE_INPUT(OP)                                                             \
+#define PREPARE_UNARY_INPUT(OP)                                                             \
+    prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
+                                   typename component_type::input_type>(operation, frame, bp, assignment);
+#define PREPARE_BINARY_INPUT(OP)                                                             \
     prepare_binary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
                                    typename component_type::input_type>(operation, frame, bp, assignment);
 
 #include <mlir-assigner/memory/stack_frame.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
 namespace nil {
     namespace blueprint {
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename UnaryOp, typename input_type>
+        input_type prepare_unary_operation_input(
+            UnaryOp &operation,
+            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment) {
+
+            assert(operation->getNumOperands() == 1 && "unary operand must have only one operand");
+            auto operand = frame.locals.find(mlir::hash_value(operation->getOperand(0)));
+            ASSERT(operand != frame.locals.end());
+
+            input_type instance_input;
+            instance_input.x = operand->second;
+            return instance_input;
+        }
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename BinOp, typename input_type>
         input_type prepare_binary_operation_input(
             BinOp &operation,
@@ -80,11 +100,11 @@ namespace nil {
             }
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename BinOp>
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
         void fill_trace(
             component_type &component,
             typename component_type::input_type &input,
-            BinOp &mlir_op,
+            Op &mlir_op,
             stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>

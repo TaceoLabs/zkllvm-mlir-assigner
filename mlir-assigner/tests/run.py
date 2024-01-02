@@ -205,6 +205,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--fast', action='store_true', help='Run fast tests only')
 parser.add_argument('--verbose', action='store_true', help='Print detailed output')
 parser.add_argument('--keep-mlir', action='store_true', help='Keep generated mlir files')
+parser.add_argument('--current', action='store_true', help='do only the current folder')
 
 args = parser.parse_args()
 
@@ -213,11 +214,13 @@ if args.fast:
 else:
     slow_test = True
 
-test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
-test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
-#test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
-if slow_test:
-    test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
+if args.current:
+    test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
+else:
+    test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
+    test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
+    if slow_test:
+        test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
 
 # cleanup
 if isfile("circuit"):
