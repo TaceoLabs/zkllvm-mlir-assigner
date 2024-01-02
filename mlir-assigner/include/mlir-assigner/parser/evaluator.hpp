@@ -384,12 +384,14 @@ namespace zk_ml_toolchain {
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
                 UNREACHABLE("TODO: component for sqrt not ready");
             } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
-              handle_sin(operation, frames.back(), bp, assignmnt, start_row);
+                handle_sin(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
-              handle_cos(operation, frames.back(), bp, assignmnt, start_row);
-            } else if (math::TanOp operation = llvm::dyn_cast<math::TanOp>(op)) {
-                UNREACHABLE("TODO: component for cos not ready");
-            }  else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
+                handle_cos(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
+                UNREACHABLE("TODO: component for atanh not ready");
+            } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
+                UNREACHABLE("TODO: component for tanh not ready");
+            } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
                 UNREACHABLE("TODO: component for erf not ready");
             } else {
                 std::string opName = op->getName().getIdentifier().str();
@@ -615,8 +617,18 @@ namespace zk_ml_toolchain {
                 return;
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
+            } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
+                UNREACHABLE(std::string("TODO KrnlSin: link to bluebrint component"));
             } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcosh: link to bluebrint component"));
+            } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
+                UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
+            } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
+                UNREACHABLE("TODO: component for tan not ready");
+            } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
+                UNREACHABLE("TODO: component for atan not ready");
+            } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
+                UNREACHABLE("TODO: component for atanh not ready");
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled krnl operation: ") + opName);
