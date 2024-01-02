@@ -118,7 +118,7 @@ namespace nil {
                 //   return false;
                 // }
 
-                llvm::outs() << assignments[0].rows_amount() << " rows\n";
+                std::cout << assignments[0].rows_amount() << " rows\n";
 
                 return true;
             }

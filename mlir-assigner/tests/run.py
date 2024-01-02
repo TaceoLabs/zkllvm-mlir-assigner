@@ -29,16 +29,18 @@ zkml_compiler = "build/bin/zkml-onnx-compiler"
 
 def assert_output(should_output, is_output):
     global MAX_DELTA 
-    ziped = zip(should_output.splitlines(), is_output.splitlines())
+    is_lines = is_output.splitlines()
+    if len(is_lines) < 3:
+        return False, "Output incomplete got less than 3 lines"
+    ziped = zip(should_output.splitlines(), is_lines)
     #1 First Line Result
     s,i = next(ziped)
     if s != i:
-        print("FAIL")
         return False, "Cannot get Result (First Line does not match) "
     s,i = next(ziped)
     memref_index = s.find('[')
     if s[0: memref_index] != i[0: memref_index]:
-        return False
+        return False, "Type mismatch (should={}; is={})".format(s[0: memref_index], i[0: memref_index])
     s_values = ast.literal_eval(s[memref_index:])
     i_values = ast.literal_eval(i[memref_index:])
     if any(filter(lambda a: a >= MAX_DELTA, map(lambda a: abs(a[0]-a[1]), zip(s_values, i_values)))):
@@ -135,14 +137,14 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     try:
-        is_output = check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
-        if is_output == should_output:
+        valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+        if valid:
             print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
             success_tests += 1
         else: 
             failed_tests += 1
             print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"output mismatch"))
+            errors.append(build_error_object(file, error_string))
     except CalledProcessError:
             error_tests += 1
             print(f"{bcolors.FAIL} error{bcolors.ENDC}")
@@ -213,6 +215,7 @@ else:
 
 test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
 test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
+#test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
 if slow_test:
     test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
 

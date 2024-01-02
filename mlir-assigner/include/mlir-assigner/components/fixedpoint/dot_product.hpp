@@ -14,8 +14,6 @@
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
-#include <mlir-assigner/components/fields/addition.hpp>
-
 namespace nil {
     namespace blueprint {
         namespace detail {

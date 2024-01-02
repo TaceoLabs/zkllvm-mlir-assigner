@@ -100,7 +100,7 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void print(
-                llvm::raw_ostream &os,
+                std::ostream& os,
                 const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment) {
                 os << "memref<";
@@ -108,13 +108,29 @@ namespace nil {
                     os << dims[i];
                     os << "x";
                 }
-                os << type << ">[";
-                for (int i = 0; i < data.size(); i++) {
-                    auto value = var_value(assignment, data[i]).data;
-                    components::FixedPoint<BlueprintFieldType, 1, 1> out(value, 16);
-                    os << out.to_double();
-                    if (i != data.size() - 1)
-                        os << ",";
+                std::string type_str;
+                llvm::raw_string_ostream ss(type_str);
+                ss << type << ">[";
+                os << type_str;
+                if (type.isa<mlir::IntegerType>()) {
+                  if (type.getIntOrFloatBitWidth() == 1) {
+                    //bool
+                    for (int i = 0; i < data.size(); i++) {
+                        os << var_value(assignment, data[i]).data;
+                        if (i != data.size() - 1)
+                            os << ",";
+                    }
+                  } else {
+                    //int
+                  }
+                } else if (type.isa<mlir::FloatType>()) {
+                    for (int i = 0; i < data.size(); i++) {
+                        auto value = var_value(assignment, data[i]).data;
+                        components::FixedPoint<BlueprintFieldType, 1, 1> out(value, 16);
+                        os << out.to_double();
+                        if (i != data.size() - 1)
+                            os << ",";
+                    }
                 }
                 os << "]\n";
             }
