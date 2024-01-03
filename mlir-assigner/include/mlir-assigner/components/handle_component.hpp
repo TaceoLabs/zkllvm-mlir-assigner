@@ -26,6 +26,7 @@
 #ifndef CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 #define CRYPTO3_ASSIGNER_HANDLE_COMPONENT_HPP
 
+#include <functional>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
@@ -88,8 +89,7 @@ namespace nil {
 
             using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
-            std::vector<var> all_vars = instance_input.all_vars();
-            std::vector<std::reference_wrapper<var>> input(all_vars.begin(), all_vars.end());
+            std::vector<std::reference_wrapper<var>> input = instance_input.all_vars();
             const auto &used_rows = assignment.get_used_rows();
 
             for (auto &v : input) {
