@@ -318,7 +318,11 @@ namespace zk_ml_toolchain {
                 auto result = lhs->second * rhs->second;
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
-            } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
+            } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
+              llvm::outs() << "icmp\n";
+              exit(0);
+            } 
+            else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (constantValue.isa<IntegerAttr>()) {
                     // this insert is ok, since this should never change, so we don't
