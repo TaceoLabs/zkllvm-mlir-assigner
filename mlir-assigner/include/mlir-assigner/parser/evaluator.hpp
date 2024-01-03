@@ -48,7 +48,9 @@
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
+#include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
 #include <mlir-assigner/components/boolean/and.hpp>
+#include <mlir-assigner/components/fixedpoint/to_fixpoint.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -347,6 +349,15 @@ namespace zk_ml_toolchain {
                     logger << constantValue;
                     UNREACHABLE("unhandled constant");
                 }
+            } else if (arith::IndexCastOp operation = llvm::dyn_cast<arith::IndexCastOp>(op)) {
+                assert(operation->getNumOperands() == 1 && "IndexCast must have exactly one operand");
+                auto index = frames.back().constant_values[mlir::hash_value(operation->getOperand(0))];
+                typename BlueprintFieldType::value_type field_constant = index;
+                auto val = put_into_assignment(field_constant);
+                frames.back().locals.insert(std::make_pair(mlir::hash_value(operation.getResult()), val));
+            } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
+                // TODO this does not respect negative and no different ranges for ints...
+                handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled arith operation: ") + opName);
@@ -372,6 +383,14 @@ namespace zk_ml_toolchain {
                     frames.back().locals[mlir::hash_value(operation.getLhs())];
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
                 UNREACHABLE("TODO: component for sqrt not ready");
+            } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
+                handle_sin(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
+                handle_cos(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
+                UNREACHABLE("TODO: component for atanh not ready");
+            } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
+                UNREACHABLE("TODO: component for tanh not ready");
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
                 UNREACHABLE("TODO: component for erf not ready");
             } else {
@@ -414,7 +433,9 @@ namespace zk_ml_toolchain {
                     assert(res != frames.back().constant_values.end());
                     mapDims.push_back(res->second);
                 }
-                auto affineMap = castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName())).getAffineMap();
+                auto affineMap =
+                    castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
+                        .getAffineMap();
                 auto value = memref->second.get(evalAffineMap(affineMap, mapDims));
                 frames.back().locals[mlir::hash_value(operation.getResult())] = value;
             } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
@@ -437,7 +458,9 @@ namespace zk_ml_toolchain {
                 auto value = frames.back().locals.find(mlir::hash_value(operation.getValue()));
                 assert(value != frames.back().locals.end());
                 // put the element from the memref using index vector
-                auto affineMap = castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName())).getAffineMap();
+                auto affineMap =
+                    castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName()))
+                        .getAffineMap();
                 memref->second.put(evalAffineMap(affineMap, mapDims), value->second);
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
@@ -594,8 +617,18 @@ namespace zk_ml_toolchain {
                 return;
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
+            } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
+                UNREACHABLE(std::string("TODO KrnlSin: link to bluebrint component"));
             } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcosh: link to bluebrint component"));
+            } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
+                UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
+            } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
+                UNREACHABLE("TODO: component for tan not ready");
+            } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
+                UNREACHABLE("TODO: component for atan not ready");
+            } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
+                UNREACHABLE("TODO: component for atanh not ready");
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled krnl operation: ") + opName);

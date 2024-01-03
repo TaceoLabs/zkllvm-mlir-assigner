@@ -29,7 +29,6 @@
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
-#include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
 #include <nil/blueprint/component.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp>    // TODO: check if there is a new mechanism for this in nil upstream
@@ -51,7 +50,7 @@ namespace nil {
             using component_type = components::lookup_logic_and<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
 
-            auto input = PREPARE_INPUT(mlir::arith::AndIOp);
+            auto input = PREPARE_BINARY_INPUT(mlir::arith::AndIOp);
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 
@@ -72,7 +71,7 @@ namespace nil {
             // using component_type = components::lookup_logic_or<
             //     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
             //
-            // auto input = PREPARE_INPUT(mlir::arith::OrIOp);
+            // auto input = PREPARE_BINARY_INPUT(mlir::arith::OrIOp);
             // const auto p = detail::PolicyManager::get_parameters(
             //     detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
             //
@@ -91,7 +90,7 @@ namespace nil {
             using component_type = components::lookup_logic_xor<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
 
-            auto input = PREPARE_INPUT(mlir::arith::XOrIOp);
+            auto input = PREPARE_BINARY_INPUT(mlir::arith::XOrIOp);
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 
