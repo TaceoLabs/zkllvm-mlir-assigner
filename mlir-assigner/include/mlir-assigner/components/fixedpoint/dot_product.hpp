@@ -84,7 +84,8 @@ namespace nil {
             stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                &assignment) {
+                &assignment,
+            std::uint32_t start_row) {
 
             auto lhs = frame.memrefs.find(mlir::hash_value(operation.getLhs()));
             ASSERT(lhs != frame.memrefs.end());
@@ -96,8 +97,7 @@ namespace nil {
 
             // TACEO_TODO: check types
 
-            auto result = detail::handle_fixedpoint_dot_product_component(x, y, zero_var, bp, assignment,
-                                                                          assignment.allocated_rows());
+            auto result = detail::handle_fixedpoint_dot_product_component(x, y, zero_var, bp, assignment, start_row);
             frame.locals[mlir::hash_value(operation.getResult())] = result.output;
         }
     }    // namespace blueprint
