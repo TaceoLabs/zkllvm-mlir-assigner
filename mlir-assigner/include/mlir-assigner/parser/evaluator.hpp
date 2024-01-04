@@ -543,29 +543,39 @@ namespace zk_ml_toolchain {
                 // Create the global at the entry of the module.
                 assert(operation.getValue().has_value() && "Krnl Global must always have a value");
                 auto value = operation.getValue().value();
+                //TODO check other bit sizes. Also no range constraint is this necessary????
                 if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
-
-                    // TODO handle other types
-                    auto floats = attr.tryGetValues<APFloat>();
-                    if (mlir::failed(floats)) {
-                        UNREACHABLE("Unsupported attribute type");
-                    }
-                    size_t idx = 0;
-                    for (auto a : floats.value()) {
-                        double d;
-                        if (&a.getSemantics() == &llvm::APFloat::IEEEdouble()) {
-                            d = a.convertToDouble();
-                        } else if (&a.getSemantics() == &llvm::APFloat::IEEEsingle()) {
-                            d = a.convertToFloat();
-                        } else {
-                            UNREACHABLE("unsupported float semantics");
+                    mlir::Type attrType = attr.getElementType();
+                    if (attrType.isa<mlir::IntegerType>()) {
+                        auto ints = attr.tryGetValues<APInt>();
+                        assert(!mlir::failed(ints) && "must work as we checked above");
+                        size_t idx = 0;
+                        for (auto a : ints.value()) {
+                             auto var = put_into_assignment(a.getSExtValue());
+                             m.put_flat(idx++, var);
                         }
-                        nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
-                        auto var = put_into_assignment(fixed.get_value());
-                        m.put_flat(idx++, var);
+                    } else if (attrType.isa<mlir::FloatType>()) {
+                        auto floats = attr.tryGetValues<APFloat>();
+                        assert(!mlir::failed(floats) && "must work as we checked above");
+                        size_t idx = 0;
+                        for (auto a : floats.value()) {
+                            double d;
+                            if (&a.getSemantics() == &llvm::APFloat::IEEEdouble()) {
+                                d = a.convertToDouble();
+                            } else if (&a.getSemantics() == &llvm::APFloat::IEEEsingle()) {
+                                d = a.convertToFloat();
+                            } else {
+                                UNREACHABLE("unsupported float semantics");
+                            }
+                            nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+                            auto var = put_into_assignment(fixed.get_value());
+                            m.put_flat(idx++, var);
+                        }
+                    } else {
+                      UNREACHABLE("Unsupported attribute type");
                     }
                 } else {
-                    UNREACHABLE("Unsupported attribute type");
+                    UNREACHABLE("Expected a DenseElementsAttr");
                 }
                 frames.back().memrefs.insert({mlir::hash_value(operation.getOutput()), m});
                 return;
