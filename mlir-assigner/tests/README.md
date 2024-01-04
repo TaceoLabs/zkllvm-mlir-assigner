@@ -80,8 +80,8 @@ long as it is applicable for ZK).
 | **Adam**                      |        :x:         |        :x:         |                                           |
 | **Add**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.    |
 | **And**                       |        :x:         | :white_check_mark: |                                           |
-| **ArgMax**                    |        :x:         | :white_check_mark: |                                           |
-| **ArgMin**                    |        :x:         | :white_check_mark: |                                           |
+| **ArgMax**                    |        :x:         | :white_check_mark: | Apparently select_last_index always 1     |
+| **ArgMin**                    |        :x:         | :white_check_mark: | Apparently select_last_index always 1     |
 | **ArrayFeatureExtractor**     |        :x:         |        :x:         |                                           |
 | **Asin**                      |        :x:         | :white_check_mark: |                                           |
 | **Asinh**                     |        :x:         | :white_check_mark: |                                           |

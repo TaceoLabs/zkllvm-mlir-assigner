@@ -16,6 +16,8 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Dialect/zkml/IR/DotProduct.h"
+#include "mlir/Dialect/zkml/IR/ArgMin.h"
+#include "mlir/Dialect/zkml/IR/ArgMax.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -35,6 +37,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
 #include <mlir-assigner/components/comparison/fixed_comparison.hpp>
+#include <mlir-assigner/components/comparison/argminmax.hpp>
 #include <mlir-assigner/components/comparison/select.hpp>
 #include <mlir-assigner/components/fixedpoint/abs.hpp>
 #include <mlir-assigner/components/fixedpoint/addition.hpp>
@@ -318,6 +321,9 @@ namespace zk_ml_toolchain {
                 auto result = lhs->second * rhs->second;
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
+            } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
+                llvm::outs() << "icmp\n";
+                exit(0);
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (constantValue.isa<IntegerAttr>()) {
@@ -636,6 +642,7 @@ namespace zk_ml_toolchain {
         }
 
         void handleZkMlOperation(Operation *op) {
+            std::uint32_t start_row = assignmnt.allocated_rows();
             if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
                 mlir::Value lhs = operation.getLhs();
                 mlir::Value rhs = operation.getRhs();
@@ -643,8 +650,18 @@ namespace zk_ml_toolchain {
                 mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
                 assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
                 logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
-                handle_fixedpoint_dot_product_component(operation, zero_var, frames.back(), bp, assignmnt);
+                handle_fixedpoint_dot_product_component(operation, zero_var, frames.back(), bp, assignmnt, start_row);
                 return;
+            } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
+                auto nextIndex = frames.back().constant_values.find(mlir::hash_value(operation.getNextIndex()));
+                ASSERT(nextIndex != frames.back().constant_values.end());
+                auto nextIndexVar = put_into_assignment(nextIndex->second);
+                handle_argmin(operation, frames.back(), bp, assignmnt, nextIndexVar, start_row);
+            } else if (zkml::ArgMaxOp operation = llvm::dyn_cast<zkml::ArgMaxOp>(op)) {
+                auto nextIndex = frames.back().constant_values.find(mlir::hash_value(operation.getNextIndex()));
+                ASSERT(nextIndex != frames.back().constant_values.end());
+                auto nextIndexVar = put_into_assignment(nextIndex->second);
+                handle_argmax(operation, frames.back(), bp, assignmnt, nextIndexVar, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
