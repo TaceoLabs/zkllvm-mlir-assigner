@@ -44,6 +44,7 @@
 #include <mlir-assigner/components/fixedpoint/ceil.hpp>
 #include <mlir-assigner/components/fixedpoint/division.hpp>
 #include <mlir-assigner/components/fixedpoint/exp.hpp>
+#include <mlir-assigner/components/fixedpoint/sqrt.hpp>
 #include <mlir-assigner/components/fixedpoint/log.hpp>
 #include <mlir-assigner/components/fixedpoint/floor.hpp>
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
@@ -376,6 +377,8 @@ namespace zk_ml_toolchain {
                 handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
                 handle_fixedpoint_log_component(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
+                UNREACHABLE("TODO: component for powf not ready");
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
                 handle_fixedpoint_abs_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
@@ -388,7 +391,7 @@ namespace zk_ml_toolchain {
                 frames.back().locals[mlir::hash_value(operation.getResult())] =
                     frames.back().locals[mlir::hash_value(operation.getLhs())];
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
-                UNREACHABLE("TODO: component for sqrt not ready");
+                handle_sqrt(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
                 handle_sin(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {

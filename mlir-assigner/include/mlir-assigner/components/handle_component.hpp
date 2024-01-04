@@ -33,6 +33,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
 
 #define PREPARE_UNARY_INPUT(OP)                                                             \
