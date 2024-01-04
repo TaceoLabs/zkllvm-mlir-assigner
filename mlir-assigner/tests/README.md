@@ -219,7 +219,7 @@ long as it is applicable for ZK).
 | **Range**                     |        :x:         | :white_check_mark: |                                                    |
 | **Reciprocal**                | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **ReduceL1**                  | :white_check_mark: | :white_check_mark: |                                                    |
-| **ReduceL2**                  |        :x:         | :white_check_mark: |                                                    |
+| **ReduceL2**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **ReduceLogSum**              | :white_check_mark: | :white_check_mark: |                                                    |
 | **ReduceLogSumExp**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **ReduceMax**                 | :white_check_mark: | :white_check_mark: |                                                    |
@@ -265,7 +265,7 @@ long as it is applicable for ZK).
 | **SpaceToDepth**              |        :x:         | :white_check_mark: |                                                    |
 | **Split**                     |        :x:         | :white_check_mark: |                                                    |
 | **SplitToSequence**           |        :x:         |        :x:         |                                                    |
-| **Sqrt**                      |        :x:         | :white_check_mark: |                                                    |
+| **Sqrt**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Squeeze**                   |        :x:         | :white_check_mark: |                                                    |
 | **StringNormalizer**          |        :x:         |        :x:         |                                                    |
 | **Sub**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
