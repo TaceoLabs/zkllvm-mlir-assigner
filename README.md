@@ -71,7 +71,7 @@ echo $MLIR_DIR
 4. Setup cmake and build
 ```bash
 mkdir build && cd build
-cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON ..
+cmake -DMLIR_DIR=${MLIR_DIR} ..
 make -j zkml-onnx-compiler mlir-assigner
 ```
 
