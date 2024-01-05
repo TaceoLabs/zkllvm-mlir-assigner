@@ -2,9 +2,8 @@
 build: 
   make -C build/ -j 12 zkml-onnx-compiler mlir-assigner
 
-# setsup the build folder
+# setup the build folder
 setup-build:
-  mkdir -p build
   cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -Bbuild -S.
 
 # runs only the small model tests (single onnx operations)
@@ -26,3 +25,11 @@ run-basic-mnist-dot: build
   ./build/bin/mlir-assigner -b mlir-assigner/tests/Models/BasicMnist/DotProductBasicMnist.mlir -i mlir-assigner/tests/Models/BasicMnist/DotProductBasicMnist.json -e pallas -c circuit -t table --print_circuit_output --check
   rm circuit
   rm table
+
+# setup the build folder for blueprint tests
+setup-build-bptests:
+  cmake -DMLIR_DIR=${MLIR_DIR} -DBUILD_SHARED_LIBS=OFF -DBLUEPRINT_PLACEHOLDER_PROOF_GEN=TRUE -DBUILD_BLUEPRINT_TESTS=TRUE -Bbuild -S.
+
+# build blueprint fixedpoint tester test
+buildbpfptester:
+  make -C build/ -j 12 blueprint_algebra_fixedpoint_plonk_tester_test
