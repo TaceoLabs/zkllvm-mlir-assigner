@@ -38,7 +38,7 @@ nix develop # or
 nix develop --cores 16 #allow the first-time build to use more cores for building the deps
 # in the devshell
 mkdir build && cd build
-cmake -DMLIR_DIR=${MLIR_DIR} -DONNX_USE_PROTOBUF_SHARED_LIBS=ON ..
+cmake -DMLIR_DIR=${MLIR_DIR} ..
 make -j
 ```
 
