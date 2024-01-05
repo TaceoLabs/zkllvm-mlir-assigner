@@ -35,6 +35,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/logic_or_flag.hpp>
 
 #define PREPARE_UNARY_INPUT(OP)                                                             \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \

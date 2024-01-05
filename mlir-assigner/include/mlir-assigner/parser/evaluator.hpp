@@ -54,7 +54,7 @@
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
-#include <mlir-assigner/components/boolean/and.hpp>
+#include <mlir-assigner/components/boolean/logic_ops.hpp>
 #include <mlir-assigner/components/fixedpoint/to_fixpoint.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
