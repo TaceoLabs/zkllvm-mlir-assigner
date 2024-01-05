@@ -113,8 +113,8 @@ long as it is applicable for ZK).
 | **Compress**                  |        :x:         | :white_check_mark: |                                                    |
 | **Concat**                    |        :x:         | :white_check_mark: |                                                    |
 | **ConcatFromSequence**        |        :x:         |        :x:         |                                                    |
-| **Constant**                  |        :x:         | :white_check_mark: |                                                    |
-| **ConstantOfShape**           |        :x:         | :white_check_mark: |                                                    |
+| **Constant**                  | :white_check_mark: | :white_check_mark: |                                                    |
+| **ConstantOfShape**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **Conv**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConvInteger**               |        :x:         |        :x:         |                                                    |
 | **ConvTranspose**             |        :x:         | :white_check_mark: |                                                    |
@@ -173,7 +173,7 @@ long as it is applicable for ZK).
 | **LessOrEqual**               | :white_check_mark: | :white_check_mark: |                                                    |
 | **LinearClassifier**          |        :x:         |        :x:         |                                                    |
 | **LinearRegressor**           |        :x:         |        :x:         |                                                    |
-| **Log**                       |        :x:         | :white_check_mark: |                                                    |
+| **Log**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LogSoftmax**                | :white_check_mark: | :white_check_mark: |                                                    |
 | **Loop**                      |        :x:         | :white_check_mark: |                                                    |
 | **LpNormalization**           |        :x:         |        :x:         |                                                    |
@@ -204,7 +204,7 @@ long as it is applicable for ZK).
 | **Optional**                  |        :x:         |        :x:         |                                                    |
 | **OptionalGetElement**        |        :x:         |        :x:         |                                                    |
 | **OptionalHasElement**        |        :x:         |        :x:         |                                                    |
-| **Or**                        |        :x:         | :white_check_mark: |                                                    |
+| **Or**                        | :white_check_mark: | :white_check_mark: |                                                    |
 | **PRelu**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Pad**                       |        :x:         | :white_check_mark: |                                                    |
 | **Pow**                       |        :x:         | :white_check_mark: |                                                    |
@@ -216,7 +216,7 @@ long as it is applicable for ZK).
 | **RandomNormalLike**          |        :x:         |        :x:         |                                                    |
 | **RandomUniform**             |        :x:         |        :x:         |                                                    |
 | **RandomUniformLike**         |        :x:         |        :x:         |                                                    |
-| **Range**                     |        :x:         | :white_check_mark: |                                                    |
+| **Range**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Reciprocal**                | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **ReduceL1**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **ReduceL2**                  | :white_check_mark: | :white_check_mark: |                                                    |
@@ -250,13 +250,13 @@ long as it is applicable for ZK).
 | **SequenceInsert**            |        :x:         | :white_check_mark: |                                                    |
 | **SequenceLength**            |        :x:         |        :x:         |                                                    |
 | **SequenceMap**               |        :x:         |        :x:         |                                                    |
-| **Shape**                     |        :x:         | :white_check_mark: |                                                    |
+| **Shape**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Shrink**                    |        :x:         |        :x:         |                                                    |
 | **Sigmoid**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Sign**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Sin**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Sinh**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **Size**                      |        :x:         | :white_check_mark: |                                                    |
+| **Size**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Slice**                     |        :x:         | :white_check_mark: |                                                    |
 | **Softmax**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **SoftmaxCrossEntropyLoss**   |        :x:         |        :x:         |                                                    |
