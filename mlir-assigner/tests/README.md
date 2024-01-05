@@ -199,7 +199,7 @@ long as it is applicable for ZK).
 | **NonZero**                   |        :x:         | :white_check_mark: |                                                    |
 | **Normalizer**                |        :x:         |        :x:         |                                                    |
 | **Not**                       | :white_check_mark: | :white_check_mark: |                                                    |
-| **OneHot**                    |        :x:         | :white_check_mark: |                                                    |
+| **OneHot**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **OneHotEncoder**             |        :x:         |        :x:         |                                                    |
 | **Optional**                  |        :x:         |        :x:         |                                                    |
 | **OptionalGetElement**        |        :x:         |        :x:         |                                                    |
