@@ -1,6 +1,7 @@
 #ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 #define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
+#include "nil/blueprint/blueprint/plonk/assignment.hpp"
 #include <cassert>
 #include <cstdint>
 #define TEST_WITHOUT_LOOKUP_TABLES
@@ -53,7 +54,7 @@
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
-#include <mlir-assigner/components/boolean/and.hpp>
+#include <mlir-assigner/components/boolean/logic_ops.hpp>
 #include <mlir-assigner/components/fixedpoint/to_fixpoint.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
@@ -190,6 +191,17 @@ namespace zk_ml_toolchain {
         bool PrintCircuitOutput;
         nil::blueprint::logger &logger;
 
+        template<typename NumberType>
+        NumberType resolve_number(VarType scalar) {
+            auto scalar_value = var_value(assignmnt, scalar);
+            static constexpr auto limit_value =
+                typename BlueprintFieldType::integral_type(std::numeric_limits<NumberType>::max());
+            auto integral_value = static_cast<typename BlueprintFieldType::integral_type>(scalar_value.data);
+            ASSERT_MSG(integral_value < limit_value, "Too large to cast");
+            NumberType number = static_cast<NumberType>(integral_value);
+            return number;
+        }
+
         void doAffineFor(affine::AffineForOp &op, int64_t from, int64_t to, int64_t step) {
             assert(from < to);
             assert(step);
@@ -253,7 +265,45 @@ namespace zk_ml_toolchain {
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
                 handle_fixedpoint_comparison_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
-                handle_select_component(operation, frames.back(), bp, assignmnt, start_row);
+                ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
+                ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
+                       "Select must operate on same type");
+                // check if we work on indices
+                Type operandType = operation->getOperand(1).getType();
+                auto i1Hash = mlir::hash_value(operation->getOperand(0));
+                if (operandType.isa<IndexType>()) {
+                    // for now we expect that if we select on indices, that we also have the cmp result in
+                    // constant values. Let's see if this holds true in the future
+                    auto cmpResult = frames.back().constant_values.find(i1Hash);
+                    ASSERT(cmpResult != frames.back().constant_values.end());
+                    if (cmpResult->second) {
+                        auto truthy = frames.back().constant_values.find(mlir::hash_value(operation->getOperand(1)));
+                        ASSERT(truthy != frames.back().constant_values.end());
+                        frames.back().constant_values[mlir::hash_value(operation->getResult(0))] = truthy->second;
+                    } else {
+                        auto falsy = frames.back().constant_values.find(mlir::hash_value(operation->getOperand(2)));
+                        ASSERT(falsy != frames.back().constant_values.end());
+                        frames.back().constant_values[mlir::hash_value(operation->getResult(0))] = falsy->second;
+                    }
+                } else if (frames.back().constant_values.find(i1Hash) != frames.back().constant_values.end()) {
+                    // we come from index comparision but we do not work on indices, ergo we need to get from locals
+                    if (frames.back().constant_values[i1Hash]) {
+                        auto truthy = frames.back().locals.find(mlir::hash_value(operation->getOperand(1)));
+                        ASSERT(truthy != frames.back().locals.end());
+                        frames.back().locals[mlir::hash_value(operation->getResult(0))] = truthy->second;
+                    } else {
+                        auto falsy = frames.back().locals.find(mlir::hash_value(operation->getOperand(2)));
+                        ASSERT(falsy != frames.back().locals.end());
+                        frames.back().locals[mlir::hash_value(operation->getResult(0))] = falsy->second;
+                    }
+                } else if (operandType.isa<FloatType>()) {
+                    handle_select_component(operation, frames.back(), bp, assignmnt, start_row);
+                } else {
+                    std::string typeStr;
+                    llvm::raw_string_ostream ss(typeStr);
+                    ss << operandType;
+                    UNREACHABLE(std::string("unhandled select operand: ") + typeStr);
+                }
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
                 handle_fixedpoint_neg_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
@@ -267,14 +317,28 @@ namespace zk_ml_toolchain {
                     UNREACHABLE("TODO add Bitwise And Gadget");
                 }
             } else if (arith::OrIOp operation = llvm::dyn_cast<arith::OrIOp>(op)) {
-                // check if logical and or bitwise and
-                mlir::Type LhsType = operation.getLhs().getType();
-                mlir::Type RhsType = operation.getRhs().getType();
-                assert(LhsType == RhsType && "must be same type for OrIOp");
-                if (LhsType.getIntOrFloatBitWidth() == 1) {
-                    handle_logic_or(operation, frames.back(), bp, assignmnt, start_row);
+                ASSERT(operation.getNumOperands() == 2 && "Or must have two operands");
+                ASSERT(operation->getOperand(0).getType() == operation->getOperand(1).getType() &&
+                       "Or must operate on same type");
+                // check if we work on indices
+                // TODO this seems like a hack, maybe we can do something better
+                auto lhsHash = mlir::hash_value(operation.getLhs());
+                if (frames.back().constant_values.find(lhsHash) != frames.back().constant_values.end()) {
+                    auto lhs = frames.back().constant_values[lhsHash];
+                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
+                    assert(rhs != frames.back().constant_values.end());
+                    auto result = lhs | rhs->second;
+                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
                 } else {
-                    UNREACHABLE("TODO add Bitwise Or Gadget");
+                    // check if logical and or bitwise and
+                    mlir::Type LhsType = operation.getLhs().getType();
+                    mlir::Type RhsType = operation.getRhs().getType();
+                    assert(LhsType == RhsType && "must be same type for OrIOp");
+                    if (LhsType.getIntOrFloatBitWidth() == 1) {
+                        handle_logic_or(operation, frames.back(), bp, assignmnt, start_row);
+                    } else {
+                        UNREACHABLE("TODO add Bitwise Or Gadget");
+                    }
                 }
             } else if (arith::XOrIOp operation = llvm::dyn_cast<arith::XOrIOp>(op)) {
                 // check if logical and or bitwise and
@@ -287,7 +351,6 @@ namespace zk_ml_toolchain {
                     UNREACHABLE("TODO add Bitwise XOr Gadget");
                 }
             } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
-
                 // TODO: ATM, handle only the case where we work on indices that are
                 // constant values
                 auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
@@ -323,8 +386,53 @@ namespace zk_ml_toolchain {
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
-                llvm::outs() << "icmp\n";
-                exit(0);
+                assert(operation.getLhs().getType().isa<IndexType>());
+                assert(operation.getRhs().getType().isa<IndexType>());
+
+                // TODO: ATM, handle only the case where we work on indices that are
+                // constant values
+                auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
+                auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
+                assert(lhs != frames.back().constant_values.end());
+                assert(rhs != frames.back().constant_values.end());
+                int64_t cmpResult;
+                switch (operation.getPredicate()) {
+                    case arith::CmpIPredicate::eq:
+                        cmpResult = static_cast<int64_t>(lhs->second == rhs->second);
+                        break;
+                    case arith::CmpIPredicate::ne:
+                        cmpResult = static_cast<int64_t>(lhs->second != rhs->second);
+                        break;
+                    case arith::CmpIPredicate::slt:
+                        cmpResult = static_cast<int64_t>(lhs->second < rhs->second);
+                        break;
+                    case arith::CmpIPredicate::sle:
+                        cmpResult = static_cast<int64_t>(lhs->second <= rhs->second);
+                        break;
+                    case arith::CmpIPredicate::sgt:
+                        cmpResult = static_cast<int64_t>(lhs->second > rhs->second);
+                        break;
+                    case arith::CmpIPredicate::sge:
+                        cmpResult = static_cast<int64_t>(lhs->second >= rhs->second);
+                        break;
+                    case arith::CmpIPredicate::ult:
+                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <
+                                                         static_cast<uint64_t>(rhs->second));
+                        break;
+                    case arith::CmpIPredicate::ule:
+                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <=
+                                                         static_cast<uint64_t>(rhs->second));
+                        break;
+                    case arith::CmpIPredicate::ugt:
+                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >
+                                                         static_cast<uint64_t>(rhs->second));
+                        break;
+                    case arith::CmpIPredicate::uge:
+                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >=
+                                                         static_cast<uint64_t>(rhs->second));
+                        break;
+                }
+                frames.back().constant_values[mlir::hash_value(operation.getResult())] = cmpResult;
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (constantValue.isa<IntegerAttr>()) {
@@ -358,10 +466,21 @@ namespace zk_ml_toolchain {
                 }
             } else if (arith::IndexCastOp operation = llvm::dyn_cast<arith::IndexCastOp>(op)) {
                 assert(operation->getNumOperands() == 1 && "IndexCast must have exactly one operand");
-                auto index = frames.back().constant_values[mlir::hash_value(operation->getOperand(0))];
-                typename BlueprintFieldType::value_type field_constant = index;
-                auto val = put_into_assignment(field_constant);
-                frames.back().locals.insert(std::make_pair(mlir::hash_value(operation.getResult()), val));
+                auto opHash = mlir::hash_value(operation->getOperand(0));
+                // from int to index
+                if (operation->getOperand(0).getType().isa<IntegerType>()) {
+                    auto i = frames.back().locals.find(opHash);
+                    assert(i != frames.back().locals.end());
+                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = resolve_number<int64_t>(i->second);
+                } else if (operation->getOperand(0).getType().isa<IndexType>()) {
+                    auto index = frames.back().constant_values.find(opHash);
+                    assert(index != frames.back().constant_values.end());
+                    typename BlueprintFieldType::value_type field_constant = index->second;
+                    auto val = put_into_assignment(field_constant);
+                    frames.back().locals.insert(std::make_pair(mlir::hash_value(operation.getResult()), val));
+                } else {
+                    UNREACHABLE("unsupported Index Cast");
+                }
             } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
                 // TODO this does not respect negative and no different ranges for ints...
                 handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
@@ -543,7 +662,7 @@ namespace zk_ml_toolchain {
                 // Create the global at the entry of the module.
                 assert(operation.getValue().has_value() && "Krnl Global must always have a value");
                 auto value = operation.getValue().value();
-                //TODO check other bit sizes. Also no range constraint is this necessary????
+                // TODO check other bit sizes. Also no range constraint is this necessary????
                 if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
                     mlir::Type attrType = attr.getElementType();
                     if (attrType.isa<mlir::IntegerType>()) {
@@ -551,8 +670,8 @@ namespace zk_ml_toolchain {
                         assert(!mlir::failed(ints) && "must work as we checked above");
                         size_t idx = 0;
                         for (auto a : ints.value()) {
-                             auto var = put_into_assignment(a.getSExtValue());
-                             m.put_flat(idx++, var);
+                            auto var = put_into_assignment(a.getSExtValue());
+                            m.put_flat(idx++, var);
                         }
                     } else if (attrType.isa<mlir::FloatType>()) {
                         auto floats = attr.tryGetValues<APFloat>();
@@ -572,7 +691,7 @@ namespace zk_ml_toolchain {
                             m.put_flat(idx++, var);
                         }
                     } else {
-                      UNREACHABLE("Unsupported attribute type");
+                        UNREACHABLE("Unsupported attribute type");
                     }
                 } else {
                     UNREACHABLE("Expected a DenseElementsAttr");
