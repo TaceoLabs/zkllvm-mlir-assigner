@@ -123,7 +123,7 @@ long as it is applicable for ZK).
 | **CumSum**                    |        :x:         | :white_check_mark: |                                                    |
 | **DFT**                       |        :x:         |        :x:         |                                                    |
 | **DeformConv**                |        :x:         |        :x:         |                                                    |
-| **DepthToSpace**              |        :x:         | :white_check_mark: |                                                    |
+| **DepthToSpace**              | :white_check_mark: | :white_check_mark: |                                                    |
 | **DequantizeLinear**          |        :x:         | :white_check_mark: |                                                    |
 | **Det**                       |        :x:         |        :x:         |                                                    |
 | **DictVectorizer**            |        :x:         |        :x:         |                                                    |
@@ -279,7 +279,7 @@ long as it is applicable for ZK).
 | **Transpose**                 |        :x:         | :white_check_mark: |                                                    |
 | **TreeEnsembleClassifier**    |        :x:         |        :x:         |                                                    |
 | **TreeEnsembleRegressor**     |        :x:         |        :x:         |                                                    |
-| **Trilu**                     |        :x:         | :white_check_mark: |                                                    |
+| **Trilu**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Unique**                    |        :x:         | :white_check_mark: |                                                    |
 | **Unsqueeze**                 |        :x:         | :white_check_mark: |                                                    |
 | **Upsample**                  |        :x:         | :white_check_mark: |                                                    |

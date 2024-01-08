@@ -133,10 +133,28 @@ namespace nil {
                 ss << type << ">[";
                 os << type_str;
                 if (type.isa<mlir::IntegerType>()) {
-                    for (int i = 0; i < data.size(); i++) {
-                        os << var_value(assignment, data[i]).data;
-                        if (i != data.size() - 1)
-                            os << ",";
+                    if (type.isUnsignedInteger()) {
+                        for (int i = 0; i < data.size(); i++) {
+                            os << var_value(assignment, data[i]).data;
+                            if (i != data.size() - 1)
+                                os << ",";
+                        }
+                    } else {
+                        static constexpr typename BlueprintFieldType::integral_type half_p =
+                            (BlueprintFieldType::modulus - typename BlueprintFieldType::integral_type(1)) /
+                            typename BlueprintFieldType::integral_type(2);
+                        for (int i = 0; i < data.size(); i++) {
+                            auto val =
+                                static_cast<typename BlueprintFieldType::integral_type>(var_value(assignment, data[i]).data);
+                            // check if negative
+                            if (val > half_p) {
+                                val = BlueprintFieldType::modulus - val;
+                                os << "-";
+                            }                             
+                            os << val;
+                            if (i != data.size() - 1)
+                                os << ",";
+                        }
                     }
                 } else if (type.isa<mlir::FloatType>()) {
                     for (int i = 0; i < data.size(); i++) {

@@ -4,6 +4,7 @@
 #include "nil/blueprint/blueprint/plonk/assignment.hpp"
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
@@ -191,15 +192,25 @@ namespace zk_ml_toolchain {
         bool PrintCircuitOutput;
         nil::blueprint::logger &logger;
 
-        template<typename NumberType>
-        NumberType resolve_number(VarType scalar) {
+        int64_t resolve_number(VarType scalar) {
             auto scalar_value = var_value(assignmnt, scalar);
-            static constexpr auto limit_value =
-                typename BlueprintFieldType::integral_type(std::numeric_limits<NumberType>::max());
+            static constexpr auto limit_value_max =
+                typename BlueprintFieldType::integral_type(std::numeric_limits<int64_t>::max());
+            static constexpr auto limit_value_min =
+                BlueprintFieldType::modulus - limit_value_max - typename BlueprintFieldType::integral_type(1);
+            static constexpr typename BlueprintFieldType::integral_type half_p =
+                (BlueprintFieldType::modulus - typename BlueprintFieldType::integral_type(1)) /
+                typename BlueprintFieldType::integral_type(2);
             auto integral_value = static_cast<typename BlueprintFieldType::integral_type>(scalar_value.data);
-            ASSERT_MSG(integral_value < limit_value, "Too large to cast");
-            NumberType number = static_cast<NumberType>(integral_value);
-            return number;
+            ASSERT_MSG(integral_value <= limit_value_max || integral_value >= limit_value_min,
+                       "cannot fit into requested number");
+            // check if negative
+            if (integral_value > half_p) {
+                integral_value = BlueprintFieldType::modulus - integral_value;
+                return -static_cast<int64_t>(integral_value);
+            } else {
+                return static_cast<int64_t>(integral_value);
+            }
         }
 
         void doAffineFor(affine::AffineForOp &op, int64_t from, int64_t to, int64_t step) {
@@ -435,7 +446,10 @@ namespace zk_ml_toolchain {
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = cmpResult;
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
-                if (constantValue.isa<IntegerAttr>()) {
+                if (operation->getResult(0).getType().isa<IndexType>()) {
+                    frames.back().constant_values.insert(std::make_pair(
+                        mlir::hash_value(operation.getResult()), llvm::dyn_cast<IntegerAttr>(constantValue).getInt()));
+                } else if (constantValue.isa<IntegerAttr>()) {
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
 
@@ -467,12 +481,12 @@ namespace zk_ml_toolchain {
             } else if (arith::IndexCastOp operation = llvm::dyn_cast<arith::IndexCastOp>(op)) {
                 assert(operation->getNumOperands() == 1 && "IndexCast must have exactly one operand");
                 auto opHash = mlir::hash_value(operation->getOperand(0));
-                // from int to index
-                if (operation->getOperand(0).getType().isa<IntegerType>()) {
+                Type casteeType = operation->getOperand(0).getType();
+                if (casteeType.isa<IntegerType>()) {
                     auto i = frames.back().locals.find(opHash);
                     assert(i != frames.back().locals.end());
-                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = resolve_number<int64_t>(i->second);
-                } else if (operation->getOperand(0).getType().isa<IndexType>()) {
+                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = resolve_number(i->second);
+                } else if (casteeType.isa<IndexType>()) {
                     auto index = frames.back().constant_values.find(opHash);
                     assert(index != frames.back().constant_values.end());
                     typename BlueprintFieldType::value_type field_constant = index->second;
@@ -482,8 +496,16 @@ namespace zk_ml_toolchain {
                     UNREACHABLE("unsupported Index Cast");
                 }
             } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
-                // TODO this does not respect negative and no different ranges for ints...
                 handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (arith::UIToFPOp operation = llvm::dyn_cast<arith::UIToFPOp>(op)) {
+                handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (arith::FPToSIOp operation = llvm::dyn_cast<arith::FPToSIOp>(op)) {
+                UNREACHABLE("Cast from FixedPoint to Int??");
+            } else if (llvm::isa<arith::ExtUIOp>(op) || llvm::isa<arith::ExtSIOp>(op) ||
+                       llvm::isa<arith::TruncIOp>(op)) {
+                auto toExtend = frames.back().locals.find(mlir::hash_value(op->getOperand(0)));
+                assert(toExtend != frames.back().locals.end());
+                frames.back().locals[mlir::hash_value(op->getResult(0))] = toExtend->second;
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled arith operation: ") + opName);
