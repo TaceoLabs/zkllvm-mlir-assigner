@@ -1,0 +1,19 @@
+	:”
+=
+in_aout_a"DepthToSpace*
+	blocksize *
+mode"DCR DepthToSpaceSimpleZ
+in_a
+
+
+
+
+
+
+b
+out_a
+
+
+
+
+B

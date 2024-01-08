@@ -17,9 +17,9 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
         void handle_to_fixedpoint(
-            mlir::arith::SIToFPOp &operation,
+            MlirOp &operation,
             stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -29,7 +29,7 @@ namespace nil {
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            auto input = PREPARE_UNARY_INPUT(mlir::arith::SIToFPOp);
+            auto input = PREPARE_UNARY_INPUT(MlirOp);
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
