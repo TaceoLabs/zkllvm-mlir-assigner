@@ -669,6 +669,7 @@ namespace zk_ml_toolchain {
         void handleKrnlOpeeration(Operation *op) {
             // Print the operation itself and some of its properties
             // Print the operation attributes
+            std::uint32_t start_row = assignmnt.allocated_rows();
             std::string opName = op->getName().getIdentifier().str();
             logger.debug("visiting %s", opName);
             if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
@@ -807,7 +808,7 @@ namespace zk_ml_toolchain {
             } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
-                UNREACHABLE("TODO: component for tan not ready");
+                handle_tan(operation, frames.back(), bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
                 UNREACHABLE("TODO: component for atan not ready");
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
