@@ -59,6 +59,27 @@ namespace nil {
                                      1, 1);
             fill_trace(component, input, operation, frame, bp, assignment, start_row);
         }
+        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        void handle_tanh(
+            mlir::math::TanhOp &operation,
+            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_tanh<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::math::TanhOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
+            const auto p = detail::PolicyManager::get_parameters(
+                detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(0, 1, 1));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     1, 1);
+            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+        }
     }    // namespace blueprint
 }    // namespace nil
 

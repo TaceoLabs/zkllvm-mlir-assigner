@@ -31,6 +31,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/tanh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>

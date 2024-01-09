@@ -546,9 +546,9 @@ namespace zk_ml_toolchain {
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
                 handle_cos(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
-                UNREACHABLE("TODO: component for atanh not ready");
+                UNREACHABLE("TODO: component for atan not ready");
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
-                UNREACHABLE("TODO: component for tanh not ready");
+                handle_tanh(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
                 UNREACHABLE("TODO: component for erf not ready");
             } else {
@@ -783,6 +783,21 @@ namespace zk_ml_toolchain {
                 // TODO: what to do when done...
                 // maybe print output?
                 return;
+            } else if (KrnlMemcpyOp operation = llvm::dyn_cast<KrnlMemcpyOp>(op)) {
+                // get dst and src memref
+                auto DstMemref = frames.back().memrefs.find(mlir::hash_value(operation.getDest()));
+                auto SrcMemref = frames.back().memrefs.find(mlir::hash_value(operation.getSrc()));
+                assert(DstMemref != frames.back().memrefs.end());
+                assert(SrcMemref != frames.back().memrefs.end());
+                // get num elements and offset
+                auto NumElements = frames.back().constant_values.find(mlir::hash_value(operation.getNumElems()));
+                auto DstOffset = frames.back().constant_values.find(mlir::hash_value(operation.getDestOffset()));
+                auto SrcOffset = frames.back().constant_values.find(mlir::hash_value(operation.getSrcOffset()));
+                assert(NumElements != frames.back().constant_values.end());
+                assert(DstOffset != frames.back().constant_values.end());
+                assert(SrcOffset != frames.back().constant_values.end());
+                DstMemref->second.copyFrom(SrcMemref->second, NumElements->second, DstOffset->second,
+                                           SrcOffset->second);
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
             } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
@@ -1001,11 +1016,11 @@ namespace zk_ml_toolchain {
                 // assert(ops.size() == 1);    // only handle single return value atm
                 // the ops[0] is something that we can hash_value to grab the result
                 // from maps
-                for (unsigned i = 0; i < ops.size(); ++i) {
-                    auto retval = frames.back().memrefs.find(mlir::hash_value(ops[i]));
-                    assert(retval != frames.back().memrefs.end());
-                    if (PrintCircuitOutput) {
-                        std::cout << "Result:\n";
+                if (PrintCircuitOutput) {
+                    std::cout << "Result:\n";
+                    for (unsigned i = 0; i < ops.size(); ++i) {
+                        auto retval = frames.back().memrefs.find(mlir::hash_value(ops[i]));
+                        assert(retval != frames.back().memrefs.end());
                         retval->second.print(std::cout, assignmnt);
                     }
                 }
