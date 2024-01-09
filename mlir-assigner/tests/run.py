@@ -32,19 +32,22 @@ def assert_output(should_output, is_output):
     is_lines = is_output.splitlines()
     if len(is_lines) < 3:
         return False, "Output incomplete got less than 3 lines"
-    ziped = zip(should_output.splitlines(), is_lines)
-    #1 First Line Result
+    should_lines = should_output.splitlines()
+    amount_results = len(should_lines) - 2
+    ziped = zip(should_lines, is_lines)
     s,i = next(ziped)
     if s != i:
         return False, "Cannot get Result (First Line does not match) "
-    s,i = next(ziped)
-    memref_index = s.find('[')
-    if s[0: memref_index] != i[0: memref_index]:
-        return False, "Type mismatch (should={}; is={})".format(s[0: memref_index], i[0: memref_index])
-    s_values = ast.literal_eval(s[memref_index:])
-    i_values = ast.literal_eval(i[memref_index:])
-    if any(filter(lambda a: a >= MAX_DELTA, map(lambda a: abs(a[0]-a[1]), zip(s_values, i_values)))):
-        return False, "Values diverge more than > {}".format(MAX_DELTA)
+    #1 First Line Result
+    for _ in range(0, amount_results):
+        s,i = next(ziped)
+        memref_index = s.find('[')
+        if s[0: memref_index] != i[0: memref_index]:
+            return False, "Type mismatch (should={}; is={})".format(s[0: memref_index], i[0: memref_index])
+        s_values = ast.literal_eval(s[memref_index:])
+        i_values = ast.literal_eval(i[memref_index:])
+        if any(filter(lambda a: a >= MAX_DELTA, map(lambda a: abs(a[0]-a[1]), zip(s_values, i_values)))):
+            return False, "Values diverge more than > {}".format(MAX_DELTA)
     s,i = next(ziped)
     s = s.replace("rows", "").strip()
     i = i.replace("rows", "").strip()

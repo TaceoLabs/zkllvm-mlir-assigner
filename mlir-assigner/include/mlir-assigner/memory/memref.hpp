@@ -118,6 +118,14 @@ namespace nil {
                 return data.size();
             }
 
+            void copyFrom(memref &src, uint64_t num_elements, uint64_t dst_offset, uint64_t src_offset) {
+                assert(this->size() >= num_elements + dst_offset && "Out of bounds access");
+                assert(src.size() >= num_elements + src_offset && "Out of bounds access");
+                for (unsigned i = 0; i < num_elements; ++i) {
+                    this->data[dst_offset + i] = src.data[src_offset + i];
+                }
+            }
+
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void print(
                 std::ostream &os,
@@ -144,13 +152,13 @@ namespace nil {
                             (BlueprintFieldType::modulus - typename BlueprintFieldType::integral_type(1)) /
                             typename BlueprintFieldType::integral_type(2);
                         for (int i = 0; i < data.size(); i++) {
-                            auto val =
-                                static_cast<typename BlueprintFieldType::integral_type>(var_value(assignment, data[i]).data);
+                            auto val = static_cast<typename BlueprintFieldType::integral_type>(
+                                var_value(assignment, data[i]).data);
                             // check if negative
                             if (val > half_p) {
                                 val = BlueprintFieldType::modulus - val;
                                 os << "-";
-                            }                             
+                            }
                             os << val;
                             if (i != data.size() - 1)
                                 os << ",";
