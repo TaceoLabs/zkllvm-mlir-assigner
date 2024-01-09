@@ -29,6 +29,7 @@
 #include <functional>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/to_int.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tan.hpp>
