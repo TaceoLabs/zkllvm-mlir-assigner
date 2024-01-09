@@ -56,7 +56,7 @@
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
 #include <mlir-assigner/components/boolean/logic_ops.hpp>
-#include <mlir-assigner/components/fixedpoint/to_fixpoint.hpp>
+#include <mlir-assigner/components/fixedpoint/conversion.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -506,7 +506,9 @@ namespace zk_ml_toolchain {
             } else if (arith::UIToFPOp operation = llvm::dyn_cast<arith::UIToFPOp>(op)) {
                 handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
             } else if (arith::FPToSIOp operation = llvm::dyn_cast<arith::FPToSIOp>(op)) {
-                UNREACHABLE("Cast from FixedPoint to Int??");
+                handle_to_int(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (arith::FPToUIOp operation = llvm::dyn_cast<arith::FPToUIOp>(op)) {
+                handle_to_int(operation, frames.back(), bp, assignmnt, start_row);
             } else if (llvm::isa<arith::ExtUIOp>(op) || llvm::isa<arith::ExtSIOp>(op) ||
                        llvm::isa<arith::TruncIOp>(op)) {
                 auto toExtend = frames.back().locals.find(mlir::hash_value(op->getOperand(0)));
@@ -1025,6 +1027,22 @@ namespace zk_ml_toolchain {
                         retval->second.print(std::cout, assignmnt);
                     }
                 }
+                return;
+            }
+
+            if (mlir::UnrealizedConversionCastOp operation = llvm::dyn_cast<mlir::UnrealizedConversionCastOp>(op)) {
+                // we do not like this but when onnx-mlir lowers from onnx.Cast to unsigned it uses this to cast
+                // from signless integers (e.g. i64) to unsigned integer(e.g. ui64)
+                // SO if we transform from one signless integer to an unsigned integer with the SAME bit length
+                // we indulge, otherwise we panic
+                mlir::Type SrcType = operation->getOperand(0).getType();
+                mlir::Type DstType = operation->getResult(0).getType();
+                assert(SrcType.isSignlessInteger() && "src must be signless integertype for conversion cast");
+                assert(DstType.isUnsignedInteger(SrcType.getIntOrFloatBitWidth()) &&
+                       "dst must be unsigned integer with same bit width as src");
+                auto Src = frames.back().locals.find(mlir::hash_value(operation->getOperand(0)));
+                assert(Src != frames.back().locals.end());
+                frames.back().locals[mlir::hash_value(operation->getResult(0))] = Src->second;
                 return;
             }
 
