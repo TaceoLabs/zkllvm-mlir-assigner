@@ -261,6 +261,12 @@ namespace zk_ml_toolchain {
             }
         }
 
+        double toFixpoint(VarType toConvert) {
+            auto val = var_value(assignmnt, toConvert).data;
+            nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> out(val, 16);
+            return out.to_double();
+        }
+
         void handleArithOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
@@ -516,6 +522,8 @@ namespace zk_ml_toolchain {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
                 handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt, start_row);
+            } else if (math::Exp2Op operation = llvm::dyn_cast<math::Exp2Op>(op)) {
+                UNREACHABLE("TODO: component for exp2 not ready");
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
                 handle_fixedpoint_log_component(operation, frames.back(), bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
@@ -745,7 +753,7 @@ namespace zk_ml_toolchain {
                 assert(funcOp != functions.end());
 
                 // only can handle single outputs atm
-                assert(numOutputs == 1);
+                // assert(numOutputs == 1);
 
                 // prepare the arguments for the function
                 frames.push_back(nil::blueprint::stack_frame<VarType>());
@@ -990,14 +998,16 @@ namespace zk_ml_toolchain {
 
             if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
                 auto ops = operation.getOperands();
-                assert(ops.size() == 1);    // only handle single return value atm
+                // assert(ops.size() == 1);    // only handle single return value atm
                 // the ops[0] is something that we can hash_value to grab the result
                 // from maps
-                auto retval = frames.back().memrefs.find(mlir::hash_value(ops[0]));
-                assert(retval != frames.back().memrefs.end());
-                if (PrintCircuitOutput) {
-                    std::cout << "Result:\n";
-                    retval->second.print(std::cout, assignmnt);
+                for (unsigned i = 0; i < ops.size(); ++i) {
+                    auto retval = frames.back().memrefs.find(mlir::hash_value(ops[i]));
+                    assert(retval != frames.back().memrefs.end());
+                    if (PrintCircuitOutput) {
+                        std::cout << "Result:\n";
+                        retval->second.print(std::cout, assignmnt);
+                    }
                 }
                 return;
             }

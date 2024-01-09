@@ -28,6 +28,7 @@
 
 #include <boost/json/kind.hpp>
 #include "mlir-assigner/helper/asserts.hpp"
+#include "onnx/string_utils.h"
 #include <cstdint>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
@@ -62,12 +63,12 @@ namespace nil {
             }
 
             bool parse_fixedpoint(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
-                // for now only double, but later we most likely will need strings as well
-                // we hardcode the scale with 2^16 for now. Let's see later down the line
                 double d;
                 if (value.kind() == boost::json::kind::double_) {
                     d = value.as_double();
-                } else {
+                } else if (value.kind() == boost::json::kind::int64) {
+                    d = static_cast<double>(value.as_int64());
+                }else {
                     UNREACHABLE("TODO add string support");
                 }
                 nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
@@ -82,14 +83,14 @@ namespace nil {
             }
 
             bool parse_int(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
-              switch (value.kind()) {
-                case boost::json::kind::int64:
-                case boost::json::kind::uint64:
-                  return parse_scalar(value, out);
-                default:
-                  std::cerr << "unsupported int type: " << value.as_string() << std::endl;
-                  UNREACHABLE("int must be int64 or uint64");
-              };
+                switch (value.kind()) {
+                    case boost::json::kind::int64:
+                    case boost::json::kind::uint64:
+                        return parse_scalar(value, out);
+                    default:
+                        std::cerr << "unsupported int type: " << value.as_string() << std::endl;
+                        UNREACHABLE("int must be int64 or uint64");
+                };
             }
 
             bool parse_scalar(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
@@ -243,7 +244,6 @@ namespace nil {
             }
 
             bool parse_memref_data(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
-
                 if (type == "f32") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_fixedpoint(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
@@ -253,7 +253,7 @@ namespace nil {
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
                     }
                 } else if (type == "int") {
-                  //TODO do we have to handle uint?
+                    // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";
@@ -261,8 +261,7 @@ namespace nil {
                         }
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
                     }
-                }
-                else if (type == "bool") {
+                } else if (type == "bool") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_bool(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";
