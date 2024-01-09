@@ -1,36 +1,0 @@
-	:’
-s
-in_a
-in_b
-in_cout_aout_b"GRU*
-activationsJSigmoidJTanh *
-	direction"forward *
-hidden_size 	GRUSimpleZ
-in_a
-
-
-
-
-Z
-in_b
-
-
-
-
-Z
-in_c
-
-
-
-b
-out_a
-
-
-
-
-b
-out_b
-
-
-
-B
