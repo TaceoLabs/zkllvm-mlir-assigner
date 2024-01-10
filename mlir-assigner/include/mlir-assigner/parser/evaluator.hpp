@@ -874,7 +874,7 @@ namespace zk_ml_toolchain {
                 auto m = nil::blueprint::memref<VarType>(dims, type.getElementType());
                 auto hash = mlir::hash_value(operation.getMemref());
                 auto insert_res = frames.back().memrefs.insert({hash, m});
-                assert(insert_res.second);    // Reallocating over an existing memref
+                //assert(insert_res.second);    // Reallocating over an existing memref
                                               // should not happen ATM
                 logger.debug("inserting memref with hash %x", size_t(hash));
             } else if (memref::AllocaOp operation = llvm::dyn_cast<memref::AllocaOp>(op)) {

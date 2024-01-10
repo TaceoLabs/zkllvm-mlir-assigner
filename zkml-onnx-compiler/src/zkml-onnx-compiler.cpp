@@ -15,7 +15,8 @@
 #include "src/Version/Version.hpp"
 
 #include "mlir/Dialect/zkml/ZkMlDialect.h"
-#include "Passes/mlir/Transform/ElimCopySignPass.h"
+#include <Passes/mlir/Transform/ElimCopySignPass.hpp>
+#include <Passes/mlir/Transform/PowFToGenericExpPass.hpp>
 
 #define STDOUT_MARKER "stdout"
 
@@ -41,12 +42,12 @@ bool hasEnding(std::string const &fullString, std::string const &ending) {
     }
 }
 
-std::string dirName(StringRef inputFilename) {
+std::string dirName(llvm::StringRef inputFilename) {
     llvm::SmallVector<char> path(inputFilename.begin(), inputFilename.end());
     llvm::sys::path::remove_filename(path);
     return std::string(path.data(), path.size());
 }
-int loadOnnxFile(StringRef inputFilename, mlir::MLIRContext &context, mlir::OwningOpRef<mlir::ModuleOp> &module,
+int loadOnnxFile(llvm::StringRef inputFilename, mlir::MLIRContext &context, mlir::OwningOpRef<mlir::ModuleOp> &module,
                  std::string *errorMessage) {
     // we use default options for now from onnx-mlir, lets see if we need
     // something else
@@ -135,7 +136,7 @@ int main(int argc, char **argv) {
     // context.appendDialectRegistry(onnx_mlir::registerDialects(onnx_mlir::maccel));
     // context.loadAllAvailableDialects();
     // onnx_mlir::registerDialects(context);
-    context.getOrLoadDialect<zkml::ZkMlDialect>();
+    context.getOrLoadDialect<mlir::zkml::ZkMlDialect>();
 
     mlir::OwningOpRef<mlir::ModuleOp> module;
     std::string errorMessage;
@@ -149,11 +150,15 @@ int main(int argc, char **argv) {
     bool EmitMLIR = EmitLevel::zkMLIR == EmitLevel || EmitLevel::MLIR == EmitLevel;
     onnx_mlir::configurePasses();
     mlir::PassManager pm(module.get()->getName(), mlir::OpPassManager::Nesting::Implicit);
-    if (EmitLevel == EmitLevel::ONNX) {
+    if (EmitLevel::ONNX == EmitLevel) {
         onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR, outputFilename);
     } else {
-        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, outputFilename, EmitLevel == EmitLevel::zkMLIR);
-        pm.addPass(zk_ml_toolchain::createElimCopySignPass());
+        onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, outputFilename,
+                             EmitLevel == EmitLevel::zkMLIR);
+        if (EmitLevel::zkMLIR == EmitLevel) {
+            pm.addPass(mlir::zk_ml::createElimCopySignPass());
+            pm.addPass(mlir::zk_ml::createPowFToGenericExpPass());
+        }
         if (!EmitMLIR) {
             // third parameter here is optional in onnx-mlir. Maybe we should do that
             // too?
