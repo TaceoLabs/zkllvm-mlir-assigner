@@ -211,7 +211,7 @@ long as it is applicable for ZK).
 | **QLinearConv**               |        :x:         |        :x:         |                                                    |
 | **QLinearMatMul**             |        :x:         |        :x:         |                                                    |
 | **QuantizeLinear**            |        :x:         | :white_check_mark: |                                                    |
-| **RNN**                       |        :x:         | :white_check_mark: |                                                    |
+| **RNN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **RandomNormal**              |        :x:         |        :x:         |                                                    |
 | **RandomNormalLike**          |        :x:         |        :x:         |                                                    |
 | **RandomUniform**             |        :x:         |        :x:         |                                                    |
