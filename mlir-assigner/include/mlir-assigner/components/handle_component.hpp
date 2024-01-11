@@ -37,6 +37,9 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/logic_or_flag.hpp>
 
@@ -75,18 +78,16 @@ namespace nil {
                 &assignment) {
 
             auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            ASSERT(lhs != frame.locals.end());
             auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
+            ASSERT(lhs != frame.locals.end());
             ASSERT(rhs != frame.locals.end());
 
-            auto x = lhs->second;
-            auto y = rhs->second;
-
             input_type instance_input;
-            instance_input.input[0] = x;
-            instance_input.input[1] = y;
+            instance_input.x = lhs->second;
+            instance_input.y = rhs->second;
             return instance_input;
         }
+
 
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType>
         void handle_component_input(
