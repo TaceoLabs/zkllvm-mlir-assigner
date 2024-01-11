@@ -96,12 +96,12 @@ long as it is applicable for ZK).
 | **Bernoulli**                 |        :x:         |        :x:         |                                                    |
 | **Binarizer**                 |        :x:         |        :x:         |                                                    |
 | **BitShift**                  |        :x:         |        :x:         |                                                    |
-| **BitwiseAnd**                |        :x:         | :white_check_mark: |                                                    |
+| **BitwiseAnd**                | :white_check_mark: | :white_check_mark: |                                                    |
 | **BitwiseNot**                |        :x:         |        :x:         |                                                    |
-| **BitwiseOr**                 |        :x:         | :white_check_mark: |                                                    |
-| **BitwiseXor**                |        :x:         | :white_check_mark: |                                                    |
+| **BitwiseOr**                 | :white_check_mark: | :white_check_mark: |                                                    |
+| **BitwiseXor**                | :white_check_mark: | :white_check_mark: |                                                    |
 | **BlackmanWindow**            |        :x:         |        :x:         |                                                    |
-| **Cast**                      |        :x:         | :white_check_mark: |                                                    |
+| **Cast**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **CastLike**                  |        :x:         |        :x:         |                                                    |
 | **CastMap**                   |        :x:         |        :x:         |                                                    |
 | **CategoryMapper**            |        :x:         |        :x:         |                                                    |
@@ -130,17 +130,17 @@ long as it is applicable for ZK).
 | **Div**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Dropout**                   |        :x:         | :white_check_mark: |                                                    |
 | **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: |                                                    |
-| **Einsum**                    |        :x:         | :white_check_mark: |                                                    |
+| **Einsum**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **Elu**                       |        :x:         | :white_check_mark: |                                                    |
 | **Equal**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Erf**                       |        :x:         | :white_check_mark: |                                                    |
-| **Exp**                       |        :x:         | :white_check_mark: |                                                    |
-| **Expand**                    |        :x:         | :white_check_mark: |                                                    |
+| **Exp**                       | :white_check_mark: | :white_check_mark: |                                                    |
+| **Expand**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **EyeLike**                   |        :x:         |        :x:         |                                                    |
 | **FeatureVectorizer**         |        :x:         |        :x:         |                                                    |
-| **Flatten**                   |        :x:         | :white_check_mark: |                                                    |
+| **Flatten**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Floor**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
-| **GRU**                       |        :x:         | :white_check_mark: |                                                    |
+| **GRU**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Gather**                    |        :x:         | :white_check_mark: |                                                    |
 | **GatherElements**            |        :x:         | :white_check_mark: |                                                    |
 | **GatherND**                  |        :x:         | :white_check_mark: |                                                    |
@@ -158,14 +158,14 @@ long as it is applicable for ZK).
 | **HardSigmoid**               | :white_check_mark: | :white_check_mark: |                                                    |
 | **HardSwish**                 |        :x:         |        :x:         |                                                    |
 | **Hardmax**                   |        :x:         | :white_check_mark: |                                                    |
-| **Identity**                  |        :x:         | :white_check_mark: |                                                    |
-| **If**                        |        :x:         | :white_check_mark: |                                                    |
+| **Identity**                  | :white_check_mark: | :white_check_mark: |                                                    |
+| **If**                        |        :x:         | :white_check_mark: | We will not support if due to zk limitations       |
 | **Imputer**                   |        :x:         |        :x:         |                                                    |
-| **InstanceNormalization**     |        :x:         | :white_check_mark: |                                                    |
+| **InstanceNormalization**     | :white_check_mark: | :white_check_mark: |                                                    |
 | **IsInf**                     |        :x:         | :white_check_mark: |                                                    |
 | **IsNaN**                     |        :x:         | :white_check_mark: |                                                    |
-| **LRN**                       |        :x:         | :white_check_mark: |                                                    |
-| **LSTM**                      |        :x:         | :white_check_mark: |                                                    |
+| **LRN**                       | :white_check_mark: | :white_check_mark: |                                                    |
+| **LSTM**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **LabelEncoder**              |        :x:         |        :x:         |                                                    |
 | **LayerNormalization**        |        :x:         | :white_check_mark: |                                                    |
 | **LeakyRelu**                 | :white_check_mark: | :white_check_mark: |                                                    |
@@ -175,7 +175,7 @@ long as it is applicable for ZK).
 | **LinearRegressor**           |        :x:         |        :x:         |                                                    |
 | **Log**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LogSoftmax**                | :white_check_mark: | :white_check_mark: |                                                    |
-| **Loop**                      |        :x:         | :white_check_mark: |                                                    |
+| **Loop**                      |        :x:         | :white_check_mark: | We will not support loop due to zk limitations     |
 | **LpNormalization**           |        :x:         |        :x:         |                                                    |
 | **LpPool**                    |        :x:         |        :x:         |                                                    |
 | **MatMul**                    | :white_check_mark: | :white_check_mark: |                                                    |
@@ -206,8 +206,8 @@ long as it is applicable for ZK).
 | **OptionalHasElement**        |        :x:         |        :x:         |                                                    |
 | **Or**                        | :white_check_mark: | :white_check_mark: |                                                    |
 | **PRelu**                     | :white_check_mark: | :white_check_mark: |                                                    |
-| **Pad**                       |        :x:         | :white_check_mark: |                                                    |
-| **Pow**                       |        :x:         | :white_check_mark: |                                                    |
+| **Pad**                       | :white_check_mark: | :white_check_mark: |                                                    |
+| **Pow**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **QLinearConv**               |        :x:         |        :x:         |                                                    |
 | **QLinearMatMul**             |        :x:         |        :x:         |                                                    |
 | **QuantizeLinear**            |        :x:         | :white_check_mark: |                                                    |
@@ -229,7 +229,7 @@ long as it is applicable for ZK).
 | **ReduceSum**                 | :white_check_mark: | :white_check_mark: |                                                    |
 | **ReduceSumSquare**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **Relu**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **Reshape**                   |        :x:         | :white_check_mark: |                                                    |
+| **Reshape**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Resize**                    |        :x:         | :white_check_mark: |                                                    |
 | **ReverseSequence**           |        :x:         | :white_check_mark: |                                                    |
 | **RoiAlign**                  |        :x:         |        :x:         |                                                    |
@@ -238,7 +238,7 @@ long as it is applicable for ZK).
 | **SVMClassifier**             |        :x:         |        :x:         |                                                    |
 | **SVMRegressor**              |        :x:         |        :x:         |                                                    |
 | **Scaler**                    |        :x:         |        :x:         |                                                    |
-| **Scan**                      |        :x:         | :white_check_mark: |                                                    |
+| **Scan**                      |        :x:         | :white_check_mark: | We will not support scan due to zk limitations     |
 | **Scatter**                   |        :x:         |        :x:         |                                                    |
 | **ScatterElements**           |        :x:         | :white_check_mark: |                                                    |
 | **ScatterND**                 |        :x:         | :white_check_mark: |                                                    |
@@ -262,26 +262,26 @@ long as it is applicable for ZK).
 | **SoftmaxCrossEntropyLoss**   |        :x:         |        :x:         |                                                    |
 | **Softplus**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **Softsign**                  | :white_check_mark: | :white_check_mark: |                                                    |
-| **SpaceToDepth**              |        :x:         | :white_check_mark: |                                                    |
-| **Split**                     |        :x:         | :white_check_mark: |                                                    |
+| **SpaceToDepth**              | :white_check_mark: | :white_check_mark: |                                                    |
+| **Split**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **SplitToSequence**           |        :x:         |        :x:         |                                                    |
 | **Sqrt**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **Squeeze**                   |        :x:         | :white_check_mark: |                                                    |
+| **Squeeze**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **StringNormalizer**          |        :x:         |        :x:         |                                                    |
 | **Sub**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Sum**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
-| **Tan**                       |        :x:         | :white_check_mark: |                                                    |
-| **Tanh**                      |        :x:         | :white_check_mark: |                                                    |
+| **Tan**                       | :white_check_mark: | :white_check_mark: |                                                    |
+| **Tanh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **TfIdfVectorizer**           |        :x:         |        :x:         |                                                    |
 | **ThresholdedRelu**           |        :x:         |        :x:         |                                                    |
-| **Tile**                      |        :x:         | :white_check_mark: |                                                    |
+| **Tile**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **TopK**                      |        :x:         | :white_check_mark: |                                                    |
-| **Transpose**                 |        :x:         | :white_check_mark: |                                                    |
+| **Transpose**                 | :white_check_mark: | :white_check_mark: |                                                    |
 | **TreeEnsembleClassifier**    |        :x:         |        :x:         |                                                    |
 | **TreeEnsembleRegressor**     |        :x:         |        :x:         |                                                    |
 | **Trilu**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Unique**                    |        :x:         | :white_check_mark: |                                                    |
-| **Unsqueeze**                 |        :x:         | :white_check_mark: |                                                    |
+| **Unsqueeze**                 | :white_check_mark: | :white_check_mark: |                                                    |
 | **Upsample**                  |        :x:         | :white_check_mark: |                                                    |
 | **Where**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Xor**                       | :white_check_mark: | :white_check_mark: |                                                    |
