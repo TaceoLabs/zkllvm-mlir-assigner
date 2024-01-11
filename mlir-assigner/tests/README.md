@@ -124,12 +124,12 @@ long as it is applicable for ZK).
 | **DFT**                       |        :x:         |        :x:         |                                                    |
 | **DeformConv**                |        :x:         |        :x:         |                                                    |
 | **DepthToSpace**              | :white_check_mark: | :white_check_mark: |                                                    |
-| **DequantizeLinear**          |        :x:         | :white_check_mark: |                                                    |
+| **DequantizeLinear**          |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
 | **Det**                       |        :x:         |        :x:         |                                                    |
 | **DictVectorizer**            |        :x:         |        :x:         |                                                    |
 | **Div**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Dropout**                   | :white_check_mark: | :white_check_mark: | This is a noop in inference                        |
-| **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: |                                                    |
+| **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
 | **Einsum**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **Elu**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Equal**                     | :white_check_mark: | :white_check_mark: |                                                    |
@@ -145,9 +145,9 @@ long as it is applicable for ZK).
 | **GatherElements**            |        :x:         | :white_check_mark: |                                                    |
 | **GatherND**                  |        :x:         | :white_check_mark: |                                                    |
 | **Gemm**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
-| **GlobalAveragePool**         |        :x:         | :white_check_mark: |                                                    |
+| **GlobalAveragePool**         | :white_check_mark: | :white_check_mark: |                                                    |
 | **GlobalLpPool**              |        :x:         |        :x:         |                                                    |
-| **GlobalMaxPool**             |        :x:         | :white_check_mark: |                                                    |
+| **GlobalMaxPool**             | :white_check_mark: | :white_check_mark: |                                                    |
 | **Gradient**                  |        :x:         |        :x:         |                                                    |
 | **Greater**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **GreaterOrEqual**            | :white_check_mark: | :white_check_mark: |                                                    |
@@ -159,11 +159,11 @@ long as it is applicable for ZK).
 | **HardSwish**                 |        :x:         |        :x:         |                                                    |
 | **Hardmax**                   |        :x:         | :white_check_mark: |                                                    |
 | **Identity**                  | :white_check_mark: | :white_check_mark: |                                                    |
-| **If**                        |        :x:         | :white_check_mark: | We will not support if due to zk limitations       |
+| **If**                        |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **Imputer**                   |        :x:         |        :x:         |                                                    |
 | **InstanceNormalization**     | :white_check_mark: | :white_check_mark: |                                                    |
-| **IsInf**                     |        :x:         | :white_check_mark: |                                                    |
-| **IsNaN**                     |        :x:         | :white_check_mark: |                                                    |
+| **IsInf**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **IsNaN**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **LRN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LSTM**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **LabelEncoder**              |        :x:         |        :x:         |                                                    |
@@ -175,7 +175,7 @@ long as it is applicable for ZK).
 | **LinearRegressor**           |        :x:         |        :x:         |                                                    |
 | **Log**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LogSoftmax**                | :white_check_mark: | :white_check_mark: |                                                    |
-| **Loop**                      |        :x:         | :white_check_mark: | We will not support loop due to zk limitations     |
+| **Loop**                      |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **LpNormalization**           |        :x:         |        :x:         |                                                    |
 | **LpPool**                    |        :x:         |        :x:         |                                                    |
 | **MatMul**                    | :white_check_mark: | :white_check_mark: |                                                    |
@@ -195,8 +195,8 @@ long as it is applicable for ZK).
 | **Multinomial**               |        :x:         |        :x:         |                                                    |
 | **Neg**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **NegativeLogLikelihoodLoss** |        :x:         |        :x:         |                                                    |
-| **NonMaxSuppression**         |        :x:         | :white_check_mark: |                                                    |
-| **NonZero**                   |        :x:         | :white_check_mark: |                                                    |
+| **NonMaxSuppression**         |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **NonZero**                   |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **Normalizer**                |        :x:         |        :x:         |                                                    |
 | **Not**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **OneHot**                    | :white_check_mark: | :white_check_mark: |                                                    |
@@ -210,7 +210,7 @@ long as it is applicable for ZK).
 | **Pow**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **QLinearConv**               |        :x:         |        :x:         |                                                    |
 | **QLinearMatMul**             |        :x:         |        :x:         |                                                    |
-| **QuantizeLinear**            |        :x:         | :white_check_mark: |                                                    |
+| **QuantizeLinear**            |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
 | **RNN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **RandomNormal**              |        :x:         |        :x:         |                                                    |
 | **RandomNormalLike**          |        :x:         |        :x:         |                                                    |
@@ -238,7 +238,7 @@ long as it is applicable for ZK).
 | **SVMClassifier**             |        :x:         |        :x:         |                                                    |
 | **SVMRegressor**              |        :x:         |        :x:         |                                                    |
 | **Scaler**                    |        :x:         |        :x:         |                                                    |
-| **Scan**                      |        :x:         | :white_check_mark: | We will not support scan due to zk limitations     |
+| **Scan**                      |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **Scatter**                   |        :x:         |        :x:         |                                                    |
 | **ScatterElements**           |        :x:         | :white_check_mark: |                                                    |
 | **ScatterND**                 |        :x:         | :white_check_mark: |                                                    |
@@ -257,7 +257,7 @@ long as it is applicable for ZK).
 | **Sin**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Sinh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Size**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **Slice**                     |        :x:         | :white_check_mark: |                                                    |
+| **Slice**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Softmax**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **SoftmaxCrossEntropyLoss**   |        :x:         |        :x:         |                                                    |
 | **Softplus**                  | :white_check_mark: | :white_check_mark: |                                                    |
@@ -280,9 +280,9 @@ long as it is applicable for ZK).
 | **TreeEnsembleClassifier**    |        :x:         |        :x:         |                                                    |
 | **TreeEnsembleRegressor**     |        :x:         |        :x:         |                                                    |
 | **Trilu**                     | :white_check_mark: | :white_check_mark: |                                                    |
-| **Unique**                    |        :x:         | :white_check_mark: |                                                    |
+| **Unique**                    |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **Unsqueeze**                 | :white_check_mark: | :white_check_mark: |                                                    |
-| **Upsample**                  |        :x:         | :white_check_mark: |                                                    |
+| **Upsample**                  |        :x:         | :white_check_mark: | Deprecated since version 10, therefore not support |
 | **Where**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Xor**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **ZipMap**                    |        :x:         |        :x:         |                                                    |
