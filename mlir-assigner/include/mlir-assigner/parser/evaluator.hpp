@@ -271,6 +271,24 @@ namespace zk_ml_toolchain {
             // std::cout << toFixpoint(Lhs) << " * " << toFixpoint(Rhs) << " = " << toFixpoint(Result) << "\n";
         }
 
+#define BITSWITCHER(func, b)                                                                           \
+    switch (b) {                                                                                       \
+        case 8:                                                                                        \
+            func<1>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            break;                                                                                     \
+        case 16:                                                                                       \
+            func<2>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            break;                                                                                     \
+        case 32:                                                                                       \
+            func<4>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            break;                                                                                     \
+        case 64:                                                                                       \
+            func<8>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            break;                                                                                     \
+        default:                                                                                       \
+            UNREACHABLE(std::string("unsupported int bit size for bitwise op: ") + std::to_string(b)); \
+    }
+
         void handleArithOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
@@ -332,10 +350,11 @@ namespace zk_ml_toolchain {
                 mlir::Type LhsType = operation.getLhs().getType();
                 mlir::Type RhsType = operation.getRhs().getType();
                 assert(LhsType == RhsType && "must be same type for AndIOp");
-                if (LhsType.getIntOrFloatBitWidth() == 1) {
+                uint8_t bits = LhsType.getIntOrFloatBitWidth();
+                if (1 == bits) {
                     handle_logic_and(operation, frames.back(), bp, assignmnt, start_row);
                 } else {
-                    UNREACHABLE("TODO add Bitwise And Gadget");
+                    BITSWITCHER(handle_bitwise_and, bits);
                 }
             } else if (arith::OrIOp operation = llvm::dyn_cast<arith::OrIOp>(op)) {
                 ASSERT(operation.getNumOperands() == 2 && "Or must have two operands");
@@ -355,10 +374,11 @@ namespace zk_ml_toolchain {
                     mlir::Type LhsType = operation.getLhs().getType();
                     mlir::Type RhsType = operation.getRhs().getType();
                     assert(LhsType == RhsType && "must be same type for OrIOp");
-                    if (LhsType.getIntOrFloatBitWidth() == 1) {
+                    unsigned bits = LhsType.getIntOrFloatBitWidth();
+                    if (1 == bits) {
                         handle_logic_or(operation, frames.back(), bp, assignmnt, start_row);
                     } else {
-                        UNREACHABLE("TODO add Bitwise Or Gadget");
+                        BITSWITCHER(handle_bitwise_or, bits);
                     }
                 }
             } else if (arith::XOrIOp operation = llvm::dyn_cast<arith::XOrIOp>(op)) {
@@ -366,10 +386,11 @@ namespace zk_ml_toolchain {
                 mlir::Type LhsType = operation.getLhs().getType();
                 mlir::Type RhsType = operation.getRhs().getType();
                 assert(LhsType == RhsType && "must be same type for XOrIOp");
-                if (LhsType.getIntOrFloatBitWidth() == 1) {
+                unsigned bits = LhsType.getIntOrFloatBitWidth();
+                if (1 == bits) {
                     handle_logic_xor(operation, frames.back(), bp, assignmnt, start_row);
                 } else {
-                    UNREACHABLE("TODO add Bitwise XOr Gadget");
+                    BITSWITCHER(handle_bitwise_xor, bits);
                 }
             } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
                 // TODO: ATM, handle only the case where we work on indices that are
@@ -524,6 +545,7 @@ namespace zk_ml_toolchain {
                 UNREACHABLE(std::string("unhandled arith operation: ") + opName);
             }
         }
+#undef BITSWITCHER
 
         void handleMathOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
