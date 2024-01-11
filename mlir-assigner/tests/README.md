@@ -128,10 +128,10 @@ long as it is applicable for ZK).
 | **Det**                       |        :x:         |        :x:         |                                                    |
 | **DictVectorizer**            |        :x:         |        :x:         |                                                    |
 | **Div**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
-| **Dropout**                   |        :x:         | :white_check_mark: |                                                    |
+| **Dropout**                   | :white_check_mark: | :white_check_mark: | This is a noop in inference                        |
 | **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: |                                                    |
 | **Einsum**                    | :white_check_mark: | :white_check_mark: |                                                    |
-| **Elu**                       |        :x:         | :white_check_mark: |                                                    |
+| **Elu**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Equal**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Erf**                       |        :x:         | :white_check_mark: |                                                    |
 | **Exp**                       | :white_check_mark: | :white_check_mark: |                                                    |
