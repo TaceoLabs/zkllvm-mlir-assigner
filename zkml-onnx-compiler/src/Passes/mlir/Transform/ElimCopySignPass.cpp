@@ -1,20 +1,14 @@
+#include <Passes/mlir/Transform/ElimCopySignPass.hpp>
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "ElimCopySignPass.h"
+using namespace mlir;
 
-StringRef zk_ml_toolchain::ElimCopySignPass::getArgument() const {
-    return "elim-copysign-pass";
-}
-
-StringRef zk_ml_toolchain::ElimCopySignPass::getDescription() const {
-    return "Eliminates redundant copysign operations that follow an frem operation";
-}
-
-void zk_ml_toolchain::ElimCopySignPass::runOnOperation() {
+void zk_ml::ElimCopySignPass::runOnOperation() {
     mlir::RewritePatternSet patterns(&getContext());
     patterns.add<ElimCopySign>(&getContext());
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
-std::unique_ptr<Pass> zk_ml_toolchain::createElimCopySignPass() {
+std::unique_ptr<Pass> mlir::zk_ml::createElimCopySignPass() {
     return std::make_unique<ElimCopySignPass>();
 }
