@@ -54,9 +54,11 @@
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
+#include <mlir-assigner/components/fixedpoint/gather.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
-#include <mlir-assigner/components/boolean/logic_ops.hpp>
 #include <mlir-assigner/components/fixedpoint/conversion.hpp>
+#include <mlir-assigner/components/boolean/logic_ops.hpp>
+#include <mlir-assigner/components/integer/arith.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -335,7 +337,7 @@ namespace zk_ml_toolchain {
                         ASSERT(falsy != frames.back().locals.end());
                         frames.back().locals[mlir::hash_value(operation->getResult(0))] = falsy->second;
                     }
-                } else if (operandType.isa<FloatType>()) {
+                } else if (operandType.isa<FloatType>() || operandType.isa<IntegerType>()) {
                     handle_select_component(operation, frames.back(), bp, assignmnt, start_row);
                 } else {
                     std::string typeStr;
@@ -393,14 +395,17 @@ namespace zk_ml_toolchain {
                     BITSWITCHER(handle_bitwise_xor, bits);
                 }
             } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
-                // TODO: ATM, handle only the case where we work on indices that are
-                // constant values
-                auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                assert(lhs != frames.back().constant_values.end());
-                assert(rhs != frames.back().constant_values.end());
-                auto result = lhs->second + rhs->second;
-                frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
+                if (operation.getLhs().getType().isa<IndexType>()) {
+                    assert(operation.getRhs().getType().isa<IndexType>());
+                    auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
+                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
+                    assert(lhs != frames.back().constant_values.end());
+                    assert(rhs != frames.back().constant_values.end());
+                    auto result = lhs->second + rhs->second;
+                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
+                } else {
+                    handle_integer_addition_component(operation, frames.back(), bp, assignmnt, start_row);
+                }
             } else if (arith::SubIOp operation = llvm::dyn_cast<arith::SubIOp>(op)) {
                 assert(operation.getLhs().getType().isa<IndexType>());
                 assert(operation.getRhs().getType().isa<IndexType>());
@@ -428,53 +433,59 @@ namespace zk_ml_toolchain {
                 frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
 
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
-                assert(operation.getLhs().getType().isa<IndexType>());
-                assert(operation.getRhs().getType().isa<IndexType>());
+                if (operation.getLhs().getType().isa<IndexType>()) {
+                    UNREACHABLE("who is using this");
+                    assert(operation.getRhs().getType().isa<IndexType>());
 
-                // TODO: ATM, handle only the case where we work on indices that are
-                // constant values
-                auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                assert(lhs != frames.back().constant_values.end());
-                assert(rhs != frames.back().constant_values.end());
-                int64_t cmpResult;
-                switch (operation.getPredicate()) {
-                    case arith::CmpIPredicate::eq:
-                        cmpResult = static_cast<int64_t>(lhs->second == rhs->second);
-                        break;
-                    case arith::CmpIPredicate::ne:
-                        cmpResult = static_cast<int64_t>(lhs->second != rhs->second);
-                        break;
-                    case arith::CmpIPredicate::slt:
-                        cmpResult = static_cast<int64_t>(lhs->second < rhs->second);
-                        break;
-                    case arith::CmpIPredicate::sle:
-                        cmpResult = static_cast<int64_t>(lhs->second <= rhs->second);
-                        break;
-                    case arith::CmpIPredicate::sgt:
-                        cmpResult = static_cast<int64_t>(lhs->second > rhs->second);
-                        break;
-                    case arith::CmpIPredicate::sge:
-                        cmpResult = static_cast<int64_t>(lhs->second >= rhs->second);
-                        break;
-                    case arith::CmpIPredicate::ult:
-                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <
-                                                         static_cast<uint64_t>(rhs->second));
-                        break;
-                    case arith::CmpIPredicate::ule:
-                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <=
-                                                         static_cast<uint64_t>(rhs->second));
-                        break;
-                    case arith::CmpIPredicate::ugt:
-                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >
-                                                         static_cast<uint64_t>(rhs->second));
-                        break;
-                    case arith::CmpIPredicate::uge:
-                        cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >=
-                                                         static_cast<uint64_t>(rhs->second));
-                        break;
+                    // TODO: ATM, handle only the case where we work on indices that are
+                    // constant values
+                    auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
+                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
+                    assert(lhs != frames.back().constant_values.end());
+                    assert(rhs != frames.back().constant_values.end());
+                    int64_t cmpResult;
+                    switch (operation.getPredicate()) {
+                        case arith::CmpIPredicate::eq:
+                            cmpResult = static_cast<int64_t>(lhs->second == rhs->second);
+                            break;
+                        case arith::CmpIPredicate::ne:
+                            cmpResult = static_cast<int64_t>(lhs->second != rhs->second);
+                            break;
+                        case arith::CmpIPredicate::slt:
+                            cmpResult = static_cast<int64_t>(lhs->second < rhs->second);
+                            break;
+                        case arith::CmpIPredicate::sle:
+                            cmpResult = static_cast<int64_t>(lhs->second <= rhs->second);
+                            break;
+                        case arith::CmpIPredicate::sgt:
+                            cmpResult = static_cast<int64_t>(lhs->second > rhs->second);
+                            break;
+                        case arith::CmpIPredicate::sge:
+                            cmpResult = static_cast<int64_t>(lhs->second >= rhs->second);
+                            break;
+                        case arith::CmpIPredicate::ult:
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <
+                                                             static_cast<uint64_t>(rhs->second));
+                            break;
+                        case arith::CmpIPredicate::ule:
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <=
+                                                             static_cast<uint64_t>(rhs->second));
+                            break;
+                        case arith::CmpIPredicate::ugt:
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >
+                                                             static_cast<uint64_t>(rhs->second));
+                            break;
+                        case arith::CmpIPredicate::uge:
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >=
+                                                             static_cast<uint64_t>(rhs->second));
+                            break;
+                    }
+                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = cmpResult;
+                } else {
+                    // FIXME we use the fcmp gadget here for the time being.
+                    // as soon as we get the cmpi gadget from upstream, swap the gadget
+                    handle_integer_comparison_component(operation, frames.back(), bp, assignmnt, start_row);
                 }
-                frames.back().constant_values[mlir::hash_value(operation.getResult())] = cmpResult;
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (operation->getResult(0).getType().isa<IndexType>()) {
@@ -867,6 +878,11 @@ namespace zk_ml_toolchain {
                 ASSERT(nextIndex != frames.back().constant_values.end());
                 auto nextIndexVar = put_into_assignment(nextIndex->second);
                 handle_argmax(operation, frames.back(), bp, assignmnt, nextIndexVar, start_row);
+            } else if (zkml::GatherOp operation = llvm::dyn_cast<zkml::GatherOp>(op)) {
+                auto dataIndex = frames.back().constant_values.find(mlir::hash_value(operation.getDataIndex()));
+                ASSERT(dataIndex != frames.back().constant_values.end());
+                auto dataIndexVar = put_into_assignment(dataIndex->second);
+                handle_gather(operation, frames.back(), bp, assignmnt, dataIndexVar, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
