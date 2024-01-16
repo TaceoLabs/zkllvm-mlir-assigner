@@ -674,8 +674,7 @@ namespace zk_ml_toolchain {
                     llvm::hash_code hash = mlir::hash_value(operand);
                     assert(frames.back().constant_values.find(hash) != frames.back().constant_values.end());
                     assert(frames.back().constant_values.count(hash));
-                    int64_t test = frames.back().constant_values[hash];
-                    operands[i++] = test;
+                    operands[i++] = frames.back().constant_values[hash];
                 }
                 if (evalIntegerSet(condition, operands, logger)) {
                     handleRegion(op->getRegion(0));
@@ -735,12 +734,22 @@ namespace zk_ml_toolchain {
                 if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
                     mlir::Type attrType = attr.getElementType();
                     if (attrType.isa<mlir::IntegerType>()) {
-                        auto ints = attr.tryGetValues<APInt>();
-                        assert(!mlir::failed(ints) && "must work as we checked above");
-                        size_t idx = 0;
-                        for (auto a : ints.value()) {
-                            auto var = put_into_assignment(a.getSExtValue());
-                            m.put_flat(idx++, var);
+                        mlir::IntegerType intType = attrType.cast<mlir::IntegerType>();
+                        if (1 == intType.getIntOrFloatBitWidth()) {
+                            auto bools = attr.tryGetValues<bool>();
+                            assert(!mlir::failed(bools) && "must work as we checked above");
+                            size_t idx = 0;
+                            for (auto a : bools.value()) {
+                                m.put_flat(idx++, a ? true_var : zero_var);
+                            }
+                        } else {
+                            auto ints = attr.tryGetValues<APInt>();
+                            assert(!mlir::failed(ints) && "must work as we checked above");
+                            size_t idx = 0;
+                            for (auto a : ints.value()) {
+                                auto var = put_into_assignment(a.getSExtValue());
+                                m.put_flat(idx++, var);
+                            }
                         }
                     } else if (attrType.isa<mlir::FloatType>()) {
                         auto floats = attr.tryGetValues<APFloat>();
@@ -815,6 +824,7 @@ namespace zk_ml_toolchain {
                 // Initialize undef and zero vars once
                 undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
                 zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
+                true_var = put_into_assignment(typename BlueprintFieldType::value_type(1));
 
                 // go execute the function
                 handleRegion(funcOp->second.getRegion());
@@ -1118,6 +1128,7 @@ namespace zk_ml_toolchain {
         size_t public_input_idx = 0;
         VarType undef_var;
         VarType zero_var;
+        VarType true_var;
     };
 }    // namespace zk_ml_toolchain
 
