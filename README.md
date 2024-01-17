@@ -83,7 +83,7 @@ To test your build, have a look in the [test folder](mlir-assigner/tests).
 
 This section shows how to use the zkML frontend for zkLLVM. In this example, we
 guide you through every step to proof the
-[CNN-MNIST Model](https://github.com/onnx/models/tree/main/vision/classification/mnist)
+[CNN-MNIST Model](https://github.com/onnx/models/tree/ddbbd1274c8387e3745778705810c340dea3d8c7/validated/vision/classification/mnist)
 from the ONNX model zoo on Ubuntu 22.04.
 
 We expect that you already built the two binaries `build/bin/zk-ml-opt` and
@@ -128,7 +128,7 @@ additions and multiplications. For that we introduced the operation
 
 3. **Prepare your input:** The `mlir-assigner` expects the input for inference
    in `json` format. Have a look at e.g.,
-   [the input to this small model](mlir-assigner/tests/Ops/Add/AddSimple.json)
+   [the input to this small model](mlir-assigner/tests/Ops/Onnx/Add/AddSimple.json)
    to see how you should prepare your input. For this example, we have an input
    file prepared. Therefore, we just copy it to our folder:
 
