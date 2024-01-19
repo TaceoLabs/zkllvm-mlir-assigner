@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
@@ -434,7 +435,6 @@ namespace zk_ml_toolchain {
 
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
-                    UNREACHABLE("who is using this");
                     assert(operation.getRhs().getType().isa<IndexType>());
 
                     // TODO: ATM, handle only the case where we work on indices that are
@@ -736,11 +736,16 @@ namespace zk_ml_toolchain {
                     if (attrType.isa<mlir::IntegerType>()) {
                         mlir::IntegerType intType = attrType.cast<mlir::IntegerType>();
                         if (1 == intType.getIntOrFloatBitWidth()) {
+                            // check if we already have a true var created
+                            if (!true_var.has_value()) {
+                                true_var =
+                                    std::make_optional(put_into_assignment(typename BlueprintFieldType::value_type(1)));
+                            }
                             auto bools = attr.tryGetValues<bool>();
                             assert(!mlir::failed(bools) && "must work as we checked above");
                             size_t idx = 0;
                             for (auto a : bools.value()) {
-                                m.put_flat(idx++, a ? true_var : zero_var);
+                                m.put_flat(idx++, a ? true_var.value() : zero_var);
                             }
                         } else {
                             auto ints = attr.tryGetValues<APInt>();
@@ -824,7 +829,7 @@ namespace zk_ml_toolchain {
                 // Initialize undef and zero vars once
                 undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
                 zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
-                true_var = put_into_assignment(typename BlueprintFieldType::value_type(1));
+                true_var = std::nullopt;
 
                 // go execute the function
                 handleRegion(funcOp->second.getRegion());
@@ -1128,7 +1133,7 @@ namespace zk_ml_toolchain {
         size_t public_input_idx = 0;
         VarType undef_var;
         VarType zero_var;
-        VarType true_var;
+        std::optional<VarType> true_var;
     };
 }    // namespace zk_ml_toolchain
 
