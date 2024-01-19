@@ -17,6 +17,8 @@
 #include "mlir/Dialect/zkml/ZkMlDialect.h"
 #include <Passes/mlir/Transform/ElimCopySignPass.hpp>
 #include <Passes/mlir/Transform/PowFToGenericExpPass.hpp>
+#include <Passes/mlir/Transform/ElimCopySignPass.hpp>
+#include <Passes/mlir/Transform/AddTracingOperationsPass.hpp>
 
 #define STDOUT_MARKER "stdout"
 
@@ -150,6 +152,9 @@ int main(int argc, char **argv) {
     bool EmitMLIR = EmitLevel::zkMLIR == EmitLevel || EmitLevel::MLIR == EmitLevel;
     onnx_mlir::configurePasses();
     mlir::PassManager pm(module.get()->getName(), mlir::OpPassManager::Nesting::Implicit);
+    if (ZkMlDebugFlag) {
+      pm.addPass(mlir::zk_ml::createAddTracingOperationsPass());
+    }
     if (EmitLevel::ONNX == EmitLevel) {
         onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR, outputFilename);
     } else {
