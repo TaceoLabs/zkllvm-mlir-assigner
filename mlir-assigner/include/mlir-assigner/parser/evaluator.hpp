@@ -21,6 +21,8 @@
 #include "mlir/Dialect/zkml/IR/DotProduct.h"
 #include "mlir/Dialect/zkml/IR/ArgMin.h"
 #include "mlir/Dialect/zkml/IR/ArgMax.h"
+#include "mlir/Dialect/zkml/IR/Trace.h"
+#include "mlir/Dialect/zkml/IR/OnnxAmount.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -898,6 +900,10 @@ namespace zk_ml_toolchain {
                 ASSERT(dataIndex != frames.back().constant_values.end());
                 auto dataIndexVar = put_into_assignment(dataIndex->second);
                 handle_gather(operation, frames.back(), bp, assignmnt, dataIndexVar, start_row);
+            } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
+                amount_ops = operation.getAmount();
+            } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
+                std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
@@ -1131,6 +1137,8 @@ namespace zk_ml_toolchain {
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
         size_t public_input_idx = 0;
+        unsigned amount_ops = 0;
+        unsigned progress = 0;
         VarType undef_var;
         VarType zero_var;
         std::optional<VarType> true_var;

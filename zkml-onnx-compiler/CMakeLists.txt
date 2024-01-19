@@ -3,12 +3,16 @@ cmake_minimum_required(VERSION 3.19.0)
 add_onnx_mlir_library(ZkMLIRTransform
  src/Passes/mlir/Transform/PowFToGenericExpPass.cpp
  src/Passes/mlir/Transform/ElimCopySignPass.cpp
+ src/Passes/mlir/Transform/AddTracingOperationsPass.cpp
 
  LINK_LIBS PRIVATE
 
  MLIRTransforms
  MLIRFuncDialect
  MLIRMathDialect
+
+ OMONNXOps
+ MLIRZkMlDialect
  )
 
 add_onnx_mlir_executable(zkml-onnx-compiler
