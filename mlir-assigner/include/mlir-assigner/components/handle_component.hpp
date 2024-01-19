@@ -37,6 +37,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/gather_acc.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>

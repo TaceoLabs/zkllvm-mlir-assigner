@@ -26,6 +26,7 @@
 #ifndef CRYPTO3_ASSIGNER_F_COMPARISON_HPP
 #define CRYPTO3_ASSIGNER_F_COMPARISON_HPP
 
+#include <cstdint>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
@@ -38,9 +39,71 @@
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/policy/policy_manager.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
+        namespace {
+            enum CmpType { GT, LT, GE, LE, NE, EQ };
+            template<uint8_t limbs, typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
+            void call_component(
+                MlirOp &operation,
+                stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+                circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &bp,
+                assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                std::uint32_t start_row,
+                CmpType cmpType) {
+                using component_type = components::fix_cmp_extended<
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, limbs, limbs>;
+                auto input = PREPARE_BINARY_INPUT(MlirOp);
+                const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
+
+                component_type component(p.witness, manifest_reader::get_constants(),
+                                         manifest_reader::get_public_inputs(), limbs, limbs);
+                if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
+                    auto lookup_tables = component.component_custom_lookup_tables();
+                    for (auto &t : lookup_tables) {
+                        bp.register_lookup_table(
+                            std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
+                    }
+                };
+
+                if constexpr (nil::blueprint::use_lookups<component_type>()) {
+                    auto lookup_tables = component.component_lookup_tables();
+                    for (auto &[k, v] : lookup_tables) {
+                        bp.reserve_table(k);
+                    }
+                };
+                handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input);
+                components::generate_circuit(component, bp, assignment, input, start_row);
+                auto result = components::generate_assignments(component, assignment, input, start_row);
+                switch (cmpType) {
+                    case GT:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.gt;
+                        break;
+                    case LT:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.lt;
+                        break;
+                    case GE:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.geq;
+                        break;
+                    case LE:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.leq;
+                        break;
+                    case NE:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.neq;
+                        break;
+                    case EQ:
+                        frame.locals[mlir::hash_value(operation.getResult())] = result.eq;
+                        break;
+                }
+            }
+        }    // namespace
+
         namespace detail {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -140,15 +203,47 @@ namespace nil {
             auto x = lhs->second;
             auto y = rhs->second;
 
-            // std::stringstream ss;
-            // ss << var_value(assignment, x) << " cmp " << var_value(assignment, y) <<
-            // "\n"; llvm::outs() << ss.str();
-
             // TACEO_TODO: check types
 
             auto result = detail::handle_f_comparison_component(pred, x, y, bp, assignment, start_row);
             frame.locals[mlir::hash_value(operation.getResult())] = result;
         }
+
+        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        void handle_integer_comparison_component(
+            mlir::arith::CmpIOp &operation,
+            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            CmpType cmpType;
+
+            switch (operation.getPredicate()) {
+                case mlir::arith::CmpIPredicate::eq:
+                    cmpType = CmpType::EQ;
+                    break;
+                case mlir::arith::CmpIPredicate::ne:
+                    cmpType = CmpType::NE;
+                    break;
+                case mlir::arith::CmpIPredicate::slt:
+                    cmpType = CmpType::LT;
+                    break;
+                case mlir::arith::CmpIPredicate::sle:
+                    cmpType = CmpType::LE;
+                    break;
+                case mlir::arith::CmpIPredicate::sgt:
+                    cmpType = CmpType::GT;
+                    break;
+                case mlir::arith::CmpIPredicate::sge:
+                    cmpType = CmpType::GE;
+                    break;
+                default:
+                    UNREACHABLE("unsupported predicate for cmpi");
+            }
+            call_component<2>(operation, frame, bp, assignment, start_row, cmpType);
+        }
+
     }    // namespace blueprint
 }    // namespace nil
 #endif    // CRYPTO3_ASSIGNER_F_COMPARISON_HPP

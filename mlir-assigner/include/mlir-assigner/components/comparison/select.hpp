@@ -81,10 +81,10 @@ namespace nil {
             std::uint32_t start_row) {
 
             auto false_value = frame.locals.find(mlir::hash_value(operation.getFalseValue()));
-            ASSERT(false_value != frame.locals.end());
             auto true_value = frame.locals.find(mlir::hash_value(operation.getTrueValue()));
-            ASSERT(true_value != frame.locals.end());
             auto condition = frame.locals.find(mlir::hash_value(operation.getCondition()));
+            ASSERT(false_value != frame.locals.end());
+            ASSERT(true_value != frame.locals.end());
             ASSERT(condition != frame.locals.end());
 
             auto c = condition->second;
