@@ -21,7 +21,7 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
         void handle_to_fixedpoint(
             MlirOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -37,13 +37,13 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      1);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
         namespace detail {
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp, uint8_t OutputType>
             void handle_to_int(
                 MlirOp &operation,
-                stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
                 circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &bp,
                 assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -60,21 +60,21 @@ namespace nil {
 
                 component_type component(p.witness, manifest_reader::get_constants(),
                                          manifest_reader::get_public_inputs(), 1, 1, outputType);
-                fill_trace(component, input, operation, frame, bp, assignment, start_row);
+                fill_trace(component, input, operation, stack, bp, assignment, start_row);
             }
         }    // namespace detail
 
 #define HANDLE_TO_INT(TY)                                                                        \
     detail::handle_to_int<BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToSIOp, TY>( \
-        operation, frame, bp, assignment, start_row);
+        operation, stack, bp, assignment, start_row);
 
 #define HANDLE_TO_UINT(TY)                                                                       \
     detail::handle_to_int<BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToUIOp, TY>( \
-        operation, frame, bp, assignment, start_row);
+        operation, stack, bp, assignment, start_row);
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_to_int(
             mlir::arith::FPToSIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -101,7 +101,7 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_to_int(
             mlir::arith::FPToUIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,

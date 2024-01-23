@@ -71,20 +71,14 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_fixedpoint_exp_component(
             mlir::math::ExpOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            auto operand = frame.locals.find(mlir::hash_value(operation.getOperand()));
-            ASSERT(operand != frame.locals.end());
-
-            auto x = operand->second;
-
-            // TACEO_TODO: check types
-
-            auto result = detail::handle_fixedpoint_exp_component(x, bp, assignment, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+            auto operand = stack.get_local(operation.getOperand());
+            auto result = detail::handle_fixedpoint_exp_component(operand, bp, assignment, start_row);
+            stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint
 }    // namespace nil

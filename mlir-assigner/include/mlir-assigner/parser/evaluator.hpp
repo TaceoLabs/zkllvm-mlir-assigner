@@ -189,8 +189,79 @@ namespace zk_ml_toolchain {
         evaluator(evaluator &&pass) = delete;
         evaluator &operator=(const evaluator &pass) = delete;
 
+        void handleKrnlEntryOperation(KrnlEntryPointOp &EntryPoint, std::string &func) {
+            int32_t numInputs = -1;
+            int32_t numOutputs = -1;
+
+            for (auto a : EntryPoint->getAttrs()) {
+                if (a.getName() == EntryPoint.getEntryPointFuncAttrName()) {
+                    func = a.getValue().cast<SymbolRefAttr>().getLeafReference().str();
+                } else if (a.getName() == EntryPoint.getNumInputsAttrName()) {
+                    numInputs = a.getValue().cast<IntegerAttr>().getInt();
+                } else if (a.getName() == EntryPoint.getNumOutputsAttrName()) {
+                    numOutputs = a.getValue().cast<IntegerAttr>().getInt();
+                } else if (a.getName() == EntryPoint.getSignatureAttrName()) {
+                    // do nothing for signature atm
+                    // TODO: check against input types & shapes
+                } else {
+                    UNREACHABLE("unhandled attribute: " + a.getName().str());
+                }
+            }
+        }
+
+        std::string gatherFuncDecls(Region &BodyRegion) {
+          assert(BodyRegion.getBlocks().size() == 1 && "must have single block in main region");
+          std::string MainDecl = "";
+          Block &MainBlock = BodyRegion.getBlocks().front();
+          bool EntryFound = false;
+          for (auto &Op : MainBlock.getOperations()) {
+            if (func::FuncOp FuncOp = llvm::dyn_cast<func::FuncOp>(Op)) {
+                auto res = functions.insert({FuncOp.getSymName().str(), FuncOp});
+                assert(res.second);    // Redefining an existing function should not
+                                       // happen ATM
+            } else if (auto EntryPointOp = llvm::dyn_cast<KrnlEntryPointOp>(Op)) {
+              assert(!EntryFound && "multiple entries found");
+              EntryFound = false;
+              handleKrnlEntryOperation(EntryPointOp, MainDecl);
+            } else {
+              std::string opName = Op.getName().getIdentifier().str();
+              UNREACHABLE(std::string("only func.func and krnl.entryPoint allowed but got: ") + opName); \
+            }
+          }
+          return MainDecl;
+        }
+
         void evaluate(mlir::OwningOpRef<mlir::ModuleOp> module) {
-            handleRegion(module->getBodyRegion());
+          std::string MainDecl = gatherFuncDecls(module->getBodyRegion());
+          auto funcOp = functions.find(MainDecl);
+          assert(funcOp != functions.end());
+          //prepare everything for run
+
+          //FIXME remove me
+          stack.push_frame();
+          nil::blueprint::stack_frame<VarType> &main_frame = stack.get_last_frame();
+          nil::blueprint::InputReader<BlueprintFieldType, VarType,
+                                      nil::blueprint::assignment<ArithmetizationType>>
+              input_reader(main_frame, assignmnt);
+          bool ok = input_reader.fill_public_input(funcOp->second, public_input);
+          if (!ok) {
+              std::cerr << "Public input does not match the circuit signature";
+              const std::string &error = input_reader.get_error();
+              if (!error.empty()) {
+                  std::cerr << ": " << error;
+              }
+              std::cerr << std::endl;
+              exit(-1);
+          }
+          public_input_idx = input_reader.get_idx();
+
+          // Initialize undef and zero vars once
+          undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
+          zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
+          true_var = std::nullopt;
+          // go execute the function
+          
+          handleRegion(funcOp->second.getRegion());
         }
 
     private:
@@ -227,18 +298,19 @@ namespace zk_ml_toolchain {
             logger.trace("for (%d -> %d step %d)", from, to, step);
             llvm::hash_code counterHash = mlir::hash_value(op.getInductionVar());
             logger.trace("inserting hash: %x:%d", std::size_t(counterHash), from);
-            auto res = frames.back().constant_values.insert({counterHash, from});
-            assert(res.second);    // we do not want overrides here, since we delete it
-                                   // after loop this should never happen
+            // auto res = frames.back().constant_values.insert({counterHash, from});
+            // we do not want overrides here, since we delete it
+            // after loop this should never happen
+            stack.push_constant(op.getInductionVar(), from, false);
             while (from < to) {
                 handleRegion(op.getLoopBody());
                 from += step;
                 logger.trace("updating hash: %x:%d", std::size_t(counterHash), from);
-                frames.back().constant_values[counterHash] = from;
+                stack.push_constant(counterHash, from);
                 logger.trace("%d -> %d", from, to);
                 logger.trace("for done! go next iteration..");
             }
-            frames.back().constant_values.erase(counterHash);
+            stack.erase_constant(counterHash);
             logger.trace("deleting: %x", std::size_t(counterHash));
         }
 
@@ -249,17 +321,7 @@ namespace zk_ml_toolchain {
                 assert(affineMap.getNumInputs() == operands.size());
                 llvm::SmallVector<int64_t> inVector(affineMap.getNumInputs());
                 for (unsigned i = 0; i < affineMap.getNumInputs(); ++i) {
-                    llvm::hash_code hash = mlir::hash_value(operands[i]);
-                    logger.trace("looking for: %x", std::size_t(hash));
-                    if (frames.back().constant_values.find(hash) == frames.back().constant_values.end()) {
-                        logger.log_affine_map(affineMap);
-                        logger.error("CANNOT FIND %x", std::size_t(mlir::hash_value(operands[i])));
-                        exit(-1);
-                    } else {
-                        assert(frames.back().constant_values.find(hash) != frames.back().constant_values.end());
-                        assert(frames.back().constant_values.count(hash));
-                        inVector[i] = frames.back().constant_values[hash];
-                    }
+                    inVector[i] = stack.get_constant(operands[i]);
                 }
                 llvm::SmallVector<int64_t> eval = evalAffineMap(affineMap, inVector);
                 return from ? getMaxFromVector(eval) : getMinFromVector(eval);
@@ -279,16 +341,16 @@ namespace zk_ml_toolchain {
 #define BITSWITCHER(func, b)                                                                           \
     switch (b) {                                                                                       \
         case 8:                                                                                        \
-            func<1>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            func<1>(operation, stack, bp, assignmnt, start_row);                               \
             break;                                                                                     \
         case 16:                                                                                       \
-            func<2>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            func<2>(operation, stack, bp, assignmnt, start_row);                               \
             break;                                                                                     \
         case 32:                                                                                       \
-            func<4>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            func<4>(operation, stack, bp, assignmnt, start_row);                               \
             break;                                                                                     \
         case 64:                                                                                       \
-            func<8>(operation, frames.back(), bp, assignmnt, start_row);                               \
+            func<8>(operation, stack, bp, assignmnt, start_row);                               \
             break;                                                                                     \
         default:                                                                                       \
             UNREACHABLE(std::string("unsupported int bit size for bitwise op: ") + std::to_string(b)); \
@@ -297,17 +359,17 @@ namespace zk_ml_toolchain {
         void handleArithOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
-                handle_fixedpoint_addition_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_addition_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
-                handle_fixedpoint_subtraction_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_subtraction_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
-                handle_fixedpoint_mul_rescale_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_mul_rescale_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
-                handle_fixedpoint_division_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_division_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
-                handle_fixedpoint_remainder_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_remainder_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
-                handle_fixedpoint_comparison_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_comparison_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
                 ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
                 ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
@@ -315,33 +377,19 @@ namespace zk_ml_toolchain {
                 // check if we work on indices
                 Type operandType = operation->getOperand(1).getType();
                 auto i1Hash = mlir::hash_value(operation->getOperand(0));
-                if (operandType.isa<IndexType>()) {
+                if (operandType.isa<IndexType>() || stack.peek_constant(i1Hash)) {
                     // for now we expect that if we select on indices, that we also have the cmp result in
                     // constant values. Let's see if this holds true in the future
-                    auto cmpResult = frames.back().constant_values.find(i1Hash);
-                    ASSERT(cmpResult != frames.back().constant_values.end());
-                    if (cmpResult->second) {
-                        auto truthy = frames.back().constant_values.find(mlir::hash_value(operation->getOperand(1)));
-                        ASSERT(truthy != frames.back().constant_values.end());
-                        frames.back().constant_values[mlir::hash_value(operation->getResult(0))] = truthy->second;
-                    } else {
-                        auto falsy = frames.back().constant_values.find(mlir::hash_value(operation->getOperand(2)));
-                        ASSERT(falsy != frames.back().constant_values.end());
-                        frames.back().constant_values[mlir::hash_value(operation->getResult(0))] = falsy->second;
-                    }
-                } else if (frames.back().constant_values.find(i1Hash) != frames.back().constant_values.end()) {
                     // we come from index comparision but we do not work on indices, ergo we need to get from locals
-                    if (frames.back().constant_values[i1Hash]) {
-                        auto truthy = frames.back().locals.find(mlir::hash_value(operation->getOperand(1)));
-                        ASSERT(truthy != frames.back().locals.end());
-                        frames.back().locals[mlir::hash_value(operation->getResult(0))] = truthy->second;
+                    if (stack.get_constant(i1Hash)) {
+                        auto truthy = stack.get_constant(operation->getOperand(1));
+                        stack.push_constant(operation->getResult(0), truthy);
                     } else {
-                        auto falsy = frames.back().locals.find(mlir::hash_value(operation->getOperand(2)));
-                        ASSERT(falsy != frames.back().locals.end());
-                        frames.back().locals[mlir::hash_value(operation->getResult(0))] = falsy->second;
+                        auto falsy = stack.get_constant(operation->getOperand(2));
+                        stack.push_constant(operation->getResult(0), falsy);
                     }
                 } else if (operandType.isa<FloatType>() || operandType.isa<IntegerType>()) {
-                    handle_select_component(operation, frames.back(), bp, assignmnt, start_row);
+                    handle_select_component(operation, stack, bp, assignmnt, start_row);
                 } else {
                     std::string typeStr;
                     llvm::raw_string_ostream ss(typeStr);
@@ -349,7 +397,7 @@ namespace zk_ml_toolchain {
                     UNREACHABLE(std::string("unhandled select operand: ") + typeStr);
                 }
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
-                handle_fixedpoint_neg_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_neg_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
                 // check if logical and or bitwise and
                 mlir::Type LhsType = operation.getLhs().getType();
@@ -357,7 +405,7 @@ namespace zk_ml_toolchain {
                 assert(LhsType == RhsType && "must be same type for AndIOp");
                 uint8_t bits = LhsType.getIntOrFloatBitWidth();
                 if (1 == bits) {
-                    handle_logic_and(operation, frames.back(), bp, assignmnt, start_row);
+                    handle_logic_and(operation, stack, bp, assignmnt, start_row);
                 } else {
                     BITSWITCHER(handle_bitwise_and, bits);
                 }
@@ -368,12 +416,11 @@ namespace zk_ml_toolchain {
                 // check if we work on indices
                 // TODO this seems like a hack, maybe we can do something better
                 auto lhsHash = mlir::hash_value(operation.getLhs());
-                if (frames.back().constant_values.find(lhsHash) != frames.back().constant_values.end()) {
-                    auto lhs = frames.back().constant_values[lhsHash];
-                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                    assert(rhs != frames.back().constant_values.end());
-                    auto result = lhs | rhs->second;
-                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
+                if (stack.peek_constant(lhsHash)) {
+                    auto lhs = stack.get_constant(lhsHash);
+                    auto rhs = stack.get_constant(operation.getRhs());
+                    auto result = lhs | rhs;
+                    stack.push_constant(operation.getResult(), result);
                 } else {
                     // check if logical and or bitwise and
                     mlir::Type LhsType = operation.getLhs().getType();
@@ -381,7 +428,7 @@ namespace zk_ml_toolchain {
                     assert(LhsType == RhsType && "must be same type for OrIOp");
                     unsigned bits = LhsType.getIntOrFloatBitWidth();
                     if (1 == bits) {
-                        handle_logic_or(operation, frames.back(), bp, assignmnt, start_row);
+                        handle_logic_or(operation, stack, bp, assignmnt, start_row);
                     } else {
                         BITSWITCHER(handle_bitwise_or, bits);
                     }
@@ -393,106 +440,90 @@ namespace zk_ml_toolchain {
                 assert(LhsType == RhsType && "must be same type for XOrIOp");
                 unsigned bits = LhsType.getIntOrFloatBitWidth();
                 if (1 == bits) {
-                    handle_logic_xor(operation, frames.back(), bp, assignmnt, start_row);
+                    handle_logic_xor(operation, stack, bp, assignmnt, start_row);
                 } else {
                     BITSWITCHER(handle_bitwise_xor, bits);
                 }
             } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
                     assert(operation.getRhs().getType().isa<IndexType>());
-                    auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                    assert(lhs != frames.back().constant_values.end());
-                    assert(rhs != frames.back().constant_values.end());
-                    auto result = lhs->second + rhs->second;
-                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
+                    auto lhs = stack.get_constant(operation.getLhs());
+                    auto rhs = stack.get_constant(operation.getRhs());
+                    stack.push_constant(operation.getResult(), lhs + rhs);
                 } else {
-                    handle_integer_addition_component(operation, frames.back(), bp, assignmnt, start_row);
+                    handle_integer_addition_component(operation, stack, bp, assignmnt, start_row);
                 }
             } else if (arith::SubIOp operation = llvm::dyn_cast<arith::SubIOp>(op)) {
                 assert(operation.getLhs().getType().isa<IndexType>());
                 assert(operation.getRhs().getType().isa<IndexType>());
-
                 // TODO: ATM, handle only the case where we work on indices that are
                 // constant values
-                auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                assert(lhs != frames.back().constant_values.end());
-                assert(rhs != frames.back().constant_values.end());
-                auto result = lhs->second - rhs->second;
-                frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
-
+                auto lhs = stack.get_constant(operation.getLhs());
+                auto rhs = stack.get_constant(operation.getRhs());
+                stack.push_constant(operation.getResult(), lhs - rhs);
             } else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
                 assert(operation.getLhs().getType().isa<IndexType>());
                 assert(operation.getRhs().getType().isa<IndexType>());
-
                 // TODO: ATM, handle only the case where we work on indices that are
                 // constant values
-                auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                assert(lhs != frames.back().constant_values.end());
-                assert(rhs != frames.back().constant_values.end());
-                auto result = lhs->second * rhs->second;
-                frames.back().constant_values[mlir::hash_value(operation.getResult())] = result;
-
+                auto lhs = stack.get_constant(operation.getLhs());
+                auto rhs = stack.get_constant(operation.getRhs());
+                stack.push_constant(operation.getResult(), lhs * rhs);
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
                     assert(operation.getRhs().getType().isa<IndexType>());
 
                     // TODO: ATM, handle only the case where we work on indices that are
                     // constant values
-                    auto lhs = frames.back().constant_values.find(mlir::hash_value(operation.getLhs()));
-                    auto rhs = frames.back().constant_values.find(mlir::hash_value(operation.getRhs()));
-                    assert(lhs != frames.back().constant_values.end());
-                    assert(rhs != frames.back().constant_values.end());
+                    auto lhs = stack.get_constant(operation.getLhs());
+                    auto rhs = stack.get_constant(operation.getRhs());
                     int64_t cmpResult;
                     switch (operation.getPredicate()) {
                         case arith::CmpIPredicate::eq:
-                            cmpResult = static_cast<int64_t>(lhs->second == rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs == rhs);
                             break;
                         case arith::CmpIPredicate::ne:
-                            cmpResult = static_cast<int64_t>(lhs->second != rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs != rhs);
                             break;
                         case arith::CmpIPredicate::slt:
-                            cmpResult = static_cast<int64_t>(lhs->second < rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs < rhs);
                             break;
                         case arith::CmpIPredicate::sle:
-                            cmpResult = static_cast<int64_t>(lhs->second <= rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs <= rhs);
                             break;
                         case arith::CmpIPredicate::sgt:
-                            cmpResult = static_cast<int64_t>(lhs->second > rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs > rhs);
                             break;
                         case arith::CmpIPredicate::sge:
-                            cmpResult = static_cast<int64_t>(lhs->second >= rhs->second);
+                            cmpResult = static_cast<int64_t>(lhs >= rhs);
                             break;
                         case arith::CmpIPredicate::ult:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <
-                                                             static_cast<uint64_t>(rhs->second));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) <
+                                                             static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::ule:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) <=
-                                                             static_cast<uint64_t>(rhs->second));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) <=
+                                                             static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::ugt:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >
-                                                             static_cast<uint64_t>(rhs->second));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) >
+                                                             static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::uge:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs->second) >=
-                                                             static_cast<uint64_t>(rhs->second));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) >=
+                                                             static_cast<uint64_t>(rhs));
                             break;
                     }
-                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = cmpResult;
+                    stack.push_constant(operation.getResult(), cmpResult);
                 } else {
                     // FIXME we use the fcmp gadget here for the time being.
                     // as soon as we get the cmpi gadget from upstream, swap the gadget
-                    handle_integer_comparison_component(operation, frames.back(), bp, assignmnt, start_row);
+                    handle_integer_comparison_component(operation, stack, bp, assignmnt, start_row);
                 }
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (operation->getResult(0).getType().isa<IndexType>()) {
-                    frames.back().constant_values.insert(std::make_pair(
-                        mlir::hash_value(operation.getResult()), llvm::dyn_cast<IntegerAttr>(constantValue).getInt()));
+                  stack.push_constant(operation.getResult(), llvm::dyn_cast<IntegerAttr>(constantValue).getInt());
                 } else if (constantValue.isa<IntegerAttr>()) {
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
@@ -505,19 +536,17 @@ namespace zk_ml_toolchain {
                     } else {
                         value = llvm::dyn_cast<IntegerAttr>(constantValue).getInt();
                     }
-                    frames.back().constant_values.insert(
-                        std::make_pair(mlir::hash_value(operation.getResult()), value));
-
+                    stack.push_constant(operation.getResult(), value);
                     typename BlueprintFieldType::value_type field_constant = value;
                     auto val = put_into_assignment(field_constant);
-                    frames.back().locals[mlir::hash_value(operation.getResult())] = val;
+                    stack.push_local(operation.getResult(), val);
                 } else if (constantValue.isa<FloatAttr>()) {
                     double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
                     nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
                     auto value = put_into_assignment(fixed.get_value());
                     // this insert is ok, since this should never change, so we
                     // don't override it if it is already there
-                    frames.back().locals[mlir::hash_value(operation.getResult())] = value;
+                    stack.push_local(operation.getResult(), value);
                 } else {
                     logger << constantValue;
                     UNREACHABLE("unhandled constant");
@@ -528,31 +557,26 @@ namespace zk_ml_toolchain {
                 Type casteeType = operation->getOperand(0).getType();
                 if (casteeType.isa<IntegerType>()) {
                     UNREACHABLE("I SHOULD NOT WORK");
-                    auto i = frames.back().locals.find(opHash);
-                    assert(i != frames.back().locals.end());
-                    frames.back().constant_values[mlir::hash_value(operation.getResult())] = resolve_number(i->second);
                 } else if (casteeType.isa<IndexType>()) {
-                    auto index = frames.back().constant_values.find(opHash);
-                    assert(index != frames.back().constant_values.end());
-                    typename BlueprintFieldType::value_type field_constant = index->second;
+                    auto index = stack.get_constant(opHash);
+                    typename BlueprintFieldType::value_type field_constant = index;
                     auto val = put_into_assignment(field_constant);
-                    frames.back().locals[mlir::hash_value(operation.getResult())] = val;
+                    stack.push_local(operation.getResult(), val);
                 } else {
                     UNREACHABLE("unsupported Index Cast");
                 }
             } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
-                handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
+                handle_to_fixedpoint(operation, stack, bp, assignmnt, start_row);
             } else if (arith::UIToFPOp operation = llvm::dyn_cast<arith::UIToFPOp>(op)) {
-                handle_to_fixedpoint(operation, frames.back(), bp, assignmnt, start_row);
+                handle_to_fixedpoint(operation, stack, bp, assignmnt, start_row);
             } else if (arith::FPToSIOp operation = llvm::dyn_cast<arith::FPToSIOp>(op)) {
-                handle_to_int(operation, frames.back(), bp, assignmnt, start_row);
+                handle_to_int(operation, stack, bp, assignmnt, start_row);
             } else if (arith::FPToUIOp operation = llvm::dyn_cast<arith::FPToUIOp>(op)) {
-                handle_to_int(operation, frames.back(), bp, assignmnt, start_row);
+                handle_to_int(operation, stack, bp, assignmnt, start_row);
             } else if (llvm::isa<arith::ExtUIOp>(op) || llvm::isa<arith::ExtSIOp>(op) ||
                        llvm::isa<arith::TruncIOp>(op)) {
-                auto toExtend = frames.back().locals.find(mlir::hash_value(op->getOperand(0)));
-                assert(toExtend != frames.back().locals.end());
-                frames.back().locals[mlir::hash_value(op->getResult(0))] = toExtend->second;
+                VarType &toExtend = stack.get_local(op->getOperand(0));
+                stack.push_local(op->getResult(0), toExtend);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled arith operation: ") + opName);
@@ -563,32 +587,32 @@ namespace zk_ml_toolchain {
         void handleMathOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
-                handle_fixedpoint_exp_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_exp_component(operation, stack, bp, assignmnt, start_row);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
-                handle_fixedpoint_log_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_log_component(operation, stack, bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
                 UNREACHABLE("TODO: component for powf not ready");
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
-                handle_fixedpoint_abs_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_abs_component(operation, stack, bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
-                handle_fixedpoint_ceil_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_ceil_component(operation, stack, bp, assignmnt, start_row);
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
-                handle_fixedpoint_floor_component(operation, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_floor_component(operation, stack, bp, assignmnt, start_row);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
                 // TODO: do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
-                frames.back().locals[mlir::hash_value(operation.getResult())] =
-                    frames.back().locals[mlir::hash_value(operation.getLhs())];
+                VarType &src = stack.get_local(operation.getLhs());
+                stack.push_local(operation.getResult(), src);
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
-                handle_sqrt(operation, frames.back(), bp, assignmnt, start_row);
+                handle_sqrt(operation, stack, bp, assignmnt, start_row);
             } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
-                handle_sin(operation, frames.back(), bp, assignmnt, start_row);
+                handle_sin(operation, stack, bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
-                handle_cos(operation, frames.back(), bp, assignmnt, start_row);
+                handle_cos(operation, stack, bp, assignmnt, start_row);
             } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
                 UNREACHABLE("TODO: component for atan not ready");
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
-                handle_tanh(operation, frames.back(), bp, assignmnt, start_row);
+                handle_tanh(operation, stack, bp, assignmnt, start_row);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
                 UNREACHABLE("TODO: component for erf not ready");
             } else {
@@ -618,48 +642,39 @@ namespace zk_ml_toolchain {
                 int64_t to = evaluateForParameter(toMap, operandsToV, false);
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
-                auto memref = frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
-                assert(memref != frames.back().memrefs.end());
+              nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
 
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
                 std::vector<int64_t> mapDims;
                 mapDims.reserve(indices.size());
-                for (auto a : indices) {
+                for (auto idx : indices) {
                     // look for indices in constant_values
-                    auto res = frames.back().constant_values.find(mlir::hash_value(a));
-                    assert(res != frames.back().constant_values.end());
-                    mapDims.push_back(res->second);
+                    mapDims.push_back(stack.get_constant(idx));
                 }
                 auto affineMap =
                     castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
                         .getAffineMap();
-                auto value = memref->second.get(evalAffineMap(affineMap, mapDims));
-                frames.back().locals[mlir::hash_value(operation.getResult())] = value;
+                auto value = memref.get(evalAffineMap(affineMap, mapDims));
+                stack.push_local(operation.getResult(), value);
             } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
                 // affine.store
-                auto memRefHash = mlir::hash_value(operation.getMemref());
-                logger.debug("looking for MemRef %x", size_t(memRefHash));
-                auto memref = frames.back().memrefs.find(memRefHash);
-                assert(memref != frames.back().memrefs.end());
-
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
                 std::vector<int64_t> mapDims;
                 mapDims.reserve(indices.size());
-                for (auto a : indices) {
-                    auto res = frames.back().constant_values.find(mlir::hash_value(a));
-                    assert(res != frames.back().constant_values.end());
-                    mapDims.push_back(res->second);
+                for (auto idx : indices) {
+                    mapDims.push_back(stack.get_constant(idx));
                 }
                 // grab the element from the locals array
-                auto value = frames.back().locals.find(mlir::hash_value(operation.getValue()));
-                assert(value != frames.back().locals.end());
+                VarType &value = stack.get_local(operation.getValue());
                 // put the element from the memref using index vector
                 auto affineMap =
                     castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName()))
                         .getAffineMap();
-                memref->second.put(evalAffineMap(affineMap, mapDims), value->second);
+                auto test = evalAffineMap(affineMap, mapDims);
+                memref.put(test, value);
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
@@ -673,10 +688,7 @@ namespace zk_ml_toolchain {
                 logger.log_attribute(op->getAttrs()[0].getValue());
                 int i = 0;
                 for (auto operand : op->getOperands()) {
-                    llvm::hash_code hash = mlir::hash_value(operand);
-                    assert(frames.back().constant_values.find(hash) != frames.back().constant_values.end());
-                    assert(frames.back().constant_values.count(hash));
-                    operands[i++] = frames.back().constant_values[hash];
+                    operands[i++] = stack.get_constant(operand);
                 }
                 if (evalIntegerSet(condition, operands, logger)) {
                     handleRegion(op->getRegion(0));
@@ -691,7 +703,7 @@ namespace zk_ml_toolchain {
                 AffineMap applyMap = castFromAttr<AffineMapAttr>(op->getAttrs()[0].getValue()).getAffineMap();
                 llvm::SmallVector<Value> operands(op->getOperands().begin(), op->getOperands().end());
                 int64_t result = evaluateForParameter(applyMap, operands, false);
-                frames.back().constant_values[mlir::hash_value(op->getResults()[0])] = result;
+                stack.push_constant(op->getResults()[0], result);
             } else if (opName == "affine.max") {
                 logger.debug("got affine.max");
                 assert(op->getResults().size() == 1);
@@ -699,13 +711,13 @@ namespace zk_ml_toolchain {
                 AffineMap applyMap = castFromAttr<AffineMapAttr>(op->getAttrs()[0].getValue()).getAffineMap();
                 llvm::SmallVector<Value> operands(op->getOperands().begin(), op->getOperands().end());
                 int64_t result = evaluateForParameter(applyMap, operands, true);
-                frames.back().constant_values[mlir::hash_value(op->getResults()[0])] = result;
+                stack.push_constant(mlir::hash_value(op->getResults()[0]), result);
             } else {
                 UNREACHABLE(std::string("unhandled affine operation: ") + opName);
             }
         }
 
-        void handleKrnlOpeeration(Operation *op) {
+        void handleKrnlOperation(Operation *op) {
             // Print the operation itself and some of its properties
             // Print the operation attributes
             std::uint32_t start_row = assignmnt.allocated_rows();
@@ -781,78 +793,18 @@ namespace zk_ml_toolchain {
                 } else {
                     UNREACHABLE("Expected a DenseElementsAttr");
                 }
-                frames.back().memrefs.insert({mlir::hash_value(operation.getOutput()), m});
+                stack.push_memref(operation.getOutput(), m);
                 return;
-            } else if (KrnlEntryPointOp operation = llvm::dyn_cast<KrnlEntryPointOp>(op)) {
-                int32_t numInputs = -1;
-                int32_t numOutputs = -1;
-                std::string func = "";
-
-                for (auto a : operation->getAttrs()) {
-                    if (a.getName() == operation.getEntryPointFuncAttrName()) {
-                        func = a.getValue().cast<SymbolRefAttr>().getLeafReference().str();
-                    } else if (a.getName() == operation.getNumInputsAttrName()) {
-                        numInputs = a.getValue().cast<IntegerAttr>().getInt();
-                    } else if (a.getName() == operation.getNumOutputsAttrName()) {
-                        numOutputs = a.getValue().cast<IntegerAttr>().getInt();
-                    } else if (a.getName() == operation.getSignatureAttrName()) {
-                        // do nothing for signature atm
-                        // TODO: check against input types & shapes
-                    } else {
-                        UNREACHABLE("unhandled attribute: " + a.getName().str());
-                    }
-                }
-                // this operation defines the entry point of the program
-                // grab the entry point function from the functions map
-                auto funcOp = functions.find(func);
-                assert(funcOp != functions.end());
-
-                // only can handle single outputs atm
-                // assert(numOutputs == 1);
-
-                // prepare the arguments for the function
-                frames.push_back(nil::blueprint::stack_frame<VarType>());
-
-                nil::blueprint::InputReader<BlueprintFieldType, VarType,
-                                            nil::blueprint::assignment<ArithmetizationType>>
-                    input_reader(frames.back(), assignmnt);
-                bool ok = input_reader.fill_public_input(funcOp->second, public_input);
-                if (!ok) {
-                    std::cerr << "Public input does not match the circuit signature";
-                    const std::string &error = input_reader.get_error();
-                    if (!error.empty()) {
-                        std::cerr << ": " << error;
-                    }
-                    std::cerr << std::endl;
-                    exit(-1);
-                }
-
-                // Initialize undef and zero vars once
-                undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
-                zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
-                true_var = std::nullopt;
-
-                // go execute the function
-                handleRegion(funcOp->second.getRegion());
-
-                // TODO: what to do when done...
-                // maybe print output?
-                return;
-            } else if (KrnlMemcpyOp operation = llvm::dyn_cast<KrnlMemcpyOp>(op)) {
+            }  else if (KrnlMemcpyOp operation = llvm::dyn_cast<KrnlMemcpyOp>(op)) {
                 // get dst and src memref
-                auto DstMemref = frames.back().memrefs.find(mlir::hash_value(operation.getDest()));
-                auto SrcMemref = frames.back().memrefs.find(mlir::hash_value(operation.getSrc()));
-                assert(DstMemref != frames.back().memrefs.end());
-                assert(SrcMemref != frames.back().memrefs.end());
+                nil::blueprint::memref<VarType> &DstMemref = stack.get_memref(operation.getDest());
+                nil::blueprint::memref<VarType> &SrcMemref = stack.get_memref(operation.getSrc());
                 // get num elements and offset
-                auto NumElements = frames.back().constant_values.find(mlir::hash_value(operation.getNumElems()));
-                auto DstOffset = frames.back().constant_values.find(mlir::hash_value(operation.getDestOffset()));
-                auto SrcOffset = frames.back().constant_values.find(mlir::hash_value(operation.getSrcOffset()));
-                assert(NumElements != frames.back().constant_values.end());
-                assert(DstOffset != frames.back().constant_values.end());
-                assert(SrcOffset != frames.back().constant_values.end());
-                DstMemref->second.copyFrom(SrcMemref->second, NumElements->second, DstOffset->second,
-                                           SrcOffset->second);
+                auto NumElements = stack.get_constant(operation.getNumElems());
+                auto DstOffset =   stack.get_constant(operation.getDestOffset());
+                auto SrcOffset =   stack.get_constant(operation.getSrcOffset());
+                DstMemref.copyFrom(SrcMemref, NumElements, DstOffset,
+                                           SrcOffset);
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
             } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
@@ -862,7 +814,7 @@ namespace zk_ml_toolchain {
             } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
-                handle_tan(operation, frames.back(), bp, assignmnt, start_row);
+                handle_tan(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
                 UNREACHABLE("TODO: component for atan not ready");
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
@@ -882,27 +834,23 @@ namespace zk_ml_toolchain {
                 mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
                 assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
                 logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
-                handle_fixedpoint_dot_product_component(operation, zero_var, frames.back(), bp, assignmnt, start_row);
+                handle_fixedpoint_dot_product_component(operation, zero_var, stack, bp, assignmnt, start_row);
                 return;
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
-                auto nextIndex = frames.back().constant_values.find(mlir::hash_value(operation.getNextIndex()));
-                ASSERT(nextIndex != frames.back().constant_values.end());
-                auto nextIndexVar = put_into_assignment(nextIndex->second);
-                handle_argmin(operation, frames.back(), bp, assignmnt, nextIndexVar, start_row);
+                auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
+                handle_argmin(operation, stack, bp, assignmnt, nextIndexVar, start_row);
             } else if (zkml::ArgMaxOp operation = llvm::dyn_cast<zkml::ArgMaxOp>(op)) {
-                auto nextIndex = frames.back().constant_values.find(mlir::hash_value(operation.getNextIndex()));
-                ASSERT(nextIndex != frames.back().constant_values.end());
-                auto nextIndexVar = put_into_assignment(nextIndex->second);
-                handle_argmax(operation, frames.back(), bp, assignmnt, nextIndexVar, start_row);
+                auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
+                handle_argmax(operation, stack, bp, assignmnt, nextIndexVar, start_row);
             } else if (zkml::GatherOp operation = llvm::dyn_cast<zkml::GatherOp>(op)) {
-                auto dataIndex = frames.back().constant_values.find(mlir::hash_value(operation.getDataIndex()));
-                ASSERT(dataIndex != frames.back().constant_values.end());
-                auto dataIndexVar = put_into_assignment(dataIndex->second);
-                handle_gather(operation, frames.back(), bp, assignmnt, dataIndexVar, start_row);
+                auto dataIndex = stack.get_constant(operation.getDataIndex());
+                auto dataIndexVar = put_into_assignment(dataIndex);
+                handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
             } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
                 std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";
+                stack.print(std::cout);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
@@ -925,19 +873,13 @@ namespace zk_ml_toolchain {
                 for (auto dim : type.getShape()) {
                     if (dim == mlir::ShapedType::kDynamic) {
                         assert(dynamicCounter < operands.size() && "not enough operands for dynamic memref");
-                        auto index = frames.back().constant_values.find(mlir::hash_value(operands[dynamicCounter++]));
-                        assert(index != frames.back().constant_values.end());
-                        dims.emplace_back(index->second);
+                        dims.emplace_back(stack.get_constant(operands[dynamicCounter++]));
                     } else {
                         dims.emplace_back(dim);
                     }
                 }
                 auto m = nil::blueprint::memref<VarType>(dims, type.getElementType());
-                auto hash = mlir::hash_value(operation.getMemref());
-                auto insert_res = frames.back().memrefs.insert({hash, m});
-                // assert(insert_res.second);    // Reallocating over an existing memref
-                //  should not happen ATM
-                logger.debug("inserting memref with hash %x", size_t(hash));
+                stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::AllocaOp operation = llvm::dyn_cast<memref::AllocaOp>(op)) {
                 // TACEO_TODO: handle cleanup of these stack memrefs
                 // TACEO_TODO: deduplicate with above
@@ -950,54 +892,39 @@ namespace zk_ml_toolchain {
                 logger << res;
                 logger << res2;
                 auto m = nil::blueprint::memref<VarType>(type.getShape(), type.getElementType());
-                auto insert_res = frames.back().memrefs.insert({mlir::hash_value(operation.getMemref()), m});
-                assert(insert_res.second);    // Reallocating over an existing memref
-                                              // should not happen ATM
+                stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
                 // TODO: deduplicate with affine.load
-                auto memref = frames.back().memrefs.find(mlir::hash_value(operation.getMemref()));
-                assert(memref != frames.back().memrefs.end());
-
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
                 std::vector<int64_t> indicesV;
                 indicesV.reserve(indices.size());
-                for (auto a : indices) {
+                for (auto idx : indices) {
                     // look for indices in constant_values
-                    auto res = frames.back().constant_values.find(mlir::hash_value(a));
-                    assert(res != frames.back().constant_values.end());
-                    indicesV.push_back(res->second);
+                    indicesV.push_back(stack.get_constant(idx));
                 }
-                auto value = memref->second.get(indicesV);
-                frames.back().locals[mlir::hash_value(operation.getResult())] = value;
+                auto value = memref.get(indicesV);
+                stack.push_local(operation.getResult(), value);
 
             } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
                 // TODO: deduplicate with affine.load
                 auto memRefHash = mlir::hash_value(operation.getMemref());
                 logger.debug("looking for MemRef %x", size_t(memRefHash));
-                auto memref = frames.back().memrefs.find(memRefHash);
-                assert(memref != frames.back().memrefs.end());
-
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
                 std::vector<int64_t> indicesV;
                 indicesV.reserve(indices.size());
-                for (auto a : indices) {
-                    auto res = frames.back().constant_values.find(mlir::hash_value(a));
-                    assert(res != frames.back().constant_values.end());
-                    indicesV.push_back(res->second);
+                for (auto idx : indices) {
+                    indicesV.push_back(stack.get_constant(idx));
                 }
                 // grab the element from the locals array
-                auto value = frames.back().locals.find(mlir::hash_value(operation.getValue()));
-                assert(value != frames.back().locals.end());
+                VarType &value = stack.get_local(operation.getValue());
                 // put the element from the memref using index vector
-                memref->second.put(indicesV, value->second);
+                memref.put(indicesV, value);
             } else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
-                logger.debug("deallocing memref");
-                auto hash = mlir::hash_value(operation.getMemref());
-                assert(frames.back().memrefs.find(hash) != frames.back().memrefs.end());
-                frames.back().memrefs.erase(hash);
-
+                stack.erase_memref(operation.getMemref());
                 // TACEO_TODO
                 return;
             } else if (memref::ReinterpretCastOp operation = llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
@@ -1009,13 +936,10 @@ namespace zk_ml_toolchain {
                 logger << result;
                 logger << result_type;
 
-                auto old_memref = frames.back().memrefs.find(mlir::hash_value(source));
-                assert(old_memref != frames.back().memrefs.end());
+                nil::blueprint::memref<VarType> &old_memref = stack.get_memref(source);
                 auto new_memref =
-                    old_memref->second.reinterpret_as(result_type.getShape(), result_type.getElementType(), logger);
-                auto insert_res = frames.back().memrefs.insert({mlir::hash_value(operation.getResult()), new_memref});
-                assert(insert_res.second);    // Reallocating over an existing memref
-                                              // should not happen ATM
+                    old_memref.reinterpret_as(result_type.getShape(), result_type.getElementType(), logger);
+                stack.push_memref(operation.getResult(), new_memref, false);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled memref operation: ") + opName);
@@ -1057,35 +981,17 @@ namespace zk_ml_toolchain {
             }
 
             if (llvm::isa<mlir::KrnlDialect>(dial)) {
-                handleKrnlOpeeration(op);
-                return;
-            }
-
-            if (mlir::ModuleOp operation = llvm::dyn_cast<mlir::ModuleOp>(op)) {
-                // this is the toplevel operation of the IR
-                // TODO: handle attributes if needed
-                handleRegion(operation.getBodyRegion());
-                return;
-            }
-
-            if (func::FuncOp operation = llvm::dyn_cast<func::FuncOp>(op)) {
-                auto res = functions.insert({operation.getSymName().str(), operation});
-                assert(res.second);    // Redefining an existing function should not
-                                       // happen ATM
+                handleKrnlOperation(op);
                 return;
             }
 
             if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
                 auto ops = operation.getOperands();
-                // assert(ops.size() == 1);    // only handle single return value atm
-                // the ops[0] is something that we can hash_value to grab the result
-                // from maps
                 if (PrintCircuitOutput) {
                     std::cout << "Result:\n";
                     for (unsigned i = 0; i < ops.size(); ++i) {
-                        auto retval = frames.back().memrefs.find(mlir::hash_value(ops[i]));
-                        assert(retval != frames.back().memrefs.end());
-                        retval->second.print(std::cout, assignmnt);
+                        nil::blueprint::memref<VarType> &retval = stack.get_memref(ops[i]);
+                        retval.print(std::cout, assignmnt);
                     }
                 }
                 return;
@@ -1101,14 +1007,12 @@ namespace zk_ml_toolchain {
                 assert(SrcType.isSignlessInteger() && "src must be signless integertype for conversion cast");
                 assert(DstType.isUnsignedInteger(SrcType.getIntOrFloatBitWidth()) &&
                        "dst must be unsigned integer with same bit width as src");
-                auto Src = frames.back().locals.find(mlir::hash_value(operation->getOperand(0)));
-                assert(Src != frames.back().locals.end());
-                frames.back().locals[mlir::hash_value(operation->getResult(0))] = Src->second;
+                VarType &Src = stack.get_local(operation->getOperand(0));
+                stack.push_local(operation->getResult(0), Src);
                 return;
             }
 
             std::string opName = op->getName().getIdentifier().str();
-            llvm::outs() << op->getDialect()->getNamespace() << "\n";
             UNREACHABLE(std::string("unhandled operation: ") + opName);
         }
 
@@ -1118,8 +1022,10 @@ namespace zk_ml_toolchain {
         }
 
         void handleBlock(Block &block) {
+            stack.push_frame();
             for (Operation &op : block.getOperations())
                 handleOperation(&op);
+            stack.pop_frame();
         }
 
     private:
@@ -1132,8 +1038,7 @@ namespace zk_ml_toolchain {
             return VarType(0, constant_idx++, false, VarType::column_type::constant);
         }
 
-        // std::map<llvm::hash_code, memref<VarType>> globals;
-        std::vector<nil::blueprint::stack_frame<VarType>> frames;
+        nil::blueprint::stack<VarType> stack;
         std::map<std::string, func::FuncOp> functions;
         nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;

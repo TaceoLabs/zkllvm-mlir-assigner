@@ -46,10 +46,10 @@
 
 #define PREPARE_UNARY_INPUT(OP)                                                             \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
-                                   typename component_type::input_type>(operation, frame, bp, assignment);
+                                   typename component_type::input_type>(operation, stack, bp, assignment);
 #define PREPARE_BINARY_INPUT(OP)                                                             \
     prepare_binary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
-                                   typename component_type::input_type>(operation, frame, bp, assignment);
+                                   typename component_type::input_type>(operation, stack, bp, assignment);
 
 
 namespace nil {
@@ -57,35 +57,25 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename UnaryOp, typename input_type>
         input_type prepare_unary_operation_input(
             UnaryOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment) {
-
             assert(operation->getNumOperands() == 1 && "unary operand must have only one operand");
-            auto operand = frame.locals.find(mlir::hash_value(operation->getOperand(0)));
-            ASSERT(operand != frame.locals.end());
-
             input_type instance_input;
-            instance_input.x = operand->second;
+            instance_input.x = stack.get_local(operation->getOperand(0));
             return instance_input;
         }
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename BinOp, typename input_type>
         input_type prepare_binary_operation_input(
             BinOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment) {
-
-            auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(lhs != frame.locals.end());
-            ASSERT(rhs != frame.locals.end());
-
             input_type instance_input;
-            instance_input.x = lhs->second;
-            instance_input.y = rhs->second;
+            instance_input.x = stack.get_local(operation.getLhs());
+            instance_input.y = stack.get_local(operation.getRhs());
             return instance_input;
         }
 
@@ -119,7 +109,7 @@ namespace nil {
             component_type &component,
             typename component_type::input_type &input,
             Op &mlir_op,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -144,7 +134,7 @@ namespace nil {
 
             components::generate_circuit(component, bp, assignment, input, start_row);
             auto result = components::generate_assignments(component, assignment, input, start_row);
-            frame.locals[mlir::hash_value(mlir_op.getResult())] = result.output;
+            stack.push_local(mlir_op.getResult(), result.output);
         }
     }    // namespace blueprint
 }    // namespace nil

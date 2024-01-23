@@ -20,24 +20,17 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_fixedpoint_addition_component(
             mlir::arith::AddFOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
 
-            auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            ASSERT(lhs != frame.locals.end());
-            auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(rhs != frame.locals.end());
+            auto lhs = stack.get_local(operation.getLhs());
+            auto rhs = stack.get_local(operation.getRhs());
 
-            auto x = lhs->second;
-            auto y = rhs->second;
-
-            // TACEO_TODO: check types
-
-            auto result = detail::handle_native_field_addition_component(x, y, bp, assignment, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+            auto result = detail::handle_native_field_addition_component(lhs, rhs, bp, assignment, start_row);
+            stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint
 }    // namespace nil

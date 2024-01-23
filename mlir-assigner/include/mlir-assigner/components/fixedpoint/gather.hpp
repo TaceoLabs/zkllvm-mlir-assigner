@@ -20,7 +20,7 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_gather(
             mlir::zkml::GatherOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -32,16 +32,10 @@ namespace nil {
                 basic_non_native_policy<BlueprintFieldType>>;
 
             using input_type = typename component_type::input_type;
-            auto prevAcc = frame.locals.find(mlir::hash_value(operation.getPrevAcc()));
-            auto data = frame.locals.find(mlir::hash_value(operation.getData()));
-            auto gatherIndex = frame.locals.find(mlir::hash_value(operation.getGatherIndex()));
-            ASSERT(prevAcc != frame.locals.end());
-            ASSERT(data != frame.locals.end());
-            ASSERT(gatherIndex != frame.locals.end());
             input_type instance_input;
-            instance_input.prev_acc = prevAcc->second;
-            instance_input.data = data->second;
-            instance_input.index_a = gatherIndex->second;
+            instance_input.prev_acc = stack.get_local(operation.getPrevAcc());
+            instance_input.data = stack.get_local(operation.getData());
+            instance_input.index_a = stack.get_local(operation.getGatherIndex());
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             const auto p = detail::PolicyManager::get_parameters(
@@ -71,7 +65,7 @@ namespace nil {
 
             components::generate_circuit(component, bp, assignment, instance_input, start_row);
             auto result = components::generate_assignments(component, assignment, instance_input, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+            stack.push_local(operation.getResult(), result.output);
         }
 
     }    // namespace blueprint

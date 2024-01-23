@@ -81,24 +81,16 @@ namespace nil {
         void handle_fixedpoint_dot_product_component(
             mlir::zkml::DotProductOp &operation,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &zero_var,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
+            auto &lhs = stack.get_memref(operation.getLhs());
+            auto &rhs = stack.get_memref(operation.getRhs());
 
-            auto lhs = frame.memrefs.find(mlir::hash_value(operation.getLhs()));
-            ASSERT(lhs != frame.memrefs.end());
-            auto rhs = frame.memrefs.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(rhs != frame.memrefs.end());
-
-            auto x = lhs->second;
-            auto y = rhs->second;
-
-            // TACEO_TODO: check types
-
-            auto result = detail::handle_fixedpoint_dot_product_component(x, y, zero_var, bp, assignment, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+            auto result = detail::handle_fixedpoint_dot_product_component(lhs, rhs, zero_var, bp, assignment, start_row);
+            stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint
 }    // namespace nil

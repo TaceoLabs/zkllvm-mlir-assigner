@@ -20,7 +20,7 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_sin(
             mlir::math::SinOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -36,12 +36,12 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      1, 1);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_cos(
             mlir::math::CosOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -57,13 +57,13 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      1, 1);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_tan(
             mlir::KrnlTanOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -79,12 +79,12 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      1, 1);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_tanh(
             mlir::math::TanhOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -100,7 +100,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      1, 1);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
     }    // namespace blueprint
 }    // namespace nil
