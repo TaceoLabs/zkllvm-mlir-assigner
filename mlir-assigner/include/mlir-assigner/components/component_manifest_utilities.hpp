@@ -30,6 +30,7 @@
 #include <limits>
 
 #include <nil/blueprint/manifest.hpp>
+#include <mlir-assigner/helper/asserts.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -65,8 +66,8 @@ namespace nil {
                     for (auto it = witness_amount_ptr->begin(); it != witness_amount_ptr->end(); it++) {
                         const auto witness_amount = *it;
                         const auto rows_amount = ComponentType::get_rows_amount(witness_amount, args...);
-                        //TACEO_TODO clarify this "improved cost metric"
-                        //const auto total_amount_rows_power_two = std::pow(2, std::ceil(std::log2(rows_amount)));
+                        // TACEO_TODO clarify this "improved cost metric"
+                        // const auto total_amount_rows_power_two = std::pow(2, std::ceil(std::log2(rows_amount)));
                         const auto total_amount_of_gates =
                             ComponentType::get_gate_manifest(witness_amount, args...).get_gates_amount();
                         values.emplace_back(witness_amount, rows_amount + total_amount_of_gates);
@@ -77,7 +78,10 @@ namespace nil {
 
                 static typename ComponentType::component_type::constant_container_type get_constants() {
                     typename ComponentType::component_type::constant_container_type constants;
-                    std::iota(constants.begin(), constants.end(), 0);    // fill 0, 1, ...
+                    ASSERT(constants.size() <
+                           5);    // TODO: remove the hardcoded value and use the real number of columns
+                    // Constant column 0 is reserved for put_into_assignment
+                    std::iota(constants.begin(), constants.end(), 1);    // fill 1, 2, ...
                     return constants;
                 }
 

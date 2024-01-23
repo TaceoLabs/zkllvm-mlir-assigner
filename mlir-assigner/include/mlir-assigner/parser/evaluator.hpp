@@ -826,7 +826,6 @@ namespace zk_ml_toolchain {
                     std::cerr << std::endl;
                     exit(-1);
                 }
-                public_input_idx = input_reader.get_idx();
 
                 // Initialize undef and zero vars once
                 undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
@@ -1126,8 +1125,11 @@ namespace zk_ml_toolchain {
     private:
         template<typename InputType>
         VarType put_into_assignment(InputType input) {
-            assignmnt.public_input(0, public_input_idx) = input;
-            return VarType(0, public_input_idx++, false, VarType::column_type::public_input);
+            // TODO: optimize this further:
+            //  The assignment.constant function increments the currently used row, even though it does not need to...
+            //  Cannot change this without modifying the blueprint library though
+            assignmnt.constant(0, constant_idx) = input;
+            return VarType(0, constant_idx++, false, VarType::column_type::constant);
         }
 
         // std::map<llvm::hash_code, memref<VarType>> globals;
@@ -1136,7 +1138,7 @@ namespace zk_ml_toolchain {
         nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
-        size_t public_input_idx = 0;
+        size_t constant_idx = 0;
         unsigned amount_ops = 0;
         unsigned progress = 0;
         VarType undef_var;
