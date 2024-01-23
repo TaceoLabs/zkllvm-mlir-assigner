@@ -253,8 +253,6 @@ namespace zk_ml_toolchain {
               std::cerr << std::endl;
               exit(-1);
           }
-          public_input_idx = input_reader.get_idx();
-
           // Initialize undef and zero vars once
           undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
           zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
