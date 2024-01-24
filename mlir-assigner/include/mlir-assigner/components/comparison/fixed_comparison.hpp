@@ -48,7 +48,7 @@ namespace nil {
             template<uint8_t limbs, typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
             void call_component(
                 MlirOp &operation,
-                stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+                stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
                 circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &bp,
                 assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -83,22 +83,22 @@ namespace nil {
                 auto result = components::generate_assignments(component, assignment, input, start_row);
                 switch (cmpType) {
                     case GT:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.gt;
+                        stack.push_local(operation.getResult(), result.gt);
                         break;
                     case LT:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.lt;
+                        stack.push_local(operation.getResult(), result.lt);
                         break;
                     case GE:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.geq;
+                        stack.push_local(operation.getResult(), result.geq);
                         break;
                     case LE:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.leq;
+                        stack.push_local(operation.getResult(), result.leq);
                         break;
                     case NE:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.neq;
+                        stack.push_local(operation.getResult(), result.neq);
                         break;
                     case EQ:
-                        frame.locals[mlir::hash_value(operation.getResult())] = result.eq;
+                        stack.push_local(operation.getResult(), result.eq);
                         break;
                 }
             }
@@ -187,32 +187,25 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_fixedpoint_comparison_component(
             mlir::arith::CmpFOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-
-            auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            ASSERT(lhs != frame.locals.end());
-            auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(rhs != frame.locals.end());
-
             auto pred = operation.getPredicate();
-
-            auto x = lhs->second;
-            auto y = rhs->second;
+            auto lhs = stack.get_local(operation.getLhs());
+            auto rhs = stack.get_local(operation.getRhs());
 
             // TACEO_TODO: check types
 
-            auto result = detail::handle_f_comparison_component(pred, x, y, bp, assignment, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result;
+            auto result = detail::handle_f_comparison_component(pred, lhs, rhs, bp, assignment, start_row);
+            stack.push_local(operation.getResult(), result);
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_integer_comparison_component(
             mlir::arith::CmpIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -241,7 +234,7 @@ namespace nil {
                 default:
                     UNREACHABLE("unsupported predicate for cmpi");
             }
-            call_component<2>(operation, frame, bp, assignment, start_row, cmpType);
+            call_component<2>(operation, stack, bp, assignment, start_row, cmpType);
         }
 
     }    // namespace blueprint

@@ -74,27 +74,19 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_select_component(
             mlir::arith::SelectOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-
-            auto false_value = frame.locals.find(mlir::hash_value(operation.getFalseValue()));
-            auto true_value = frame.locals.find(mlir::hash_value(operation.getTrueValue()));
-            auto condition = frame.locals.find(mlir::hash_value(operation.getCondition()));
-            ASSERT(false_value != frame.locals.end());
-            ASSERT(true_value != frame.locals.end());
-            ASSERT(condition != frame.locals.end());
-
-            auto c = condition->second;
-            auto x = true_value->second;
-            auto y = false_value->second;
+            auto c = stack.get_local(operation.getCondition());
+            auto x = stack.get_local(operation.getTrueValue());
+            auto y = stack.get_local(operation.getFalseValue());
 
             // TACEO_TODO: check types
 
             auto result = detail::handle_select_component(c, x, y, bp, assignment, start_row);
-            frame.locals[mlir::hash_value(operation.getResult())] = result.output;
+            stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint
 }    // namespace nil

@@ -19,11 +19,8 @@ namespace nil {
             memref() = default;
 
             memref(const memref &) = default;
-
             memref(memref &&) = default;
-
             memref &operator=(const memref &) = default;
-
             memref &operator=(memref &&) = default;
 
             memref(std::vector<int64_t> dims, mlir::Type type) : data(), dims(dims), strides(), type(type) {

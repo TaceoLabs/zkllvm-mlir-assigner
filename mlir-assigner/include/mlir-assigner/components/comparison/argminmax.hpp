@@ -21,7 +21,7 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_argmin(
             mlir::zkml::ArgMinOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -32,16 +32,10 @@ namespace nil {
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             using input_type = typename component_type::input_type;
-            auto acc = frame.locals.find(mlir::hash_value(operation.getAcc()));
-            auto next = frame.locals.find(mlir::hash_value(operation.getNext()));
-            auto accIndex = frame.locals.find(mlir::hash_value(operation.getAccIndex()));
-            ASSERT(acc != frame.locals.end());
-            ASSERT(next != frame.locals.end());
-            ASSERT(accIndex != frame.locals.end());
             input_type instance_input;
-            instance_input.x = acc->second;
-            instance_input.y = next->second;
-            instance_input.index_x = accIndex->second;
+            instance_input.x = stack.get_local(operation.getAcc());
+            instance_input.y = stack.get_local(operation.getNext());
+            instance_input.index_x = stack.get_local(operation.getAccIndex());
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
             const auto p = detail::PolicyManager::get_parameters(
@@ -64,18 +58,19 @@ namespace nil {
                 }
             };
 
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, instance_input);
+            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment,
+                                                                                              instance_input);
 
             components::generate_circuit(component, bp, assignment, instance_input, start_row);
             auto result = components::generate_assignments(component, assignment, instance_input, start_row);
-            frame.locals[mlir::hash_value(operation.getResult(0))] = result.min;
-            frame.locals[mlir::hash_value(operation.getResult(1))] = result.index;
+            stack.push_local(operation.getResult(0), result.min);
+            stack.push_local(operation.getResult(1), result.index);
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_argmax(
             mlir::zkml::ArgMaxOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -86,16 +81,10 @@ namespace nil {
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             using input_type = typename component_type::input_type;
-            auto acc = frame.locals.find(mlir::hash_value(operation.getAcc()));
-            auto next = frame.locals.find(mlir::hash_value(operation.getNext()));
-            auto accIndex = frame.locals.find(mlir::hash_value(operation.getAccIndex()));
-            ASSERT(acc != frame.locals.end());
-            ASSERT(next != frame.locals.end());
-            ASSERT(accIndex != frame.locals.end());
             input_type instance_input;
-            instance_input.x = acc->second;
-            instance_input.y = next->second;
-            instance_input.index_x = accIndex->second;
+            instance_input.x = stack.get_local(operation.getAcc());
+            instance_input.y = stack.get_local(operation.getNext());
+            instance_input.index_x = stack.get_local(operation.getAccIndex());
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
             const auto p = detail::PolicyManager::get_parameters(
@@ -118,12 +107,13 @@ namespace nil {
                 }
             };
 
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, instance_input);
+            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment,
+                                                                                              instance_input);
 
             components::generate_circuit(component, bp, assignment, instance_input, start_row);
             auto result = components::generate_assignments(component, assignment, instance_input, start_row);
-            frame.locals[mlir::hash_value(operation.getResult(0))] = result.max;
-            frame.locals[mlir::hash_value(operation.getResult(1))] = result.index;
+            stack.push_local(operation.getResult(0), result.max);
+            stack.push_local(operation.getResult(1), result.index);
         }
     }    // namespace blueprint
 }    // namespace nil

@@ -44,35 +44,29 @@ namespace nil {
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_logic_and(
             mlir::arith::AndIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
             using component_type = components::lookup_logic_and<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
-
-            auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(lhs != frame.locals.end());
-            ASSERT(rhs != frame.locals.end());
-
             typename component_type::input_type input;
-            input.input[0] = lhs->second;
-            input.input[1] = rhs->second;
+            input.input[0] = stack.get_local(operation.getLhs());
+            input.input[1] = stack.get_local(operation.getRhs());
 
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_logic_or(
             mlir::arith::OrIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -84,40 +78,34 @@ namespace nil {
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_logic_xor(
             mlir::arith::XOrIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
             using component_type = components::lookup_logic_xor<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
-
-            auto lhs = frame.locals.find(mlir::hash_value(operation.getLhs()));
-            auto rhs = frame.locals.find(mlir::hash_value(operation.getRhs()));
-            ASSERT(lhs != frame.locals.end());
-            ASSERT(rhs != frame.locals.end());
-
             typename component_type::input_type input;
-            input.input[0] = lhs->second;
-            input.input[1] = rhs->second;
+            input.input[0] = stack.get_local(operation.getLhs());
+            input.input[1] = stack.get_local(operation.getRhs());
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<uint8_t m, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_bitwise_and(
             mlir::arith::AndIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -133,13 +121,13 @@ namespace nil {
 
             component_type component(
                 p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(), m);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<uint8_t m, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_bitwise_or(
             mlir::arith::OrIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -155,13 +143,13 @@ namespace nil {
 
             component_type component(
                 p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(), m);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
         template<uint8_t m, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_bitwise_xor(
             mlir::arith::XOrIOp &operation,
-            stack_frame<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &frame,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
@@ -177,7 +165,7 @@ namespace nil {
 
             component_type component(
                 p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(), m);
-            fill_trace(component, input, operation, frame, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
     }    // namespace blueprint
