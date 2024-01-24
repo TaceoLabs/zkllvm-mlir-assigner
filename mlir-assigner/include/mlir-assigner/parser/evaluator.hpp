@@ -181,10 +181,11 @@ namespace zk_ml_toolchain {
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
                   const boost::json::array &public_input, const boost::json::array &private_input,
-                  nil::blueprint::print_format print_circuit_format, nil::blueprint::logger &logger) :
+                  boost::json::array &public_output, nil::blueprint::print_format print_circuit_format,
+                  nil::blueprint::logger &logger) :
             bp(circuit),
             assignmnt(assignment), public_input(public_input), private_input(private_input),
-            print_circuit_format(print_circuit_format), logger(logger) {
+            public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
         }
 
         evaluator(const evaluator &pass) = delete;
@@ -259,7 +260,7 @@ namespace zk_ml_toolchain {
                 }
 
                 // reserve space for the output constraints
-                ok = input_reader.reserve_outputs(funcOp->second, public_input);
+                ok = input_reader.reserve_outputs(funcOp->second, public_output, output_is_already_assigned);
                 if (!ok) {
                     std::cerr << "Could not reserve space for output constraints in public input column";
                     const std::string &error = input_reader.get_error();
@@ -1092,6 +1093,7 @@ namespace zk_ml_toolchain {
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
         const boost::json::array &private_input;
+        boost::json::array &public_output;
         size_t constant_idx = 0;
         unsigned amount_ops = 0;
         unsigned progress = 0;

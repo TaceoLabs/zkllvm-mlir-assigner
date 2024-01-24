@@ -115,10 +115,10 @@ namespace nil {
             }
 
             bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module, const boost::json::array &public_input,
-                          const boost::json::array &private_input) {
+                          const boost::json::array &private_input, boost::json::array &public_output) {
 
                 zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(
-                    circuits[0], assignments[0], public_input, private_input, print_output_format, log);
+                    circuits[0], assignments[0], public_input, private_input, public_output, print_output_format, log);
                 evaluator.evaluate(std::move(module));
                 // if (mlir::failed(pm.run(module))) {
                 //   llvm::errs() << "Passmanager failed to run!\n";

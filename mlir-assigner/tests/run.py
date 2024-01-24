@@ -85,10 +85,12 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
         should_output = f.read().strip()
     # Construct the JSON file name by replacing the ".mlir" extension with ".json"
     json_file = file.replace(".onnx", ".json")
+    json_output_file = file.replace(".onnx", ".output.json")
     json_file_path = os.path.join(subfolder_path, json_file)
+    json_output_file_path = os.path.join(subfolder_path, json_output_file)
     # Call the assigner binary with the input files
     run_tests += 1
-    args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
+    args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
     if verbose:
         print("running: '" + " ".join(args) + "'...",  flush=True)
     try:
@@ -133,10 +135,12 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
         should_output = f.read().strip()
     # Construct the JSON file name by replacing the ".mlir" extension with ".json"
     json_file = file.replace(".mlir", ".json")
+    json_output_file = file.replace(".mlir", ".output.json")
     json_file_path = os.path.join(subfolder_path, json_file)
+    json_output_file_path = os.path.join(subfolder_path, json_output_file)
     # Call the assigner binary with the input files
     run_tests += 1
-    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
+    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     try:

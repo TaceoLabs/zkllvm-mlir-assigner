@@ -118,6 +118,7 @@ namespace nil {
             bool take_memref(mlir::BlockArgument arg, mlir::MemRefType memref_type, const boost::json::object &value,
                              bool is_private) {
                 if (value.size() != 1 || !value.contains("memref") || !value.at("memref").is_object()) {
+                    error = "invalid json object for input memref";
                     return false;
                 }
                 memref<var> m(memref_type.getShape(), memref_type.getElementType());
@@ -165,6 +166,39 @@ namespace nil {
                     }
                 }
                 output_memrefs.push_back(std::move(m));
+                return true;
+            }
+            // reserves space for the output memref in the assignment table, directly after the other inputs
+            // fills the output memref with the values from the input file
+            bool take_output_memref(mlir::MemRefType memref_type, const boost::json::object &value, bool is_private) {
+                if (value.size() != 1 || !value.contains("memref") || !value.at("memref").is_object()) {
+                    error = "invalid json object for output memref";
+                    return false;
+                }
+                memref<var> m(memref_type.getShape(), memref_type.getElementType());
+
+                const boost::json::object &mo = value.at("memref").as_object();
+                if (!mo.contains("data") || !mo.at("data").is_array()) {
+                    error = "output memref does not contain data";
+                    return false;
+                }
+                if (!mo.contains("dims") || !mo.at("dims").is_array()) {
+                    error = "output memref does not contain dims";
+                    return false;
+                }
+                if (!mo.contains("type") || !mo.at("type").is_string()) {
+                    error = "output memref does not contain type";
+                    return false;
+                }
+                auto dims = parse_dim_array(mo.at("dims").as_array());
+                std::string type = mo.at("type").as_string().c_str();
+                if (is_private) {
+                    parse_memref_data_private(m, mo.at("data").as_array(), type);
+                } else {
+                    parse_memref_data_public(m, mo.at("data").as_array(), type);
+                }
+                output_memrefs.push_back(std::move(m));
+
                 return true;
             }
 
@@ -286,15 +320,29 @@ namespace nil {
                 return true;
             }
 
-            bool reserve_outputs(mlir::func::FuncOp &function, const boost::json::array &public_input) {
+            bool reserve_outputs(mlir::func::FuncOp &function, boost::json::array &public_outputs,
+                                 bool &output_is_already_present) {
                 mlir::FunctionType func_type = function.getFunctionType();
 
                 bool is_private = false;    // currently we don't have private output support in MLIR
 
-                for (mlir::Type return_type : func_type.getResults()) {
+                if (!public_outputs.empty()) {
+                    // we have the outputs already
+                    output_is_already_present = true;
+                }
+                auto results = func_type.getResults();
+                for (unsigned i = 0; i < results.size(); ++i) {
+                    mlir::Type return_type = results[i];
                     if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(return_type)) {
-                        if (!reserve_output_memref(memref_type, is_private))
-                            return false;
+                        if (!output_is_already_present) {
+                            if (!reserve_output_memref(memref_type, is_private)) {
+                                return false;
+                            }
+                        } else {
+                            const boost::json::object &current_value = public_outputs[i].as_object();
+                            if (!take_output_memref(memref_type, current_value, is_private))
+                                return false;
+                        }
                     } else {
                         UNREACHABLE("only memref types are supported for now");
                     }

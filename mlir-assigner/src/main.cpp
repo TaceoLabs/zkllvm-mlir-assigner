@@ -390,6 +390,7 @@ template<typename BlueprintFieldType>
 int curve_dependent_main(std::string bytecode_file_name,
                          std::string public_input_file_name,
                          std::string private_input_file_name,
+                         std::string public_output_file_name,
                          std::string assignment_table_file_name,
                          std::string circuit_file_name,
                          long stack_size,
@@ -433,6 +434,21 @@ int curve_dependent_main(std::string bytecode_file_name,
         ASSERT(read_json(private_input_file_name, private_input_json_value));
     }
 
+    boost::json::value public_output_json_value = boost::json::array();
+    bool have_output = true;
+    {
+        std::ifstream test_file(public_output_file_name.c_str());
+        if (!test_file.is_open()) {
+            // we do not have any input atm
+            have_output = false;
+        } else {
+            test_file.close();
+        }
+    }
+    if (have_output) {
+        ASSERT(read_json(public_output_file_name, public_output_json_value));
+    }
+
     // Here are the main changes to the assigner binary:
     // otherwise, it is the same, unmodified code from
     // zkllvm/bin/assigner/src/main.cpp
@@ -450,7 +466,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     }
 
     if (!parser_instance.evaluate(std::move(module), public_input_json_value.as_array(),
-                                  private_input_json_value.as_array())) {
+                                  private_input_json_value.as_array(), public_output_json_value.as_array())) {
         return 1;
     }
     // end of changes
@@ -587,6 +603,7 @@ int main(int argc, char *argv[]) {
             ("bytecode,b", boost::program_options::value<std::string>(), "Bytecode input file")
             ("public-input,i", boost::program_options::value<std::string>(), "Public input file")
             ("private-input,p", boost::program_options::value<std::string>(), "Private input file")
+            ("public-output,o", boost::program_options::value<std::string>(), "Public ouput file")
             ("assignment-table,t", boost::program_options::value<std::string>(), "Assignment table output file")
             ("circuit,c", boost::program_options::value<std::string>(), "Circuit output file")
             ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12381)")
@@ -630,6 +647,7 @@ int main(int argc, char *argv[]) {
     std::string bytecode_file_name;
     std::string public_input_file_name;
     std::string private_input_file_name;
+    std::string public_output_file_name;
     std::string assignment_table_file_name;
     std::string circuit_file_name;
     std::string elliptic_curve;
@@ -658,6 +676,17 @@ int main(int argc, char *argv[]) {
     if (vm.count("public-input")) {
         public_input_file_name = vm["public-input"].as<std::string>();
     }
+
+    // begin of changes
+    // we also need an output file
+    if (vm.count("public-output")) {
+        public_output_file_name = vm["public-output"].as<std::string>();
+    } else {
+        std::cerr << "Invalid command line argument - public output file name is not specified" << std::endl;
+        std::cout << options_desc << std::endl;
+        return 1;
+    }
+    // end of changes
 
     if (vm.count("assignment-table")) {
         assignment_table_file_name = vm["assignment-table"].as<std::string>();
@@ -781,6 +810,7 @@ int main(int argc, char *argv[]) {
             return curve_dependent_main<typename algebra::curves::pallas::base_field_type>(bytecode_file_name,
                                                                                            public_input_file_name,
                                                                                            private_input_file_name,
+                                                                                           public_output_file_name,
                                                                                            assignment_table_file_name,
                                                                                            circuit_file_name,
                                                                                            stack_size,
@@ -804,6 +834,7 @@ int main(int argc, char *argv[]) {
             return curve_dependent_main<typename algebra::fields::bls12_base_field<381>>(bytecode_file_name,
                                                                                          public_input_file_name,
                                                                                          private_input_file_name,
+                                                                                         public_output_file_name,
                                                                                          assignment_table_file_name,
                                                                                          circuit_file_name,
                                                                                          stack_size,
