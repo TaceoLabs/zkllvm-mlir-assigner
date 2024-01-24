@@ -454,8 +454,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     // zkllvm/bin/assigner/src/main.cpp
     // we load an mlir module instead and pass it
     // to our parser instead
-    // parser does not have a target_prover argument
-    // parser also does not have a check_validity argument
+    // parser does not have a check_validity argument
 
     nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams> parser_instance(
         stack_size, log_level, max_num_provers, target_prover, policy, circuit_output_print_format);
@@ -464,10 +463,24 @@ int curve_dependent_main(std::string bytecode_file_name,
     if (!module) {
         return 1;
     }
+    // need to bind this to an lvalue here since we give a mut ref down into evaluate
+    boost::json::array public_output_json_array = public_output_json_value.as_array();
 
     if (!parser_instance.evaluate(std::move(module), public_input_json_value.as_array(),
-                                  private_input_json_value.as_array(), public_output_json_value.as_array())) {
+                                  private_input_json_value.as_array(), public_output_json_array)) {
         return 1;
+    }
+    // we also write our output file
+    if (!have_output) {
+        std::ofstream output_file(public_output_file_name.c_str());
+        if (!output_file.is_open()) {
+            std::cerr << "Could not open the file - '" << public_output_file_name << "' for writing" << std::endl;
+            return 1;
+        } else {
+            output_file.close();
+        }
+        output_file << public_output_json_value;
+        output_file.close();
     }
     // end of changes
 

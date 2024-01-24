@@ -66,6 +66,7 @@
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/parser/input_reader.hpp>
+#include <mlir-assigner/parser/output_writer.hpp>
 
 #include <unordered_map>
 #include <map>
@@ -1031,6 +1032,22 @@ namespace zk_ml_toolchain {
                                     UNREACHABLE("Outputs must be either private or public");
                                 }
                             }
+                        }
+                    }
+                    if (!output_is_already_assigned) {
+                        // if the output was only just calculated, we write it out into the public output file
+                        nil::blueprint::OutputWriter<BlueprintFieldType, VarType,
+                                                     nil::blueprint::assignment<ArithmetizationType>>
+                            output_writer(assignmnt, output_memrefs);
+                        bool ok = output_writer.make_outputs_to_json(public_output);
+                        if (!ok) {
+                            std::cerr << "Public input does not match the circuit signature";
+                            const std::string &error = output_writer.get_error();
+                            if (!error.empty()) {
+                                std::cerr << ": " << error;
+                            }
+                            std::cerr << std::endl;
+                            exit(-1);
                         }
                     }
                     output_is_already_assigned = true;
