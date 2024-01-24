@@ -251,7 +251,8 @@ namespace nil {
                 return res;
             }
 
-            bool fill_public_input(mlir::func::FuncOp &function, const boost::json::array &public_input) {
+            bool fill_input(mlir::func::FuncOp &function, const boost::json::array &public_input,
+                            const boost::json::array &private_input) {
                 mlir::FunctionType func_type = function.getFunctionType();
                 mlir::Region &reg = function.getBody();
                 auto args = reg.getArguments();

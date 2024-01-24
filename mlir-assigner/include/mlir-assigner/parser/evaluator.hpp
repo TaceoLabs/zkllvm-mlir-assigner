@@ -180,9 +180,11 @@ namespace zk_ml_toolchain {
 
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
-                  const boost::json::array &public_input, bool PrintCircuitOutput, nil::blueprint::logger &logger) :
+                  const boost::json::array &public_input, const boost::json::array &private_input,
+                  nil::blueprint::print_format print_circuit_format, nil::blueprint::logger &logger) :
             bp(circuit),
-            assignmnt(assignment), public_input(public_input), PrintCircuitOutput(PrintCircuitOutput), logger(logger) {
+            assignmnt(assignment), public_input(public_input), private_input(private_input),
+            print_circuit_format(print_circuit_format), logger(logger) {
         }
 
         evaluator(const evaluator &pass) = delete;
@@ -245,7 +247,7 @@ namespace zk_ml_toolchain {
                 nil::blueprint::InputReader<BlueprintFieldType, VarType,
                                             nil::blueprint::assignment<ArithmetizationType>>
                     input_reader(main_frame, assignmnt, output_memrefs);
-                bool ok = input_reader.fill_public_input(funcOp->second, public_input);
+                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
                 if (!ok) {
                     std::cerr << "Public input does not match the circuit signature";
                     const std::string &error = input_reader.get_error();
@@ -277,9 +279,6 @@ namespace zk_ml_toolchain {
         }
 
     private:
-        bool PrintCircuitOutput;
-        nil::blueprint::logger &logger;
-
         int64_t resolve_number(VarType scalar) {
             auto scalar_value = var_value(assignmnt, scalar);
             static constexpr auto limit_value_max =
@@ -997,7 +996,8 @@ namespace zk_ml_toolchain {
                 // are we returning from the entry_point?
                 if (function_call_depth == 0) {
                     auto ops = operation.getOperands();
-                    if (PrintCircuitOutput) {
+                    if (print_circuit_format != nil::blueprint::print_format::no_print) {
+                        // TODO: support different print formats
                         std::cout << "Result:\n";
                         for (unsigned i = 0; i < ops.size(); ++i) {
                             nil::blueprint::memref<VarType> &retval = stack.get_memref(ops[i]);
@@ -1080,6 +1080,9 @@ namespace zk_ml_toolchain {
             return VarType(0, constant_idx++, false, VarType::column_type::constant);
         }
 
+        nil::blueprint::print_format print_circuit_format;
+        nil::blueprint::logger &logger;
+
         nil::blueprint::stack<VarType> stack;
         std::map<std::string, func::FuncOp> functions;
         size_t function_call_depth = 0;
@@ -1088,6 +1091,7 @@ namespace zk_ml_toolchain {
         nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
+        const boost::json::array &private_input;
         size_t constant_idx = 0;
         unsigned amount_ops = 0;
         unsigned progress = 0;

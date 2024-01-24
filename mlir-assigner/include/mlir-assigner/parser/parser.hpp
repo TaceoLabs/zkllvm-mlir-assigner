@@ -40,7 +40,6 @@
 #include <mlir-assigner/helper/logger.hpp>
 
 // ONNX_MLIR stuff, fix include paths
-#include "evaluator.hpp"
 #include "src/Compiler/CompilerUtils.hpp"
 #include "mlir/Dialect/zkml/ZkMlDialect.h"
 
@@ -51,17 +50,24 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams, bool PrintCircuitOutput>
+        template<typename BlueprintFieldType, typename ArithmetizationParams>
         struct parser {
 
             parser(long stack_size, boost::log::trivial::severity_level log_level, std::uint32_t max_num_provers,
-                   const std::string &kind = "") :
-                max_num_provers(max_num_provers) {
+                   std::uint32_t target_prover_idx, const std::string &kind = "",
+                   print_format output_print_format = no_print) :
+                max_num_provers(max_num_provers),
+                print_output_format(output_print_format) {
                 if (max_num_provers != 1) {
                     throw std::runtime_error(
                         "Currently only one prover is supported, please "
                         "set max_num_provers to 1");
                 }
+                // if (target_prover_idx != 0) {
+                //     throw std::runtime_error(
+                //         "Currently only one prover is supported, please "
+                //         "set target_prover_idx to 0");
+                // }
                 log.set_level(log_level);
                 detail::PolicyManager::set_policy(kind);
 
@@ -108,10 +114,11 @@ namespace nil {
                 return module;
             }
 
-            bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module, const boost::json::array &public_input) {
+            bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module, const boost::json::array &public_input,
+                          const boost::json::array &private_input) {
 
                 zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(
-                    circuits[0], assignments[0], public_input, PrintCircuitOutput, log);
+                    circuits[0], assignments[0], public_input, private_input, print_output_format, log);
                 evaluator.evaluate(std::move(module));
                 // if (mlir::failed(pm.run(module))) {
                 //   llvm::errs() << "Passmanager failed to run!\n";
@@ -127,6 +134,7 @@ namespace nil {
             mlir::MLIRContext context;
             bool finished = false;
             logger log;
+            print_format print_output_format;
             std::uint32_t max_num_provers;
             std::shared_ptr<circuit<ArithmetizationType>> bp_ptr;
             std::shared_ptr<assignment<ArithmetizationType>> assignment_ptr;

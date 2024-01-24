@@ -88,7 +88,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     json_file_path = os.path.join(subfolder_path, json_file)
     # Call the assigner binary with the input files
     run_tests += 1
-    args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "--print_circuit_output", "--check"]
+    args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
     if verbose:
         print("running: '" + " ".join(args) + "'...",  flush=True)
     try:
@@ -136,7 +136,7 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
     json_file_path = os.path.join(subfolder_path, json_file)
     # Call the assigner binary with the input files
     run_tests += 1
-    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "--print_circuit_output", "--check"]
+    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     try:

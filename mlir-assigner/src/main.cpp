@@ -38,6 +38,8 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 #include <nil/crypto3/algebra/curves/ed25519.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/ed25519.hpp>
+#include <nil/crypto3/algebra/curves/bls12.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/bls12.hpp>
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/params.hpp>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
@@ -74,8 +76,7 @@ void print_circuit(const circuit_proxy<ArithmetizationType> &circuit_proxy,
         std::tuple<nil::crypto3::marshalling::types::plonk_gates<
                        TTypeBase, typename ConstraintSystemType::gates_container_type::value_type>,    // gates
                    nil::crypto3::marshalling::types::plonk_copy_constraints<
-                       TTypeBase,
-                       typename ConstraintSystemType::field_type>,    // copy constraints
+                       TTypeBase, typename ConstraintSystemType::field_type>,    // copy constraints
                    nil::crypto3::marshalling::types::plonk_lookup_gates<
                        TTypeBase,
                        typename ConstraintSystemType::lookup_gates_container_type::value_type>,    // lookup constraints
@@ -99,6 +100,7 @@ void print_circuit(const circuit_proxy<ArithmetizationType> &circuit_proxy,
     for (const auto &it : used_copy_constraints_idx) {
         used_copy_constraints.push_back(copy_constraints[it]);
     }
+
     if (rename_required) {
         const auto &used_rows = table_proxy.get_used_rows();
         std::uint32_t local_row = 0;
@@ -150,7 +152,7 @@ void print_circuit(const circuit_proxy<ArithmetizationType> &circuit_proxy,
     cv.resize(filled_val.length(), 0x00);
     auto write_iter = cv.begin();
     nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
-    out.write(reinterpret_cast<char*>(cv.data()), cv.size());
+    out.write(reinterpret_cast<char *>(cv.data()), cv.size());
 }
 
 enum class print_table_kind { PRIVATE, SHARED, FULL };
@@ -158,11 +160,9 @@ enum class print_table_kind { PRIVATE, SHARED, FULL };
 enum class print_column_kind { WITNESS, SHARED, PUBLIC_INPUT, CONSTANT, SELECTOR };
 
 template<typename ValueType, typename ContainerType>
-void fill_vector_value(std::vector<ValueType> &table_values, const ContainerType &table_col, std::uint32_t padding) {
-    std::copy(table_col.begin(), table_col.end(), std::back_inserter(table_values));
-    for (std::uint32_t j = table_col.size(); j < padding; j++) {
-        table_values.push_back(0);
-    }
+void fill_vector_value(std::vector<ValueType> &table_values, const ContainerType &table_col,
+                       typename std::vector<ValueType>::iterator start) {
+    std::copy(table_col.begin(), table_col.end(), start);
 }
 
 template<typename Endianness, typename ArithmetizationType, typename BlueprintFieldType>
@@ -172,6 +172,7 @@ void print_assignment_table(const assignment_proxy<ArithmetizationType> &table_p
     using AssignmentTableType = assignment_proxy<ArithmetizationType>;
     std::uint32_t usable_rows_amount;
     std::uint32_t total_columns;
+    std::uint32_t total_size;
     std::uint32_t shared_size = table_proxy.shareds_amount();
     std::uint32_t public_input_size = table_proxy.public_inputs_amount();
     std::uint32_t witness_size = table_proxy.witnesses_amount();
@@ -225,14 +226,13 @@ void print_assignment_table(const assignment_proxy<ArithmetizationType> &table_p
     if (padded_rows_amount < 8) {
         padded_rows_amount = 8;
     }
+    total_size = padded_rows_amount * total_columns;
 
     using TTypeBase = nil::marshalling::field_type<Endianness>;
     using plonk_assignment_table = nil::marshalling::types::bundle<
         TTypeBase,
-        std::tuple<nil::marshalling::types::integral<TTypeBase,
-                                                     std::size_t>,    // usable_rows
-                   nil::marshalling::types::integral<TTypeBase,
-                                                     std::size_t>,    // columns_number
+        std::tuple<nil::marshalling::types::integral<TTypeBase, std::size_t>,    // usable_rows
+                   nil::marshalling::types::integral<TTypeBase, std::size_t>,    // columns_number
                    // table_values
                    nil::marshalling::types::array_list<
                        TTypeBase,
@@ -242,86 +242,101 @@ void print_assignment_table(const assignment_proxy<ArithmetizationType> &table_p
                            nil::marshalling::types::integral<TTypeBase, std::size_t>>>>>;
     using column_type = typename crypto3::zk::snark::plonk_column<BlueprintFieldType>;
 
-    std::vector<typename AssignmentTableType::field_type::value_type> table_values;
+    std::vector<typename AssignmentTableType::field_type::value_type> table_values(total_size, 0);
     if (print_kind == print_table_kind::FULL) {
+        auto it = table_values.begin();
         for (std::uint32_t i = 0; i < witness_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.witness(i), padded_rows_amount);
+                table_values, table_proxy.witness(i), it);
+            it += padded_rows_amount;
         }
         for (std::uint32_t i = 0; i < public_input_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.public_input(i), padded_rows_amount);
+                table_values, table_proxy.public_input(i), it);
+            it += padded_rows_amount;
         }
         for (std::uint32_t i = 0; i < constant_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.constant(i), padded_rows_amount);
+                table_values, table_proxy.constant(i), it);
+            it += padded_rows_amount;
         }
         for (std::uint32_t i = 0; i < selector_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.selector(i), padded_rows_amount);
+                table_values, table_proxy.selector(i), it);
+            it += padded_rows_amount;
         }
     } else {
         const auto &rows = table_proxy.get_used_rows();
+        const auto &selector_rows = table_proxy.get_used_selector_rows();
         const std::uint32_t padding = padded_rows_amount - rows.size();
+        std::uint32_t idx = 0;
+        auto it = table_values.begin();
         // witness
         for (std::size_t i = 0; i < AssignmentTableType::arithmetization_params::witness_columns; i++) {
             const auto column_size = table_proxy.witness_column_size(i);
+            std::uint32_t offset = 0;
             for (const auto &j : rows) {
                 if (j < column_size) {
-                    table_values.push_back(table_proxy.witness(i, j));
-                } else {
-                    table_values.push_back(0);
+                    table_values[idx + offset] = table_proxy.witness(i, j);
+                    offset++;
                 }
             }
-            for (std::uint32_t j = 0; j < padding; j++) {
-                table_values.push_back(0);
-            }
+            idx += padded_rows_amount;
         }
         // public input
+        it += idx;
         for (std::uint32_t i = 0; i < public_input_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.public_input(i), padded_rows_amount);
+                table_values, table_proxy.public_input(i), it);
+            it += padded_rows_amount;
+            idx += padded_rows_amount;
         }
         for (std::uint32_t i = 0; i < shared_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.shared(i), padded_rows_amount);
+                table_values, table_proxy.shared(i), it);
+            it += padded_rows_amount;
+            idx += padded_rows_amount;
         }
         // constant
         for (std::uint32_t i = 0; i < ComponentConstantColumns; i++) {
             const auto column_size = table_proxy.constant_column_size(i);
+            std::uint32_t offset = 0;
             for (const auto &j : rows) {
                 if (j < column_size) {
-                    table_values.push_back(table_proxy.constant(i, j));
-                } else {
-                    table_values.push_back(0);
+                    table_values[idx + offset] = table_proxy.constant(i, j);
+                    offset++;
                 }
             }
-            for (std::uint32_t j = 0; j < padding; j++) {
-                table_values.push_back(0);
-            }
+            idx += padded_rows_amount;
         }
+        it += idx;
         for (std::uint32_t i = ComponentConstantColumns; i < constant_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.constant(i), padded_rows_amount);
+                table_values, table_proxy.constant(i), it);
+            it += padded_rows_amount;
+            idx += padded_rows_amount;
         }
         // selector
         for (std::uint32_t i = 0; i < ComponentSelectorColumns; i++) {
             const auto column_size = table_proxy.selector_column_size(i);
+            std::uint32_t offset = 0;
             for (const auto &j : rows) {
                 if (j < column_size) {
-                    table_values.push_back(table_proxy.selector(i, j));
-                } else {
-                    table_values.push_back(0);
+                    if (selector_rows.find(j) != selector_rows.end()) {
+                        table_values[idx + offset] = table_proxy.selector(i, j);
+                    }
+                    offset++;
                 }
             }
-            for (std::uint32_t j = 0; j < padding; j++) {
-                table_values.push_back(0);
-            }
+            idx += padded_rows_amount;
         }
         for (std::uint32_t i = ComponentSelectorColumns; i < selector_size; i++) {
             fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                table_values, table_proxy.selector(i), padded_rows_amount);
+                table_values, table_proxy.selector(i), it);
+            it += padded_rows_amount;
+            idx += padded_rows_amount;
         }
+        ASSERT_MSG(idx == total_size, "Printed index not equal required assignment size");
     }
 
     auto filled_val = plonk_assignment_table(
@@ -329,20 +344,61 @@ void print_assignment_table(const assignment_proxy<ArithmetizationType> &table_p
                         nil::marshalling::types::integral<TTypeBase, std::size_t>(total_columns),
                         nil::crypto3::marshalling::types::fill_field_element_vector<
                             typename AssignmentTableType::field_type::value_type, Endianness>(table_values)));
+    table_values.clear();
+    table_values.shrink_to_fit();
 
     std::vector<std::uint8_t> cv;
     cv.resize(filled_val.length(), 0x00);
     auto write_iter = cv.begin();
     nil::marshalling::status_type status = filled_val.write(write_iter, cv.size());
-    out.write(reinterpret_cast<char*>(cv.data()), cv.size());
+    out.write(reinterpret_cast<char *>(cv.data()), cv.size());
 }
 
-template<typename CurveType, bool PrintCircuitOutput>
-int curve_dependent_main(std::string bytecode_file_name, std::string public_input_file_name,
-                         std::string assignment_table_file_name, std::string circuit_file_name, long stack_size,
-                         bool check_validity, boost::log::trivial::severity_level log_level, const std::string &policy,
-                         std::uint32_t max_num_provers) {
-    using BlueprintFieldType = typename CurveType::base_field_type;
+bool read_json(std::string input_file_name, boost::json::value &input_json_value) {
+    std::ifstream input_file(input_file_name.c_str());
+    if (!input_file.is_open()) {
+        std::cerr << "Could not open the file - '" << input_file_name << "'" << std::endl;
+        return false;
+    }
+
+    boost::json::stream_parser p;
+    boost::json::error_code ec;
+    while (!input_file.eof()) {
+        char input_string[256];
+        input_file.read(input_string, sizeof(input_string) - 1);
+        input_string[input_file.gcount()] = '\0';
+        p.write(input_string, ec);
+        if (ec) {
+            std::cerr << "JSON parsing of input failed" << std::endl;
+            return false;
+        }
+    }
+    p.finish(ec);
+    if (ec) {
+        std::cerr << "JSON parsing of input failed" << std::endl;
+        return false;
+    }
+    input_json_value = p.release();
+    if (!input_json_value.is_array()) {
+        std::cerr << "Array of arguments is expected in JSON file" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+template<typename BlueprintFieldType>
+int curve_dependent_main(std::string bytecode_file_name,
+                         std::string public_input_file_name,
+                         std::string private_input_file_name,
+                         std::string assignment_table_file_name,
+                         std::string circuit_file_name,
+                         long stack_size,
+                         bool check_validity,
+                         boost::log::trivial::severity_level log_level,
+                         const std::string &policy,
+                         std::uint32_t max_num_provers,
+                         std::uint32_t target_prover,
+                         nil::blueprint::print_format circuit_output_print_format) {
 
     constexpr std::size_t ComponentConstantColumns = 5;
     constexpr std::size_t LookupConstantColumns = 30;
@@ -363,50 +419,38 @@ int curve_dependent_main(std::string bytecode_file_name, std::string public_inpu
     using AssignmentTableType =
         zk::snark::plonk_table<BlueprintFieldType, ArithmetizationParams, zk::snark::plonk_column<BlueprintFieldType>>;
 
-    std::vector<typename BlueprintFieldType::value_type> public_input;
-    std::ifstream input_file(public_input_file_name.c_str());
-    if (!input_file.is_open()) {
-        std::cerr << "Could not open the file - '" << public_input_file_name << "'" << std::endl;
-        return EXIT_FAILURE;
+    boost::json::value public_input_json_value;
+    if (public_input_file_name.empty()) {
+        public_input_json_value = boost::json::array();
+    } else {
+        ASSERT(read_json(public_input_file_name, public_input_json_value));
     }
 
-    boost::json::stream_parser p;
-    boost::json::error_code ec;
-    while (!input_file.eof()) {
-        char input_string[256];
-        input_file.read(input_string, sizeof(input_string) - 1);
-        input_string[input_file.gcount()] = '\0';
-        p.write(input_string, ec);
-        if (ec) {
-            std::cerr << "JSON parsing of public input failed" << std::endl;
-            return 1;
-        }
+    boost::json::value private_input_json_value;
+    if (private_input_file_name.empty()) {
+        private_input_json_value = boost::json::array();
+    } else {
+        ASSERT(read_json(private_input_file_name, private_input_json_value));
     }
-    p.finish(ec);
-    if (ec) {
-        std::cerr << "JSON parsing of public input failed" << std::endl;
-        return 1;
-    }
-    boost::json::value input_json_value = p.release();
-    if (!input_json_value.is_array()) {
-        std::cerr << "Array of arguments is expected in JSON file" << std::endl;
-        return 1;
-    }
-
-    nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams, PrintCircuitOutput> parser_instance(
-        stack_size, log_level, max_num_provers, policy);
 
     // Here are the main changes to the assigner binary:
     // otherwise, it is the same, unmodified code from
     // zkllvm/bin/assigner/src/main.cpp
     // we load an mlir module instead and pass it
     // to our parser instead
+    // parser does not have a target_prover argument
+    // parser also does not have a check_validity argument
+
+    nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams> parser_instance(
+        stack_size, log_level, max_num_provers, target_prover, policy, circuit_output_print_format);
+
     mlir::OwningOpRef<mlir::ModuleOp> module = parser_instance.parseMLIRFile(bytecode_file_name.c_str());
     if (!module) {
         return 1;
     }
 
-    if (!parser_instance.evaluate(std::move(module), input_json_value.as_array())) {
+    if (!parser_instance.evaluate(std::move(module), public_input_json_value.as_array(),
+                                  private_input_json_value.as_array())) {
         return 1;
     }
     // end of changes
@@ -422,14 +466,23 @@ int curve_dependent_main(std::string bytecode_file_name, std::string public_inpu
         // fill ComponentConstantColumns, ComponentConstantColumns + 1, ...
         std::iota(lookup_columns_indices.begin(), lookup_columns_indices.end(), ComponentConstantColumns);
 
-        auto usable_rows_amount = zk::snark::pack_lookup_tables_horizontal(
-            parser_instance.circuits[0].get_reserved_indices(), parser_instance.circuits[0].get_reserved_tables(),
-            parser_instance.circuits[0].get(), parser_instance.assignments[0].get(), lookup_columns_indices,
-            ComponentSelectorColumns, parser_instance.assignments[0].allocated_rows(), max_usable_rows);
+        auto usable_rows_amount =
+            zk::snark::pack_lookup_tables_horizontal(parser_instance.circuits[0].get_reserved_indices(),
+                                                     parser_instance.circuits[0].get_reserved_tables(),
+                                                     parser_instance.circuits[0].get(),
+                                                     parser_instance.assignments[0].get(),
+                                                     lookup_columns_indices,
+                                                     ComponentSelectorColumns,
+                                                     0,
+                                                     max_usable_rows);
     }
 
-    // print full table
-    if (parser_instance.assignments.size() == 1) {
+    constexpr std::uint32_t invalid_target_prover = std::numeric_limits<std::uint32_t>::max();
+    // print assignment tables and circuits
+    ASSERT_MSG(parser_instance.assignments.size() == parser_instance.circuits.size(),
+               "Missmatch assignments circuits size");
+    if (parser_instance.assignments.size() == 1 && (target_prover == 0 || target_prover == invalid_target_prover)) {
+        // print assignment table
         std::ofstream otable;
         otable.open(assignment_table_file_name, std::ios_base::binary | std::ios_base::out);
         if (!otable) {
@@ -442,56 +495,83 @@ int curve_dependent_main(std::string bytecode_file_name, std::string public_inpu
             otable);
 
         otable.close();
-    } else if (parser_instance.assignments.size() > 1) {
-        for (const auto &it : parser_instance.assignments) {
+
+        // print assignment circuit
+        std::ofstream ocircuit;
+        ocircuit.open(circuit_file_name, std::ios_base::binary | std::ios_base::out);
+        if (!ocircuit) {
+            std::cout << "Something wrong with output " << circuit_file_name << std::endl;
+            return 1;
+        }
+
+        print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
+            parser_instance.circuits[0], parser_instance.assignments[0], false, ocircuit);
+        ocircuit.close();
+    } else if (parser_instance.assignments.size() > 1 &&
+               (target_prover < parser_instance.assignments.size() || invalid_target_prover == invalid_target_prover)) {
+        std::uint32_t start_idx = (target_prover == invalid_target_prover) ? 0 : target_prover;
+        std::uint32_t end_idx =
+            (target_prover == invalid_target_prover) ? parser_instance.assignments.size() : target_prover + 1;
+        for (std::uint32_t idx = start_idx; idx < end_idx; idx++) {
+            // print assignment table
             std::ofstream otable;
-            otable.open(assignment_table_file_name + std::to_string(it.get_id()), std::ios_base::binary | std::ios_base::out);
+            otable.open(assignment_table_file_name + std::to_string(idx), std::ios_base::binary | std::ios_base::out);
             if (!otable) {
-                std::cout << "Something wrong with output " << assignment_table_file_name + std::to_string(it.get_id())
+                std::cout << "Something wrong with output " << assignment_table_file_name + std::to_string(idx)
                           << std::endl;
                 return 1;
             }
 
             print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType, BlueprintFieldType>(
-                it, print_table_kind::PRIVATE, ComponentConstantColumns, ComponentSelectorColumns, otable);
+                parser_instance.assignments[idx], print_table_kind::PRIVATE, ComponentConstantColumns,
+                ComponentSelectorColumns, otable);
 
             otable.close();
-        }
-    }
 
-    auto assignment_it = parser_instance.assignments.begin();
-    for (auto &it : parser_instance.circuits) {
-        std::ofstream ocircuit;
-        std::string file_name =
-            parser_instance.circuits.size() > 1 ? circuit_file_name + std::to_string(it.get_id()) : circuit_file_name;
-        ocircuit.open(file_name, std::ios_base::binary | std::ios_base::out);
-        if (!ocircuit) {
-            std::cout << "Something wrong with output " << file_name << std::endl;
-            return 1;
+            // print assignment table
+            std::ofstream ocircuit;
+            ocircuit.open(circuit_file_name + std::to_string(idx), std::ios_base::binary | std::ios_base::out);
+            if (!ocircuit) {
+                std::cout << "Something wrong with output " << circuit_file_name + std::to_string(idx) << std::endl;
+                return 1;
+            }
+
+            ASSERT_MSG(idx < parser_instance.circuits.size(), "Not found circuit");
+            print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
+                parser_instance.circuits[idx], parser_instance.assignments[idx], (idx > 0), ocircuit);
+
+            ocircuit.close();
         }
-        ASSERT_MSG(assignment_it != parser_instance.assignments.end(), "Not found assignment for circuit");
-        print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
-            it, *assignment_it, (parser_instance.assignments.size() > 1), ocircuit);
-        ocircuit.close();
-        assignment_it++;
+    } else {
+        std::cout << "No data for print: target prover " << target_prover << ", actual number of provers "
+                  << parser_instance.assignments.size() << std::endl;
+        return 1;
     }
 
     if (check_validity) {
-        ASSERT_MSG(
-            nil::blueprint::is_satisfied(parser_instance.circuits[0].get(), parser_instance.assignments[0].get()),
-            "The circuit is not satisfied");
-        auto assignment_it = parser_instance.assignments.begin();
-        for (auto &it : parser_instance.circuits) {
-            ASSERT_MSG(assignment_it != parser_instance.assignments.end(), "Not found assignment for circuit");
-            assignment_it->set_check(true);
-            bool is_accessible = nil::blueprint::is_satisfied(it, *assignment_it);
-            assignment_it->set_check(false);
-            ASSERT_MSG(is_accessible,
-                       ("The circuit is not satisfied on prover " + std::to_string(it.get_id())).c_str());
-            assignment_it++;
+        if (parser_instance.assignments.size() == 1 && (target_prover == 0 || target_prover == invalid_target_prover)) {
+            ASSERT_MSG(
+                nil::blueprint::is_satisfied(parser_instance.circuits[0].get(), parser_instance.assignments[0].get()),
+                "The circuit is not satisfied");
+        } else if (parser_instance.assignments.size() > 1 && (target_prover < parser_instance.assignments.size() ||
+                                                              invalid_target_prover == invalid_target_prover)) {
+            //  check only for target prover if set
+            std::uint32_t start_idx = (target_prover == invalid_target_prover) ? 0 : target_prover;
+            std::uint32_t end_idx =
+                (target_prover == invalid_target_prover) ? parser_instance.assignments.size() : target_prover + 1;
+            for (std::uint32_t idx = start_idx; idx < end_idx; idx++) {
+                parser_instance.assignments[idx].set_check(true);
+                bool is_accessible =
+                    nil::blueprint::is_satisfied(parser_instance.circuits[idx], parser_instance.assignments[idx]);
+                parser_instance.assignments[idx].set_check(false);
+                ASSERT_MSG(is_accessible, ("The circuit is not satisfied on prover " + std::to_string(idx)).c_str());
+            }
+        } else {
+            std::cout << "No data for check: target prover " << target_prover << ", actual number of provers "
+                      << parser_instance.assignments.size() << std::endl;
+            return 1;
         }
     }
-
     return 0;
 }
 
@@ -506,15 +586,18 @@ int main(int argc, char *argv[]) {
             ("version,v", "Display version")
             ("bytecode,b", boost::program_options::value<std::string>(), "Bytecode input file")
             ("public-input,i", boost::program_options::value<std::string>(), "Public input file")
+            ("private-input,p", boost::program_options::value<std::string>(), "Private input file")
             ("assignment-table,t", boost::program_options::value<std::string>(), "Assignment table output file")
             ("circuit,c", boost::program_options::value<std::string>(), "Circuit output file")
-            ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12-381)")
+            ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12381)")
             ("stack-size,s", boost::program_options::value<long>(), "Stack size in bytes")
             ("check", "Check satisfiability of the generated circuit")
             ("log-level,l", boost::program_options::value<std::string>(), "Log level (trace, debug, info, warning, error, fatal)")
-            ("print_circuit_output", "print output of the circuit")
+            ("print_circuit_output", "deprecated, use \"-f\" instead")
+            ("print-circuit-output-format,f", boost::program_options::value<std::string>(), "print output of the circuit (dec, hex)")
             ("policy", boost::program_options::value<std::string>(), "Policy for creating circuits. Possible values: default")
-            ("max-num-provers", boost::program_options::value<int>(), "Maximum number of provers. Possible values >= 1");
+            ("max-num-provers", boost::program_options::value<int>(), "Maximum number of provers. Possible values >= 1")
+            ("target-prover", boost::program_options::value<int>(), "Assignment table and circuit will be generated only for defined prover. Possible values [0, max-num-provers)");
     // clang-format on
 
     boost::program_options::variables_map vm;
@@ -539,16 +622,18 @@ int main(int argc, char *argv[]) {
 #define str(s) #s
         std::cout << xstr(ASSIGNER_VERSION) << std::endl;
 #else
-        std::cout << "undefined" << std::endl;
+        std::cout << "Version is not defined" << std::endl;
 #endif
         return 0;
     }
 
     std::string bytecode_file_name;
     std::string public_input_file_name;
+    std::string private_input_file_name;
     std::string assignment_table_file_name;
     std::string circuit_file_name;
     std::string elliptic_curve;
+    nil::blueprint::print_format circuit_output_print_format;
     std::string log_level;
     long stack_size;
 
@@ -560,22 +645,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (vm.count("public-input")) {
-        public_input_file_name = vm["public-input"].as<std::string>();
-    } else {
-        std::cerr << "Invalid command line argument - public input file name is "
-                     "not specified"
-                  << std::endl;
+    if (!vm.count("public-input") && !vm.count("private-input")) {
+        std::cerr << "Both public and private input file names are not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
+    }
+
+    if (vm.count("private-input")) {
+        private_input_file_name = vm["private-input"].as<std::string>();
+    }
+
+    if (vm.count("public-input")) {
+        public_input_file_name = vm["public-input"].as<std::string>();
     }
 
     if (vm.count("assignment-table")) {
         assignment_table_file_name = vm["assignment-table"].as<std::string>();
     } else {
-        std::cerr << "Invalid command line argument - assignment table file name "
-                     "is not specified"
-                  << std::endl;
+        std::cerr << "Invalid command line argument - assignment table file name is not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
     }
@@ -591,9 +678,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("elliptic-curve-type")) {
         elliptic_curve = vm["elliptic-curve-type"].as<std::string>();
     } else {
-        std::cerr << "Invalid command line argument - elliptic curve type is not "
-                     "specified"
-                  << std::endl;
+        std::cerr << "Invalid command line argument - elliptic curve type is not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
     }
@@ -608,13 +693,32 @@ int main(int argc, char *argv[]) {
         {"pallas", 0},
         {"vesta", 1},
         {"ed25519", 2},
-        {"bls12-381", 3},
+        {"bls12381", 3},
     };
 
     if (curve_options.find(elliptic_curve) == curve_options.end()) {
         std::cerr << "Invalid command line argument -e (Native elliptic curve type): " << elliptic_curve << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
+    }
+
+    std::map<std::string, nil::blueprint::print_format> print_circuit_output_options {
+        {"dec", dec},
+        {"hex", hex},
+    };
+
+    if (vm.count("print-circuit-output-format")) {
+        std::string output_format = vm["print-circuit-output-format"].as<std::string>();
+        if (print_circuit_output_options.find(output_format) == print_circuit_output_options.end()) {
+            std::cerr << "Invalid command line argument -f (print-circuit-output-format): " << output_format
+                      << std::endl;
+            std::cout << options_desc << std::endl;
+            return 1;
+        } else {
+            circuit_output_print_format = print_circuit_output_options[output_format];
+        }
+    } else {
+        circuit_output_print_format = no_print;
     }
 
     if (vm.count("stack-size")) {
@@ -644,8 +748,18 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // We use Boost log trivial severity levels, these are string representations
-    // of their names
+    std::uint32_t target_prover = std::numeric_limits<std::uint32_t>::max();
+    if (vm.count("target-prover")) {
+        target_prover = vm["target-prover"].as<int>();
+        if (target_prover >= max_num_provers) {
+            std::cerr << "Invalid command line argument - target-prover. " << target_prover << " is wrong value."
+                      << std::endl;
+            std::cout << options_desc << std::endl;
+            return 1;
+        }
+    }
+
+    // We use Boost log trivial severity levels, these are string representations of their names
     std::map<std::string, boost::log::trivial::severity_level> log_options {
         {"trace", boost::log::trivial::trace}, {"debug", boost::log::trivial::debug},
         {"info", boost::log::trivial::info},   {"warning", boost::log::trivial::warning},
@@ -657,17 +771,25 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    ASSERT_MSG(!vm.count("print_circuit_output"),
+               "\nyou used --print_circuit_output flag,\n"
+               "it is deprecated, use \"-f dec\" instead.\n"
+               "Or use \"-f hex\", hex output format is also supported now\n");
+
     switch (curve_options[elliptic_curve]) {
         case 0: {
-            if (vm.count("print_circuit_output")) {
-                return curve_dependent_main<typename algebra::curves::pallas, true>(
-                    bytecode_file_name, public_input_file_name, assignment_table_file_name, circuit_file_name,
-                    stack_size, vm.count("check"), log_options[log_level], policy, max_num_provers);
-            } else {
-                return curve_dependent_main<typename algebra::curves::pallas, false>(
-                    bytecode_file_name, public_input_file_name, assignment_table_file_name, circuit_file_name,
-                    stack_size, vm.count("check"), log_options[log_level], policy, max_num_provers);
-            }
+            return curve_dependent_main<typename algebra::curves::pallas::base_field_type>(bytecode_file_name,
+                                                                                           public_input_file_name,
+                                                                                           private_input_file_name,
+                                                                                           assignment_table_file_name,
+                                                                                           circuit_file_name,
+                                                                                           stack_size,
+                                                                                           vm.count("check"),
+                                                                                           log_options[log_level],
+                                                                                           policy,
+                                                                                           max_num_provers,
+                                                                                           target_prover,
+                                                                                           circuit_output_print_format);
             break;
         }
         case 1: {
@@ -679,7 +801,18 @@ int main(int argc, char *argv[]) {
             break;
         }
         case 3: {
-            UNREACHABLE("bls12-381 curve based circuits are not supported yet");
+            return curve_dependent_main<typename algebra::fields::bls12_base_field<381>>(bytecode_file_name,
+                                                                                         public_input_file_name,
+                                                                                         private_input_file_name,
+                                                                                         assignment_table_file_name,
+                                                                                         circuit_file_name,
+                                                                                         stack_size,
+                                                                                         vm.count("check"),
+                                                                                         log_options[log_level],
+                                                                                         policy,
+                                                                                         max_num_provers,
+                                                                                         target_prover,
+                                                                                         circuit_output_print_format);
             break;
         }
     };
