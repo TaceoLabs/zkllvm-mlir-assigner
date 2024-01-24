@@ -53,8 +53,6 @@ void zk_ml::SetPrivateInputPass::runOnOperation() {
         StringAttr Name = StringAttr::get(Context, "zkML.input");
         if (privateInputs[i]) {
             MainFunc.setArgAttrs(i, {NamedAttribute(Name, zkml::ZkMlPrivateInputAttr::get(Context))});
-        } else {
-            MainFunc.setArgAttrs(i, {NamedAttribute(Name, zkml::ZkMlPublicInputAttr::get(Context))});
         }
     }
 }

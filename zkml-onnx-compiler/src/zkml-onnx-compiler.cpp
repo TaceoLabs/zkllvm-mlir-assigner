@@ -24,6 +24,7 @@
 
 #define STDOUT_MARKER "stdout"
 #define EMPTY_MARKER "NOT_SET"
+#define ALL_PUB_MARKER "ALL_PUBLIC"
 
 enum EmitLevel { zkMLIR, ONNX, MLIR, LLVMIR };
 
@@ -37,8 +38,7 @@ llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you w
                                                     clEnumVal(zkMLIR, "Lower to \"zkMLIR-IR\"."),
                                                     clEnumVal(LLVMIR, "Lower to \"LLVM-IR\".")));
 
-llvm::cl::opt<std::string> PrivateInputs("pubpriv", llvm::cl::desc("Specify output filename"),
-                                         llvm::cl::init("NOT_SET"));
+llvm::cl::opt<std::string> PrivateInputs("zk", llvm::cl::desc("Specify output filename"), llvm::cl::init("NOT_SET"));
 
 llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::init(false));
 
@@ -133,7 +133,7 @@ bool parseComaSeperatedList(std::string &str, std::vector<bool> &vect) {
             vect.push_back(false);
         } else {
             llvm::errs() << "unexpected str: \"" << substr
-                         << "\" in comma seperated list. Expected one of {0,1,false,true}\n";
+                         << "\" in comma seperated list. Expected one of {0,1,false,true}, or just \"ALL_PUBLIC\"\n";
             return false;
         }
     }
@@ -188,16 +188,18 @@ int main(int argc, char **argv) {
             // parse setting for public/private
             if (EMPTY_MARKER == PrivateInputs) {
                 llvm::errs() << "When compiling zkMLIR you have to specify which inputs are public/private by passing "
-                                "a comma seperated list to --TODO\n";
-                return -2;
-            }
-            std::vector<bool> pubPrivMarkers;
-            if (!parseComaSeperatedList(PrivateInputs, pubPrivMarkers)) {
+                                "a comma seperated list to --zk\n";
                 return -2;
             }
             pm.addPass(mlir::zk_ml::createElimCopySignPass());
             pm.addPass(mlir::zk_ml::createPowFToGenericExpPass());
-            pm.addPass(mlir::zk_ml::createSetPrivateInputPass(pubPrivMarkers));
+            if (ALL_PUB_MARKER != PrivateInputs) {
+                std::vector<bool> pubPrivMarkers;
+                if (!parseComaSeperatedList(PrivateInputs, pubPrivMarkers)) {
+                    return -2;
+                }
+                pm.addPass(mlir::zk_ml::createSetPrivateInputPass(pubPrivMarkers));
+            }
         }
         if (!EmitMLIR) {
             // third parameter here is optional in onnx-mlir. Maybe we should do that
