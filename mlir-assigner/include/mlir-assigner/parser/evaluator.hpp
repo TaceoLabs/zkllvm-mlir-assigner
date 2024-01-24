@@ -1013,9 +1013,26 @@ namespace zk_ml_toolchain {
                         ASSERT(retval.getDims() == output.getDims() && "output shape must match retval shape");
                         ASSERT(retval.getType() == output.getType() && "output type must match retval type");
                         for (unsigned j = 0; j < retval.size(); ++j) {
-                            bp.add_copy_constraint({retval.get_flat(j), output.get_flat(j)});
+                            auto ret_var = retval.get_flat(j);
+                            auto output_var = output.get_flat(j);
+                            bp.add_copy_constraint({ret_var, output_var});
+                            if (!output_is_already_assigned) {
+                                if (output_var.index ==
+                                    nil::blueprint::assignment<nil::crypto3::zk::snark::plonk_constraint_system<
+                                        BlueprintFieldType, ArithmetizationParams>>::private_storage_index) {
+                                    assignmnt.private_storage(output_var.rotation) = var_value(assignmnt, ret_var);
+                                } else if (output_var.type ==
+                                           nil::crypto3::zk::snark::plonk_variable<
+                                               typename BlueprintFieldType::value_type>::column_type::public_input) {
+                                    assignmnt.public_input(output_var.index, output_var.rotation) =
+                                        var_value(assignmnt, ret_var);
+                                } else {
+                                    UNREACHABLE("Outputs must be either private or public");
+                                }
+                            }
                         }
                     }
+                    output_is_already_assigned = true;
                 } else {
                     function_call_depth -= 1;
                 }
@@ -1067,6 +1084,7 @@ namespace zk_ml_toolchain {
         std::map<std::string, func::FuncOp> functions;
         size_t function_call_depth = 0;
         std::vector<nil::blueprint::memref<VarType>> output_memrefs;
+        bool output_is_already_assigned = false;
         nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
