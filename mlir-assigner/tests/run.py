@@ -69,7 +69,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     global errors 
     global zkml_compiler
     mlir_file = os.path.join(subfolder_path, file.replace(".onnx", ".mlir"))
-    args = [zkml_compiler, os.path.join(subfolder_path, file), "-i", mlir_file]
+    args = [zkml_compiler, os.path.join(subfolder_path, file), "-i", mlir_file, "-zk", "ALL_PUBLIC"]
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     #todo remove check output

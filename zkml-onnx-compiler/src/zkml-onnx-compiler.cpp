@@ -19,8 +19,12 @@
 #include <Passes/mlir/Transform/PowFToGenericExpPass.hpp>
 #include <Passes/mlir/Transform/ElimCopySignPass.hpp>
 #include <Passes/mlir/Transform/AddTracingOperationsPass.hpp>
+#include <Passes/mlir/Transform/SetPrivateInputPass.hpp>
+#include <vector>
 
 #define STDOUT_MARKER "stdout"
+#define EMPTY_MARKER "NOT_SET"
+#define ALL_PUB_MARKER "ALL_PUBLIC"
 
 enum EmitLevel { zkMLIR, ONNX, MLIR, LLVMIR };
 
@@ -33,6 +37,8 @@ llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you w
                                                     clEnumVal(MLIR, "Lower to \"MLIR-IR\"."),
                                                     clEnumVal(zkMLIR, "Lower to \"zkMLIR-IR\"."),
                                                     clEnumVal(LLVMIR, "Lower to \"LLVM-IR\".")));
+
+llvm::cl::opt<std::string> PrivateInputs("zk", llvm::cl::desc("Specify output filename"), llvm::cl::init("NOT_SET"));
 
 llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::init(false));
 
@@ -116,6 +122,24 @@ std::unique_ptr<llvm::Module> translateToLLVMIR(mlir::ModuleOp module, llvm::LLV
     return llvm_module;
 }
 
+bool parseComaSeperatedList(std::string &str, std::vector<bool> &vect) {
+    std::stringstream ss(str);
+    while (ss.good()) {
+        std::string substr;
+        getline(ss, substr, ',');
+        if (substr == "1" || substr == "true") {
+            vect.push_back(true);
+        } else if (substr == "0" || substr == "false") {
+            vect.push_back(false);
+        } else {
+            llvm::errs() << "unexpected str: \"" << substr
+                         << "\" in comma seperated list. Expected one of {0,1,false,true}, or just \"ALL_PUBLIC\"\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char **argv) {
     llvm::cl::ParseCommandLineOptions(argc, argv);
     std::string inputFilename = InputFilename.c_str();
@@ -153,7 +177,7 @@ int main(int argc, char **argv) {
     onnx_mlir::configurePasses();
     mlir::PassManager pm(module.get()->getName(), mlir::OpPassManager::Nesting::Implicit);
     if (ZkMlDebugFlag) {
-      pm.addPass(mlir::zk_ml::createAddTracingOperationsPass());
+        pm.addPass(mlir::zk_ml::createAddTracingOperationsPass());
     }
     if (EmitLevel::ONNX == EmitLevel) {
         onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitONNXIR, outputFilename);
@@ -161,8 +185,21 @@ int main(int argc, char **argv) {
         onnx_mlir::addPasses(module, pm, onnx_mlir::EmissionTargetType::EmitMLIR, outputFilename,
                              EmitLevel == EmitLevel::zkMLIR);
         if (EmitLevel::zkMLIR == EmitLevel) {
+            // parse setting for public/private
+            if (EMPTY_MARKER == PrivateInputs) {
+                llvm::errs() << "When compiling zkMLIR you have to specify which inputs are public/private by passing "
+                                "a comma seperated list to --zk\n";
+                return -2;
+            }
             pm.addPass(mlir::zk_ml::createElimCopySignPass());
             pm.addPass(mlir::zk_ml::createPowFToGenericExpPass());
+            if (ALL_PUB_MARKER != PrivateInputs) {
+                std::vector<bool> pubPrivMarkers;
+                if (!parseComaSeperatedList(PrivateInputs, pubPrivMarkers)) {
+                    return -2;
+                }
+                pm.addPass(mlir::zk_ml::createSetPrivateInputPass(pubPrivMarkers));
+            }
         }
         if (!EmitMLIR) {
             // third parameter here is optional in onnx-mlir. Maybe we should do that

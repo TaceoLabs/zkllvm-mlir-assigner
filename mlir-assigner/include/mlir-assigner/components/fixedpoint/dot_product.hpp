@@ -34,8 +34,6 @@ namespace nil {
                                                                                  ArithmetizationParams>> &assignment,
                     std::uint32_t start_row) {
 
-                using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
-
                 using component_type = components::fix_dot_rescale_2_gates<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;

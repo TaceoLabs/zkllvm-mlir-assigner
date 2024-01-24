@@ -4,6 +4,7 @@ add_onnx_mlir_library(ZkMLIRTransform
  src/Passes/mlir/Transform/PowFToGenericExpPass.cpp
  src/Passes/mlir/Transform/ElimCopySignPass.cpp
  src/Passes/mlir/Transform/AddTracingOperationsPass.cpp
+ src/Passes/mlir/Transform/SetPrivateInputPass.cpp
 
  LINK_LIBS PRIVATE
 
@@ -12,6 +13,7 @@ add_onnx_mlir_library(ZkMLIRTransform
  MLIRMathDialect
 
  OMONNXOps
+ OMKrnlOps
  MLIRZkMlDialect
  )
 
