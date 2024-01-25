@@ -1,6 +1,6 @@
 # build the mlir-assigner
 build: 
-  make -C build/ -j 12 zkml-onnx-compiler mlir-assigner
+  make -C build/ -j 12 zkml-onnx-compiler mlir-assigner 3>&1 1>&2 2>&3 | python filter.py
 
 # setup the build folder
 setup-build:

@@ -251,7 +251,7 @@ namespace zk_ml_toolchain {
                     input_reader(main_frame, assignmnt, output_memrefs);
                 bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
                 if (!ok) {
-                    std::cerr << "Public input does not match the circuit signature";
+                    std::cerr << "Provided input files do not match the circuit signature";
                     const std::string &error = input_reader.get_error();
                     if (!error.empty()) {
                         std::cerr << ": " << error;
@@ -1041,7 +1041,7 @@ namespace zk_ml_toolchain {
                             output_writer(assignmnt, output_memrefs);
                         bool ok = output_writer.make_outputs_to_json(public_output);
                         if (!ok) {
-                            std::cerr << "Public input does not match the circuit signature";
+                            std::cerr << "TODO better error message";
                             const std::string &error = output_writer.get_error();
                             if (!error.empty()) {
                                 std::cerr << ": " << error;

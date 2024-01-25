@@ -369,13 +369,13 @@ bool read_json(std::string input_file_name, boost::json::value &input_json_value
         input_string[input_file.gcount()] = '\0';
         p.write(input_string, ec);
         if (ec) {
-            std::cerr << "JSON parsing of input failed" << std::endl;
+            std::cerr << "JSON parsing failed for file: \"" << input_file_name << "\"" << std::endl;
             return false;
         }
     }
     p.finish(ec);
     if (ec) {
-        std::cerr << "JSON parsing of input failed" << std::endl;
+        std::cerr << "JSON parsing failed for file: \"" << input_file_name << "\"" << std::endl;
         return false;
     }
     input_json_value = p.release();

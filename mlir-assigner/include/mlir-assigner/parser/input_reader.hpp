@@ -29,16 +29,23 @@
 #include <boost/json/kind.hpp>
 #include "mlir-assigner/helper/asserts.hpp"
 #include "onnx/string_utils.h"
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/BuiltinTypes.h>
+#include "mlir/Dialect/zkml/IR/ZkMlAttributes.hpp"
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
 #include <boost/json/src.hpp>
 
 namespace nil {
@@ -285,36 +292,103 @@ namespace nil {
                 return res;
             }
 
-            bool fill_input(mlir::func::FuncOp &function, const boost::json::array &public_input,
-                            const boost::json::array &private_input) {
-                mlir::FunctionType func_type = function.getFunctionType();
-                mlir::Region &reg = function.getBody();
-                auto args = reg.getArguments();
-                for (size_t i = 0; i < func_type.getNumInputs(); ++i) {
-                    if (public_input.size() <= i || !public_input[i].is_object()) {
-                        error = "not enough values in the input file.";
+            bool parse_indices(std::unordered_map<size_t, size_t> &map, const boost::json::array &json) {
+                for (size_t i = 0; i < json.size(); ++i) {
+                    const boost::json::object &current_value = json[i].as_object();
+                    if (current_value.size() != 1 || !current_value.contains("memref") ||
+                        !current_value.at("memref").is_object()) {
+                        error = "invalid json object for input memref";
                         return false;
                     }
 
+                    const boost::json::object &mo = current_value.at("memref").as_object();
+
+                    if (!mo.contains("idx") || mo.at("idx").kind() != boost::json::kind::int64) {
+                        error = "memref does not contain idx";
+                        return false;
+                    }
+                    int64_t idx = mo.at("idx").as_int64();
+                    if (idx < 0) {
+                        error = "negative indices not supported";
+                        return false;
+                    }
+                    auto res = map.insert(std::make_pair(i, static_cast<size_t>(idx)));
+                    if (!res.second) {
+                        error = "duplicate index in memrefs: " + std::to_string(idx);
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            bool map_input(size_t counter, mlir::BlockArgument arg, mlir::Type arg_type,
+                           std::unordered_map<size_t, size_t> &idx_map, const boost::json::array &json,
+                           bool is_private) {
+                auto idx = idx_map.find(counter);
+                if (idx == idx_map.end()) {
+                    error = (is_private ? "No private input found with idx (" : "No public input found with idx (") +
+                            std::to_string(counter) + ")";
+                    return false;
+                }
+                if (json.size() <= idx->second) {
+                    error = "idx (" + std::to_string(idx->second) + ") out-of-bounds in " +
+                            (is_private ? "private input file" : "public input file");
+                    return false;
+                }
+                const boost::json::object &current_value = json[idx->second].as_object();
+                if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(arg_type)) {
+                    if (!take_memref(arg, memref_type, current_value, is_private))
+                        return false;
+                } else {
+                    UNREACHABLE("only memref types are supported for now");
+                    return false;
+                }
+                return true;
+            }
+
+            bool fill_input(mlir::func::FuncOp &function, const boost::json::array &public_input,
+                            const boost::json::array &private_input) {
+
+                std::unordered_map<size_t, size_t> public_indices;
+                std::unordered_map<size_t, size_t> private_indices;
+                if (!parse_indices(public_indices, public_input)) {
+                    return false;
+                }
+                if (!parse_indices(private_indices, private_input)) {
+                    return false;
+                }
+
+                mlir::FunctionType func_type = function.getFunctionType();
+                mlir::Region &reg = function.getBody();
+                auto args = reg.getArguments();
+                size_t public_counter = 0;
+                size_t private_counter = 0;
+                for (size_t i = 0; i < func_type.getNumInputs(); ++i) {
                     auto arg = args[i];
 
                     mlir::Type arg_type = func_type.getInput(i);
 
-                    const boost::json::object &current_value = public_input[i].as_object();
-
-                    bool is_private = false;    // currently we don't have private input support in MLIR
-
-                    if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(arg_type)) {
-                        if (!take_memref(arg, memref_type, current_value, is_private))
-                            return false;
-                    } else {
-                        UNREACHABLE("only memref types are supported for now");
+                    bool is_private = false;
+                    mlir::Attribute inputAttr = function.getArgAttr(i, "zkML.input");
+                    if (inputAttr) {
+                        assert(llvm::isa<mlir::zkml::ZkMlPrivateInputAttr>(inputAttr) &&
+                               "Got unknown attribute for zkML.input on input");
+                        is_private = true;
+                    }
+                    bool success = is_private ? map_input(private_counter++, arg, arg_type, private_indices, private_input, true) :
+                                                map_input(public_counter++, arg, arg_type, public_indices, public_input, false);
+                    if (!success) {
+                        return false;
                     }
                 }
 
                 // Check if there are remaining elements of public input
-                if (func_type.getNumInputs() != public_input.size()) {
-                    error = "too many values in the input file";
+                if (func_type.getNumInputs() != public_input.size() + private_input.size()) {
+                    std::stringstream ss;
+                    ss << std::endl << "too many values in the input files" << std::endl;
+                    ss << "Expected: " << func_type.getNumInputs() << " inputs, got ";
+                    ss << public_input.size() + private_input.size() << std::endl;
+                    error = ss.str();
                     return false;
                 }
                 return true;
