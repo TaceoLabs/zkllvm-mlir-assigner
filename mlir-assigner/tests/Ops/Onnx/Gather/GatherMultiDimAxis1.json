@@ -1,1 +1,1 @@
-[{ "memref": { "data": [0, 1, -3], "dims": [3], "type": "int" } }]
+[{ "memref": {"idx": 0,  "data": [0, 1, -3], "dims": [3], "type": "int" } }]
