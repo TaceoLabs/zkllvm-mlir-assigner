@@ -159,7 +159,7 @@ namespace nil {
                         UNREACHABLE(std::string("unsupported memref type: ") + type);
                     }
                     mo.emplace("data", data);
-                    mo.emplace("output_index", i);
+                    mo.emplace("idx", i);
 
                     boost::json::object o;
                     o.emplace("memref", mo);

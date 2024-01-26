@@ -477,10 +477,9 @@ int curve_dependent_main(std::string bytecode_file_name,
             std::cerr << "Could not open the file - '" << public_output_file_name << "' for writing" << std::endl;
             return 1;
         } else {
+            output_file << public_output_json_array;
             output_file.close();
         }
-        output_file << public_output_json_value;
-        output_file.close();
     }
     // end of changes
 

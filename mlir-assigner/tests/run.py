@@ -91,6 +91,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     # Call the assigner binary with the input files
     run_tests += 1
     args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
+
     if verbose:
         print("running: '" + " ".join(args) + "'...",  flush=True)
     try:

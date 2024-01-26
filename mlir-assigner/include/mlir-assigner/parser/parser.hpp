@@ -120,13 +120,7 @@ namespace nil {
                 zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(
                     circuits[0], assignments[0], public_input, private_input, public_output, print_output_format, log);
                 evaluator.evaluate(std::move(module));
-                // if (mlir::failed(pm.run(module))) {
-                //   llvm::errs() << "Passmanager failed to run!\n";
-                //   return false;
-                // }
-
                 std::cout << assignments[0].rows_amount() << " rows\n";
-
                 return true;
             }
 

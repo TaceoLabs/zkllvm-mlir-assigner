@@ -375,8 +375,9 @@ namespace nil {
                                "Got unknown attribute for zkML.input on input");
                         is_private = true;
                     }
-                    bool success = is_private ? map_input(private_counter++, arg, arg_type, private_indices, private_input, true) :
-                                                map_input(public_counter++, arg, arg_type, public_indices, public_input, false);
+                    bool success =
+                        is_private ? map_input(private_counter++, arg, arg_type, private_indices, private_input, true) :
+                                     map_input(public_counter++, arg, arg_type, public_indices, public_input, false);
                     if (!success) {
                         return false;
                     }
