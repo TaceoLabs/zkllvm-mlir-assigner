@@ -142,6 +142,9 @@ namespace nil {
                             auto val = var_value(assignmnt, memref.get_flat(j));
                             nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(
                                 val, nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1>::SCALE);
+                            // std::cout << "d: " << fixed.to_double() << " fixed: " << fixed.get_value() << "val: " <<
+                            // val
+                            //           << std::endl;
                             data.emplace_back(fixed.to_double());
                         }
                     } else if (type == "int") {
