@@ -70,8 +70,6 @@ namespace nil {
                     UNREACHABLE("TODO add string support");
                 }
                 nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
-                // std::cout << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10) << "d: " << d
-                //           << " fixed: " << fixed.get_value() << std::endl;
                 out = fixed.get_value();
                 return true;
             }

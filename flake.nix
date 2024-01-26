@@ -33,7 +33,7 @@
               pkgs.just
               zkllvm_with_mlir
               # (pkgs.callPackage ./nix/zkllvm/default.nix { inherit pkgs; })
-              (pkgs.boost180.override { enableShared = false; })
+              (pkgs.boost183.override { enableShared = false; })
             ];
             shellHook = ''
               export MLIR_DIR=${zkllvm_with_mlir}/lib/cmake/mlir

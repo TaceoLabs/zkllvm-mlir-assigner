@@ -361,7 +361,8 @@ bool read_json(std::string input_file_name, boost::json::value &input_json_value
         return false;
     }
 
-    boost::json::stream_parser p;
+    // we want precise parsing of doubles for our inputs
+    boost::json::stream_parser p({}, {.numbers = boost::json::number_precision::precise});
     boost::json::error_code ec;
     while (!input_file.eof()) {
         char input_string[256];

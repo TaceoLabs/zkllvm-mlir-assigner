@@ -1034,7 +1034,6 @@ namespace zk_ml_toolchain {
                             } else {
                                 typename BlueprintFieldType::value_type left = var_value(assignmnt, ret_var);
                                 typename BlueprintFieldType::value_type right = var_value(assignmnt, output_var);
-                                std::cout << left << "," << right << std::endl;
                                 ASSERT(left == right);
                             }
                         }
