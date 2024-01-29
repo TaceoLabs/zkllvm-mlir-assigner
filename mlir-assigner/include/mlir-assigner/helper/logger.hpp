@@ -40,6 +40,9 @@
 
 namespace nil {
     namespace blueprint {
+
+        enum print_format { no_print, dec, hex };
+
         class logger {
         public:
             logger(boost::log::trivial::severity_level lvl = boost::log::trivial::info) : lvl(lvl) {

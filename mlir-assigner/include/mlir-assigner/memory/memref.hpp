@@ -73,15 +73,10 @@ namespace nil {
                 }
                 return data[offset];
             }
-            // VarType &get(const std::vector<uint32_t> &indices) const {
-            //   assert(indices.size() == dims.size());
-            //   uint32_t offset = 0;
-            //   for (int i = 0; i < indices.size(); i++) {
-            //     assert(indices[i] < dims[i]);
-            //     offset += indices[i] * strides[i];
-            //   }
-            //   return data[offset];
-            // }
+
+            const VarType &get_flat(const int64_t &offset) const {
+                return data[offset];
+            }
 
             void put(const std::vector<int64_t> &indices, const VarType &value) {
                 assert(indices.size() == dims.size());

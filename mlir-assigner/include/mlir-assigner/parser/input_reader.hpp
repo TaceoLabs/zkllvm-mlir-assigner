@@ -29,16 +29,25 @@
 #include <boost/json/kind.hpp>
 #include "mlir-assigner/helper/asserts.hpp"
 #include "onnx/string_utils.h"
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <mlir-assigner/memory/stack_frame.hpp>
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/BuiltinTypes.h>
+#include "mlir/Dialect/zkml/IR/ZkMlAttributes.hpp"
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
 #include <iostream>
+#include <iomanip>
+#include <limits>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
 #include <boost/json/src.hpp>
 
 namespace nil {
@@ -46,20 +55,9 @@ namespace nil {
         template<typename BlueprintFieldType, typename var, typename Assignment>
         class InputReader {
         public:
-            InputReader(stack_frame<var> &frame, Assignment &assignmnt) :
-                frame(frame), assignmnt(assignmnt), public_input_idx(0), private_input_idx(0) {
-            }
-
-            template<typename InputType>
-            var put_into_assignment(InputType &input, bool is_private) {
-                if (is_private) {
-                    assignmnt.private_storage(private_input_idx) = input;
-                    return var(Assignment::PRIVATE_STORAGE_INDEX, private_input_idx++, false,
-                               var::column_type::public_input);
-                } else {
-                    assignmnt.public_input(0, public_input_idx) = input;
-                    return var(0, public_input_idx++, false, var::column_type::public_input);
-                }
+            InputReader(stack_frame<var> &frame, Assignment &assignmnt, std::vector<memref<var>> &output_memrefs) :
+                frame(frame), output_memrefs(output_memrefs), assignmnt(assignmnt), public_input_idx(0),
+                private_input_idx(0) {
             }
 
             bool parse_fixedpoint(const boost::json::value &value, typename BlueprintFieldType::value_type &out) {
@@ -68,7 +66,7 @@ namespace nil {
                     d = value.as_double();
                 } else if (value.kind() == boost::json::kind::int64) {
                     d = static_cast<double>(value.as_int64());
-                }else {
+                } else {
                     UNREACHABLE("TODO add string support");
                 }
                 nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
@@ -126,90 +124,10 @@ namespace nil {
                 }
             }
 
-            std::vector<var> put_field_into_assignmnt(std::vector<typename BlueprintFieldType::value_type> input,
-                                                      bool is_private) {
-
-                std::vector<var> res;
-
-                for (std::size_t i = 0; i < input.size(); i++) {
-                    res.push_back(put_into_assignment(input[i], is_private));
-                }
-
-                return res;
-            }
-
-            std::vector<var> process_int(const boost::json::object &object, std::size_t bitness, bool is_private) {
-                ASSERT(object.size() == 1 && object.contains("int"));
-                std::vector<var> res = std::vector<var>(1);
-
-                typename BlueprintFieldType::value_type out;
-
-                switch (object.at("int").kind()) {
-                    case boost::json::kind::int64:
-                        if (bitness < 64 && object.at("int").as_int64() >> bitness > 0) {
-                            std::cerr << "value " << object.at("int").as_int64() << " does not fit into " << bitness
-                                      << " bits\n";
-                            UNREACHABLE("one of the input values is too large");
-                        }
-                        out = object.at("int").as_int64();
-                        break;
-                    case boost::json::kind::uint64:
-                        if (bitness < 64 && object.at("int").as_uint64() >> bitness > 0) {
-                            std::cerr << "value " << object.at("int").as_uint64() << " does not fit into " << bitness
-                                      << " bits\n";
-                            UNREACHABLE("one of the input values is too large");
-                        }
-                        out = object.at("int").as_uint64();
-                        break;
-                    case boost::json::kind::double_: {
-                        std::cerr << "error in json value " << boost::json::serialize(object) << "\n";
-                        error =
-                            "got double value for int argument. Probably the value is too big to "
-                            "be represented as "
-                            "integer. You can put it in \"\" to avoid JSON parser restrictions.";
-                        UNREACHABLE(error);
-                    }
-                    case boost::json::kind::string: {
-                        const std::size_t buflen = 256;
-                        char buf[buflen];
-
-                        std::size_t numlen = object.at("int").as_string().size();
-
-                        if (numlen > buflen - 1) {
-                            std::cerr << "value " << object.at("int").as_string() << " exceeds buffer size ("
-                                      << buflen - 1 << ")\n";
-                            UNREACHABLE("value size exceeds buffer size");
-                        }
-
-                        object.at("int").as_string().copy(buf, numlen);
-                        buf[numlen] = '\0';
-                        typename BlueprintFieldType::extended_integral_type number =
-                            typename BlueprintFieldType::extended_integral_type(buf);
-                        typename BlueprintFieldType::extended_integral_type one = 1;
-                        ASSERT_MSG(bitness <= 128,
-                                   "integers larger than 128 bits are not "
-                                   "supported, try to use field types");
-                        typename BlueprintFieldType::extended_integral_type max_size = one << bitness;
-                        if (number >= max_size) {
-                            std::cout << "value " << buf << " does not fit into " << bitness
-                                      << " bits, try to use other type\n";
-                            UNREACHABLE("input value is too big");
-                        }
-                        out = number;
-                        break;
-                    }
-                    default:
-                        UNREACHABLE("process_int handles only ints");
-                        break;
-                }
-
-                res[0] = put_into_assignment(out, is_private);
-                return res;
-            }
-
             bool take_memref(mlir::BlockArgument arg, mlir::MemRefType memref_type, const boost::json::object &value,
                              bool is_private) {
                 if (value.size() != 1 || !value.contains("memref") || !value.at("memref").is_object()) {
+                    error = "invalid json object for input memref";
                     return false;
                 }
                 memref<var> m(memref_type.getShape(), memref_type.getElementType());
@@ -229,21 +147,72 @@ namespace nil {
                 }
                 auto dims = parse_dim_array(mo.at("dims").as_array());
                 std::string type = mo.at("type").as_string().c_str();
-                parse_memref_data(m, mo.at("data").as_array(), type);
-
-                // TODO: process data in memref
-                // auto values = process_fixedpoint(
-                //     llvm::cast<llvm::ZkFixedPointType>(fixedpoint_type), value);
-                // if (values.size() != 1)
-                //   return false;
-                // frame.scalars[fixedpoint_arg] = values[0];
+                if (is_private) {
+                    parse_memref_data_private(m, mo.at("data").as_array(), type);
+                } else {
+                    parse_memref_data_public(m, mo.at("data").as_array(), type);
+                }
 
                 auto res = frame.memrefs.insert({mlir::hash_value(arg), m});
                 ASSERT(res.second);    // we do not want to override stuff here
                 return true;
             }
 
-            bool parse_memref_data(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
+            // reserves space for the output memref in the assignment table, directly after the other inputs
+            // this will be filled later on with the actual values of the output
+            bool reserve_output_memref(mlir::MemRefType memref_type, bool is_private) {
+                memref<var> m(memref_type.getShape(), memref_type.getElementType());
+                if (is_private) {
+                    for (size_t i = 0; i < m.size(); ++i) {
+                        assignmnt.private_storage(private_input_idx) = 0;
+                        m.put_flat(i, var(Assignment::private_storage_index, private_input_idx++, false,
+                                          var::column_type::public_input));
+                    }
+                } else {
+                    for (size_t i = 0; i < m.size(); ++i) {
+                        assignmnt.public_input(0, public_input_idx) = 0;
+                        m.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
+                    }
+                }
+                output_memrefs.push_back(std::move(m));
+                return true;
+            }
+            // reserves space for the output memref in the assignment table, directly after the other inputs
+            // fills the output memref with the values from the input file
+            bool take_output_memref(mlir::MemRefType memref_type, const boost::json::object &value, bool is_private) {
+                if (value.size() != 1 || !value.contains("memref") || !value.at("memref").is_object()) {
+                    error = "invalid json object for output memref";
+                    return false;
+                }
+                memref<var> m(memref_type.getShape(), memref_type.getElementType());
+
+                const boost::json::object &mo = value.at("memref").as_object();
+                if (!mo.contains("data") || !mo.at("data").is_array()) {
+                    error = "output memref does not contain data";
+                    return false;
+                }
+                if (!mo.contains("dims") || !mo.at("dims").is_array()) {
+                    error = "output memref does not contain dims";
+                    return false;
+                }
+                if (!mo.contains("type") || !mo.at("type").is_string()) {
+                    error = "output memref does not contain type";
+                    return false;
+                }
+                auto dims = parse_dim_array(mo.at("dims").as_array());
+                std::string type = mo.at("type").as_string().c_str();
+                if (is_private) {
+                    parse_memref_data_private(m, mo.at("data").as_array(), type);
+                } else {
+                    parse_memref_data_public(m, mo.at("data").as_array(), type);
+                }
+                output_memrefs.push_back(std::move(m));
+
+                return true;
+            }
+
+            /// parse a memref from the input file into the public input column
+            bool parse_memref_data_public(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
                 if (type == "f32") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_fixedpoint(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
@@ -256,7 +225,7 @@ namespace nil {
                     // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
-                            llvm::errs() << "expect fixedpoints in tensor\n";
+                            llvm::errs() << "expect ints in tensor\n";
                             return false;
                         }
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
@@ -264,10 +233,46 @@ namespace nil {
                 } else if (type == "bool") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_bool(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
-                            llvm::errs() << "expect fixedpoints in tensor\n";
+                            llvm::errs() << "expect booleans in tensor\n";
                             return false;
                         }
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
+                    }
+                } else {
+                    UNREACHABLE(std::string("unsupported memref type: ") + type);
+                }
+                return true;
+            }
+
+            /// parse a memref from the input file into the private input column
+            bool parse_memref_data_private(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
+                if (type == "f32") {
+                    for (size_t i = 0; i < tensor_arr.size(); ++i) {
+                        if (!parse_fixedpoint(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
+                            llvm::errs() << "expect fixedpoints in tensor\n";
+                            return false;
+                        }
+                        data.put_flat(i, var(Assignment::private_storage_index, private_input_idx++, false,
+                                             var::column_type::public_input));
+                    }
+                } else if (type == "int") {
+                    // TODO do we have to handle uint?
+                    for (size_t i = 0; i < tensor_arr.size(); ++i) {
+                        if (!parse_int(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
+                            llvm::errs() << "expect ints in tensor\n";
+                            return false;
+                        }
+                        data.put_flat(i, var(Assignment::private_storage_index, private_input_idx++, false,
+                                             var::column_type::public_input));
+                    }
+                } else if (type == "bool") {
+                    for (size_t i = 0; i < tensor_arr.size(); ++i) {
+                        if (!parse_bool(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
+                            llvm::errs() << "expect booleans in tensor\n";
+                            return false;
+                        }
+                        data.put_flat(i, var(Assignment::private_storage_index, private_input_idx++, false,
+                                             var::column_type::public_input));
                     }
                 } else {
                     UNREACHABLE(std::string("unsupported memref type: ") + type);
@@ -289,37 +294,135 @@ namespace nil {
                 return res;
             }
 
-            bool fill_public_input(mlir::func::FuncOp &function, const boost::json::array &public_input) {
-                size_t ret_gap = 0;
-                mlir::FunctionType func_type = function.getFunctionType();
-                mlir::Region &reg = function.getBody();
-                auto args = reg.getArguments();
-                for (size_t i = 0; i < func_type.getNumInputs(); ++i) {
-                    if (public_input.size() <= i - ret_gap || !public_input[i - ret_gap].is_object()) {
-                        error = "not enough values in the input file.";
+            bool parse_indices(std::unordered_map<size_t, size_t> &map, const boost::json::array &json) {
+                for (size_t i = 0; i < json.size(); ++i) {
+                    const boost::json::object &current_value = json[i].as_object();
+                    if (current_value.size() != 1 || !current_value.contains("memref") ||
+                        !current_value.at("memref").is_object()) {
+                        error = "invalid json object for input memref";
                         return false;
                     }
 
+                    const boost::json::object &mo = current_value.at("memref").as_object();
+
+                    if (!mo.contains("idx") || mo.at("idx").kind() != boost::json::kind::int64) {
+                        error = "memref does not contain idx";
+                        return false;
+                    }
+                    int64_t idx = mo.at("idx").as_int64();
+                    if (idx < 0) {
+                        error = "negative indices not supported";
+                        return false;
+                    }
+                    auto res = map.insert(std::make_pair(i, static_cast<size_t>(idx)));
+                    if (!res.second) {
+                        error = "duplicate index in memrefs: " + std::to_string(idx);
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            bool map_input(size_t counter, mlir::BlockArgument arg, mlir::Type arg_type,
+                           std::unordered_map<size_t, size_t> &idx_map, const boost::json::array &json,
+                           bool is_private) {
+                auto idx = idx_map.find(counter);
+                if (idx == idx_map.end()) {
+                    error = (is_private ? "No private input found with idx (" : "No public input found with idx (") +
+                            std::to_string(counter) + ")";
+                    return false;
+                }
+                if (json.size() <= idx->second) {
+                    error = "idx (" + std::to_string(idx->second) + ") out-of-bounds in " +
+                            (is_private ? "private input file" : "public input file");
+                    return false;
+                }
+                const boost::json::object &current_value = json[idx->second].as_object();
+                if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(arg_type)) {
+                    if (!take_memref(arg, memref_type, current_value, is_private))
+                        return false;
+                } else {
+                    UNREACHABLE("only memref types are supported for now");
+                    return false;
+                }
+                return true;
+            }
+
+            bool fill_input(mlir::func::FuncOp &function, const boost::json::array &public_input,
+                            const boost::json::array &private_input) {
+
+                std::unordered_map<size_t, size_t> public_indices;
+                std::unordered_map<size_t, size_t> private_indices;
+                if (!parse_indices(public_indices, public_input)) {
+                    return false;
+                }
+                if (!parse_indices(private_indices, private_input)) {
+                    return false;
+                }
+
+                mlir::FunctionType func_type = function.getFunctionType();
+                mlir::Region &reg = function.getBody();
+                auto args = reg.getArguments();
+                size_t public_counter = 0;
+                size_t private_counter = 0;
+                for (size_t i = 0; i < func_type.getNumInputs(); ++i) {
                     auto arg = args[i];
 
                     mlir::Type arg_type = func_type.getInput(i);
 
-                    const boost::json::object &current_value = public_input[i - ret_gap].as_object();
-
-                    bool is_private = false;    // currently we don't have private input support in MLIR
-
-                    if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(arg_type)) {
-                        if (!take_memref(arg, memref_type, current_value, is_private))
-                            return false;
-                    } else {
-                        UNREACHABLE("only memref types are supported for now");
+                    bool is_private = false;
+                    mlir::Attribute inputAttr = function.getArgAttr(i, "zkML.input");
+                    if (inputAttr) {
+                        assert(llvm::isa<mlir::zkml::ZkMlPrivateInputAttr>(inputAttr) &&
+                               "Got unknown attribute for zkML.input on input");
+                        is_private = true;
+                    }
+                    bool success =
+                        is_private ? map_input(private_counter++, arg, arg_type, private_indices, private_input, true) :
+                                     map_input(public_counter++, arg, arg_type, public_indices, public_input, false);
+                    if (!success) {
+                        return false;
                     }
                 }
 
                 // Check if there are remaining elements of public input
-                if (func_type.getNumInputs() - ret_gap != public_input.size()) {
-                    error = "too many values in the input file";
+                if (func_type.getNumInputs() != public_input.size() + private_input.size()) {
+                    std::stringstream ss;
+                    ss << std::endl << "too many values in the input files" << std::endl;
+                    ss << "Expected: " << func_type.getNumInputs() << " inputs, got ";
+                    ss << public_input.size() + private_input.size() << std::endl;
+                    error = ss.str();
                     return false;
+                }
+                return true;
+            }
+
+            bool reserve_outputs(mlir::func::FuncOp &function, boost::json::array &public_outputs,
+                                 bool &output_is_already_present) {
+                mlir::FunctionType func_type = function.getFunctionType();
+
+                bool is_private = false;    // currently we don't have private output support in MLIR
+
+                if (!public_outputs.empty()) {
+                    // we have the outputs already
+                    output_is_already_present = true;
+                }
+                auto results = func_type.getResults();
+                for (unsigned i = 0; i < results.size(); ++i) {
+                    mlir::Type return_type = results[i];
+                    if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(return_type)) {
+                        if (!output_is_already_present) {
+                            if (!reserve_output_memref(memref_type, is_private)) {
+                                return false;
+                            }
+                        } else {
+                            const boost::json::object &current_value = public_outputs[i].as_object();
+                            if (!take_output_memref(memref_type, current_value, is_private))
+                                return false;
+                        }
+                    } else {
+                        UNREACHABLE("only memref types are supported for now");
+                    }
                 }
                 return true;
             }
@@ -333,6 +436,7 @@ namespace nil {
 
         private:
             stack_frame<var> &frame;
+            std::vector<memref<var>> &output_memrefs;
             Assignment &assignmnt;
             size_t public_input_idx;
             size_t private_input_idx;

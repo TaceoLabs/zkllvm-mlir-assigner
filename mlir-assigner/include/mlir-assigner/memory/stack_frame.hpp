@@ -169,7 +169,7 @@ namespace nil {
             }
 
             void erase_memref(llvm::hash_code hash_code) {
-                assert(frames.size() && "stack is empty but we push?");
+                assert(frames.size() && "stack is empty but we erase?");
                 frames.back().memrefs.erase(size_t(hash_code));
             }
 
@@ -186,7 +186,7 @@ namespace nil {
                         return iter->memrefs[hash_code];
                     }
                 }
-                UNREACHABLE("empty");
+                UNREACHABLE("did not find wanted memref in our stack");
             }
 
             void print(std::ostream &os) {

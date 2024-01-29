@@ -66,6 +66,7 @@
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/parser/input_reader.hpp>
+#include <mlir-assigner/parser/output_writer.hpp>
 
 #include <unordered_map>
 #include <map>
@@ -180,9 +181,12 @@ namespace zk_ml_toolchain {
 
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
-                  const boost::json::array &public_input, bool PrintCircuitOutput, nil::blueprint::logger &logger) :
+                  const boost::json::array &public_input, const boost::json::array &private_input,
+                  boost::json::array &public_output, nil::blueprint::print_format print_circuit_format,
+                  nil::blueprint::logger &logger) :
             bp(circuit),
-            assignmnt(assignment), public_input(public_input), PrintCircuitOutput(PrintCircuitOutput), logger(logger) {
+            assignmnt(assignment), public_input(public_input), private_input(private_input),
+            public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
         }
 
         evaluator(const evaluator &pass) = delete;
@@ -210,62 +214,73 @@ namespace zk_ml_toolchain {
         }
 
         std::string gatherFuncDecls(Region &BodyRegion) {
-          assert(BodyRegion.getBlocks().size() == 1 && "must have single block in main region");
-          std::string MainDecl = "";
-          Block &MainBlock = BodyRegion.getBlocks().front();
-          bool EntryFound = false;
-          for (auto &Op : MainBlock.getOperations()) {
-            if (func::FuncOp FuncOp = llvm::dyn_cast<func::FuncOp>(Op)) {
-                auto res = functions.insert({FuncOp.getSymName().str(), FuncOp});
-                assert(res.second);    // Redefining an existing function should not
-                                       // happen ATM
-            } else if (auto EntryPointOp = llvm::dyn_cast<KrnlEntryPointOp>(Op)) {
-              assert(!EntryFound && "multiple entries found");
-              EntryFound = false;
-              handleKrnlEntryOperation(EntryPointOp, MainDecl);
-            } else {
-              std::string opName = Op.getName().getIdentifier().str();
-              UNREACHABLE(std::string("only func.func and krnl.entryPoint allowed but got: ") + opName); \
+            assert(BodyRegion.getBlocks().size() == 1 && "must have single block in main region");
+            std::string MainDecl = "";
+            Block &MainBlock = BodyRegion.getBlocks().front();
+            bool EntryFound = false;
+            for (auto &Op : MainBlock.getOperations()) {
+                if (func::FuncOp FuncOp = llvm::dyn_cast<func::FuncOp>(Op)) {
+                    auto res = functions.insert({FuncOp.getSymName().str(), FuncOp});
+                    assert(res.second);    // Redefining an existing function should not
+                                           // happen ATM
+                } else if (auto EntryPointOp = llvm::dyn_cast<KrnlEntryPointOp>(Op)) {
+                    assert(!EntryFound && "multiple entries found");
+                    EntryFound = true;
+                    handleKrnlEntryOperation(EntryPointOp, MainDecl);
+                } else {
+                    std::string opName = Op.getName().getIdentifier().str();
+                    UNREACHABLE(std::string("only func.func and krnl.entryPoint allowed but got: ") + opName);
+                }
             }
-          }
-          return MainDecl;
+            assert(EntryFound && "no entry point found");
+            return MainDecl;
         }
 
         void evaluate(mlir::OwningOpRef<mlir::ModuleOp> module) {
-          std::string MainDecl = gatherFuncDecls(module->getBodyRegion());
-          auto funcOp = functions.find(MainDecl);
-          assert(funcOp != functions.end());
-          //prepare everything for run
+            std::string MainDecl = gatherFuncDecls(module->getBodyRegion());
+            auto funcOp = functions.find(MainDecl);
+            assert(funcOp != functions.end());
+            // prepare everything for run
 
-          //FIXME remove me
-          stack.push_frame();
-          nil::blueprint::stack_frame<VarType> &main_frame = stack.get_last_frame();
-          nil::blueprint::InputReader<BlueprintFieldType, VarType,
-                                      nil::blueprint::assignment<ArithmetizationType>>
-              input_reader(main_frame, assignmnt);
-          bool ok = input_reader.fill_public_input(funcOp->second, public_input);
-          if (!ok) {
-              std::cerr << "Public input does not match the circuit signature";
-              const std::string &error = input_reader.get_error();
-              if (!error.empty()) {
-                  std::cerr << ": " << error;
-              }
-              std::cerr << std::endl;
-              exit(-1);
-          }
-          // Initialize undef and zero vars once
-          undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
-          zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
-          true_var = std::nullopt;
-          // go execute the function
-          
-          handleRegion(funcOp->second.getRegion());
+            // FIXME remove me
+            stack.push_frame();
+            nil::blueprint::stack_frame<VarType> &main_frame = stack.get_last_frame();
+            {
+                nil::blueprint::InputReader<BlueprintFieldType, VarType,
+                                            nil::blueprint::assignment<ArithmetizationType>>
+                    input_reader(main_frame, assignmnt, output_memrefs);
+                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
+                if (!ok) {
+                    std::cerr << "Provided input files do not match the circuit signature";
+                    const std::string &error = input_reader.get_error();
+                    if (!error.empty()) {
+                        std::cerr << ": " << error;
+                    }
+                    std::cerr << std::endl;
+                    exit(-1);
+                }
+
+                // reserve space for the output constraints
+                ok = input_reader.reserve_outputs(funcOp->second, public_output, output_is_already_assigned);
+                if (!ok) {
+                    std::cerr << "Could not reserve space for output constraints in public input column";
+                    const std::string &error = input_reader.get_error();
+                    if (!error.empty()) {
+                        std::cerr << ": " << error;
+                    }
+                    std::cerr << std::endl;
+                    exit(-1);
+                }
+            }
+            // Initialize undef and zero vars once
+            undef_var = put_into_assignment(typename BlueprintFieldType::value_type());
+            zero_var = put_into_assignment(typename BlueprintFieldType::value_type(0));
+            true_var = std::nullopt;
+            // go execute the function
+            handleRegion(funcOp->second.getRegion());
         }
 
     private:
-        bool PrintCircuitOutput;
-        nil::blueprint::logger &logger;
-
         int64_t resolve_number(VarType scalar) {
             auto scalar_value = var_value(assignmnt, scalar);
             static constexpr auto limit_value_max =
@@ -339,16 +354,16 @@ namespace zk_ml_toolchain {
 #define BITSWITCHER(func, b)                                                                           \
     switch (b) {                                                                                       \
         case 8:                                                                                        \
-            func<1>(operation, stack, bp, assignmnt, start_row);                               \
+            func<1>(operation, stack, bp, assignmnt, start_row);                                       \
             break;                                                                                     \
         case 16:                                                                                       \
-            func<2>(operation, stack, bp, assignmnt, start_row);                               \
+            func<2>(operation, stack, bp, assignmnt, start_row);                                       \
             break;                                                                                     \
         case 32:                                                                                       \
-            func<4>(operation, stack, bp, assignmnt, start_row);                               \
+            func<4>(operation, stack, bp, assignmnt, start_row);                                       \
             break;                                                                                     \
         case 64:                                                                                       \
-            func<8>(operation, stack, bp, assignmnt, start_row);                               \
+            func<8>(operation, stack, bp, assignmnt, start_row);                                       \
             break;                                                                                     \
         default:                                                                                       \
             UNREACHABLE(std::string("unsupported int bit size for bitwise op: ") + std::to_string(b)); \
@@ -496,20 +511,16 @@ namespace zk_ml_toolchain {
                             cmpResult = static_cast<int64_t>(lhs >= rhs);
                             break;
                         case arith::CmpIPredicate::ult:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) <
-                                                             static_cast<uint64_t>(rhs));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) < static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::ule:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) <=
-                                                             static_cast<uint64_t>(rhs));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) <= static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::ugt:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) >
-                                                             static_cast<uint64_t>(rhs));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) > static_cast<uint64_t>(rhs));
                             break;
                         case arith::CmpIPredicate::uge:
-                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) >=
-                                                             static_cast<uint64_t>(rhs));
+                            cmpResult = static_cast<int64_t>(static_cast<uint64_t>(lhs) >= static_cast<uint64_t>(rhs));
                             break;
                     }
                     stack.push_constant(operation.getResult(), cmpResult);
@@ -521,7 +532,7 @@ namespace zk_ml_toolchain {
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
                 if (operation->getResult(0).getType().isa<IndexType>()) {
-                  stack.push_constant(operation.getResult(), llvm::dyn_cast<IntegerAttr>(constantValue).getInt());
+                    stack.push_constant(operation.getResult(), llvm::dyn_cast<IntegerAttr>(constantValue).getInt());
                 } else if (constantValue.isa<IntegerAttr>()) {
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
@@ -640,7 +651,7 @@ namespace zk_ml_toolchain {
                 int64_t to = evaluateForParameter(toMap, operandsToV, false);
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
-              nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
 
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
@@ -793,16 +804,15 @@ namespace zk_ml_toolchain {
                 }
                 stack.push_memref(operation.getOutput(), m);
                 return;
-            }  else if (KrnlMemcpyOp operation = llvm::dyn_cast<KrnlMemcpyOp>(op)) {
+            } else if (KrnlMemcpyOp operation = llvm::dyn_cast<KrnlMemcpyOp>(op)) {
                 // get dst and src memref
                 nil::blueprint::memref<VarType> &DstMemref = stack.get_memref(operation.getDest());
                 nil::blueprint::memref<VarType> &SrcMemref = stack.get_memref(operation.getSrc());
                 // get num elements and offset
                 auto NumElements = stack.get_constant(operation.getNumElems());
-                auto DstOffset =   stack.get_constant(operation.getDestOffset());
-                auto SrcOffset =   stack.get_constant(operation.getSrcOffset());
-                DstMemref.copyFrom(SrcMemref, NumElements, DstOffset,
-                                           SrcOffset);
+                auto DstOffset = stack.get_constant(operation.getDestOffset());
+                auto SrcOffset = stack.get_constant(operation.getSrcOffset());
+                DstMemref.copyFrom(SrcMemref, NumElements, DstOffset, SrcOffset);
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
             } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
@@ -984,13 +994,69 @@ namespace zk_ml_toolchain {
             }
 
             if (func::ReturnOp operation = llvm::dyn_cast<func::ReturnOp>(op)) {
-                auto ops = operation.getOperands();
-                if (PrintCircuitOutput) {
-                    std::cout << "Result:\n";
+
+                // are we returning from the entry_point?
+                if (function_call_depth == 0) {
+                    auto ops = operation.getOperands();
+                    if (print_circuit_format != nil::blueprint::print_format::no_print) {
+                        // TODO: support different print formats
+                        std::cout << "Result:\n";
+                        for (unsigned i = 0; i < ops.size(); ++i) {
+                            nil::blueprint::memref<VarType> &retval = stack.get_memref(ops[i]);
+                            retval.print(std::cout, assignmnt);
+                        }
+                    }
+
+                    // constrain the output based on the public input
                     for (unsigned i = 0; i < ops.size(); ++i) {
                         nil::blueprint::memref<VarType> &retval = stack.get_memref(ops[i]);
-                        retval.print(std::cout, assignmnt);
+                        nil::blueprint::memref<VarType> &output = output_memrefs[i];
+
+                        ASSERT(retval.getDims() == output.getDims() && "output shape must match retval shape");
+                        ASSERT(retval.getType() == output.getType() && "output type must match retval type");
+                        for (unsigned j = 0; j < retval.size(); ++j) {
+                            auto ret_var = retval.get_flat(j);
+                            auto output_var = output.get_flat(j);
+                            bp.add_copy_constraint({ret_var, output_var});
+                            if (!output_is_already_assigned) {
+                                if (output_var.index ==
+                                    nil::blueprint::assignment<nil::crypto3::zk::snark::plonk_constraint_system<
+                                        BlueprintFieldType, ArithmetizationParams>>::private_storage_index) {
+                                    assignmnt.private_storage(output_var.rotation) = var_value(assignmnt, ret_var);
+                                } else if (output_var.type ==
+                                           nil::crypto3::zk::snark::plonk_variable<
+                                               typename BlueprintFieldType::value_type>::column_type::public_input) {
+                                    assignmnt.public_input(output_var.index, output_var.rotation) =
+                                        var_value(assignmnt, ret_var);
+                                } else {
+                                    UNREACHABLE("Outputs must be either private or public");
+                                }
+                            } else {
+                                typename BlueprintFieldType::value_type left = var_value(assignmnt, ret_var);
+                                typename BlueprintFieldType::value_type right = var_value(assignmnt, output_var);
+                                ASSERT(left == right);
+                            }
+                        }
                     }
+                    if (!output_is_already_assigned) {
+                        // if the output was only just calculated, we write it out into the public output file
+                        nil::blueprint::OutputWriter<BlueprintFieldType, VarType,
+                                                     nil::blueprint::assignment<ArithmetizationType>>
+                            output_writer(assignmnt, output_memrefs);
+                        bool ok = output_writer.make_outputs_to_json(public_output);
+                        if (!ok) {
+                            std::cerr << "TODO better error message";
+                            const std::string &error = output_writer.get_error();
+                            if (!error.empty()) {
+                                std::cerr << ": " << error;
+                            }
+                            std::cerr << std::endl;
+                            exit(-1);
+                        }
+                    }
+                    output_is_already_assigned = true;
+                } else {
+                    function_call_depth -= 1;
                 }
                 return;
             }
@@ -1030,17 +1096,25 @@ namespace zk_ml_toolchain {
         template<typename InputType>
         VarType put_into_assignment(InputType input) {
             // TODO: optimize this further:
-            //  The assignment.constant function increments the currently used row, even though it does not need to...
-            //  Cannot change this without modifying the blueprint library though
+            //  The assignment.constant function increments the currently used row, even though it does not need
+            //  to... Cannot change this without modifying the blueprint library though
             assignmnt.constant(0, constant_idx) = input;
             return VarType(0, constant_idx++, false, VarType::column_type::constant);
         }
 
+        nil::blueprint::print_format print_circuit_format;
+        nil::blueprint::logger &logger;
+
         nil::blueprint::stack<VarType> stack;
         std::map<std::string, func::FuncOp> functions;
+        size_t function_call_depth = 0;
+        std::vector<nil::blueprint::memref<VarType>> output_memrefs;
+        bool output_is_already_assigned = false;
         nil::blueprint::circuit_proxy<ArithmetizationType> &bp;
         nil::blueprint::assignment_proxy<ArithmetizationType> &assignmnt;
         const boost::json::array &public_input;
+        const boost::json::array &private_input;
+        boost::json::array &public_output;
         size_t constant_idx = 0;
         unsigned amount_ops = 0;
         unsigned progress = 0;
