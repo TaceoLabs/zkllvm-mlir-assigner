@@ -31,13 +31,17 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_int.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/sinh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/cosh.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/atan.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tan.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tanh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/gather_acc.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/erf.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>

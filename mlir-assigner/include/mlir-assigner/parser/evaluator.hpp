@@ -21,6 +21,7 @@
 #include "mlir/Dialect/zkml/IR/DotProduct.h"
 #include "mlir/Dialect/zkml/IR/ArgMin.h"
 #include "mlir/Dialect/zkml/IR/ArgMax.h"
+#include "mlir/Dialect/zkml/IR/Trigonometric.h"
 #include "mlir/Dialect/zkml/IR/Trace.h"
 #include "mlir/Dialect/zkml/IR/OnnxAmount.h"
 
@@ -58,6 +59,7 @@
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/gather.hpp>
+#include <mlir-assigner/components/fixedpoint/erf.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
 #include <mlir-assigner/components/fixedpoint/conversion.hpp>
 #include <mlir-assigner/components/boolean/logic_ops.hpp>
@@ -618,12 +620,10 @@ namespace zk_ml_toolchain {
                 handle_sin(operation, stack, bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
                 handle_cos(operation, stack, bp, assignmnt, start_row);
-            } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
-                UNREACHABLE("TODO: component for atan not ready");
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
                 handle_tanh(operation, stack, bp, assignmnt, start_row);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
-                UNREACHABLE("TODO: component for erf not ready");
+                handle_erf(operation, stack, bp, assignmnt, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled math operation: ") + opName);
@@ -824,7 +824,7 @@ namespace zk_ml_toolchain {
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
                 handle_tan(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
-                UNREACHABLE("TODO: component for atan not ready");
+                handle_atan(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
                 UNREACHABLE("TODO: component for atanh not ready");
             } else {
@@ -854,7 +854,12 @@ namespace zk_ml_toolchain {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
                 handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
-            } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
+            } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {
+                handle_sinh(operation, stack, bp, assignmnt, start_row);
+            } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
+                handle_cosh(operation, stack, bp, assignmnt, start_row);
+            }
+            else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
                 std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";

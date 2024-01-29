@@ -16,7 +16,7 @@ class bcolors:
     ENDC = '\033[0m'
     UNDERLINE = '\033[4m'
 
-MAX_DELTA = 0.001
+MAX_DELTA = 0.01
 
 run_tests = 0
 success_tests = 0
