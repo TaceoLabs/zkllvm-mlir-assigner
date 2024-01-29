@@ -21,6 +21,7 @@
 #include "mlir/Dialect/zkml/IR/DotProduct.h"
 #include "mlir/Dialect/zkml/IR/ArgMin.h"
 #include "mlir/Dialect/zkml/IR/ArgMax.h"
+#include "mlir/Dialect/zkml/IR/Trigonometric.h"
 #include "mlir/Dialect/zkml/IR/Trace.h"
 #include "mlir/Dialect/zkml/IR/OnnxAmount.h"
 
@@ -853,7 +854,12 @@ namespace zk_ml_toolchain {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
                 handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
-            } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
+            } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {
+                handle_sinh(operation, stack, bp, assignmnt, start_row);
+            } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
+                handle_cosh(operation, stack, bp, assignmnt, start_row);
+            }
+            else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
                 std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";
