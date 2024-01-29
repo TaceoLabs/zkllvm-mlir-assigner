@@ -58,6 +58,7 @@
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/gather.hpp>
+#include <mlir-assigner/components/fixedpoint/erf.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
 #include <mlir-assigner/components/fixedpoint/conversion.hpp>
 #include <mlir-assigner/components/boolean/logic_ops.hpp>
@@ -618,12 +619,10 @@ namespace zk_ml_toolchain {
                 handle_sin(operation, stack, bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
                 handle_cos(operation, stack, bp, assignmnt, start_row);
-            } else if (math::AtanOp operation = llvm::dyn_cast<math::AtanOp>(op)) {
-                UNREACHABLE("TODO: component for atan not ready");
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
                 handle_tanh(operation, stack, bp, assignmnt, start_row);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
-                UNREACHABLE("TODO: component for erf not ready");
+                handle_erf(operation, stack, bp, assignmnt, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled math operation: ") + opName);
@@ -824,7 +823,7 @@ namespace zk_ml_toolchain {
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
                 handle_tan(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
-                UNREACHABLE("TODO: component for atan not ready");
+                handle_atan(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
                 UNREACHABLE("TODO: component for atanh not ready");
             } else {
