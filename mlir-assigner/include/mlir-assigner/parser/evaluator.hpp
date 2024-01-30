@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
@@ -858,8 +858,7 @@ namespace zk_ml_toolchain {
                 handle_sinh(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
                 handle_cosh(operation, stack, bp, assignmnt, start_row);
-            }
-            else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
+            } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
                 std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";
