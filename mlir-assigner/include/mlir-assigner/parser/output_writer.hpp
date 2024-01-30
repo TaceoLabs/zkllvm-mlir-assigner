@@ -43,8 +43,14 @@
 
 namespace nil {
     namespace blueprint {
-        template<typename BlueprintFieldType, typename var, typename Assignment>
+        template<typename BlueprintFieldType,
+                 typename var,
+                 typename Assignment,
+                 std::uint8_t PreLimbs,
+                 std::uint8_t PostLimbs>
         class OutputWriter {
+            using FixedPoint = nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
+
         public:
             OutputWriter(Assignment &assignmnt, std::vector<memref<var>> &output_memrefs) :
                 output_memrefs(output_memrefs), assignmnt(assignmnt) {
@@ -59,7 +65,7 @@ namespace nil {
                 } else {
                     UNREACHABLE("TODO add string support");
                 }
-                nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+                FixedPoint fixed(d);
                 out = fixed.get_value();
                 return true;
             }
@@ -140,8 +146,7 @@ namespace nil {
                     if (type == "f32") {
                         for (size_t j = 0; j < memref.size(); ++j) {
                             auto val = var_value(assignmnt, memref.get_flat(j));
-                            nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(
-                                val, nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1>::SCALE);
+                            FixedPoint fixed(val, FixedPoint::SCALE);
                             data.emplace_back(fixed.to_double());
                         }
                     } else if (type == "int") {

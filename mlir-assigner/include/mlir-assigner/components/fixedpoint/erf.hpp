@@ -14,7 +14,8 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_erf(
             mlir::math::ErfOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -27,11 +28,13 @@ namespace nil {
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             auto input = PREPARE_UNARY_INPUT(mlir::math::ErfOp);
-            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
-            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, 1, 1));
+            using manifest_reader =
+                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p =
+                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
-                                     1, 1);
+                                     PreLimbs, PostLimbs);
             fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
     }    // namespace blueprint

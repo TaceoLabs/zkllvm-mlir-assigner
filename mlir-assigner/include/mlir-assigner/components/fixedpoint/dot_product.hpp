@@ -18,7 +18,8 @@ namespace nil {
     namespace blueprint {
         namespace detail {
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams>
             typename components::fix_dot_rescale_2_gates<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
@@ -37,12 +38,12 @@ namespace nil {
                 using component_type = components::fix_dot_rescale_2_gates<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, 1, 1>;
+                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
                 auto dims = x.getDims();
                 ASSERT(dims.size() == 1 && "must be one-dim for dot product");
-                const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), 1));
+                const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), PostLimbs));
                 component_type component_instance(p.witness, manifest_reader::get_constants(),
-                                                  manifest_reader::get_public_inputs(), dims.front(), 1);
+                                                  manifest_reader::get_public_inputs(), dims.front(), PostLimbs);
 
                 if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                     auto lookup_tables = component_instance.component_custom_lookup_tables();
@@ -75,7 +76,8 @@ namespace nil {
 
         }    // namespace detail
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_fixedpoint_dot_product_component(
             mlir::zkml::DotProductOp &operation,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &zero_var,
@@ -87,7 +89,8 @@ namespace nil {
             auto &lhs = stack.get_memref(operation.getLhs());
             auto &rhs = stack.get_memref(operation.getRhs());
 
-            auto result = detail::handle_fixedpoint_dot_product_component(lhs, rhs, zero_var, bp, assignment, start_row);
+            auto result = detail::handle_fixedpoint_dot_product_component<PreLimbs, PostLimbs>(lhs, rhs, zero_var, bp,
+                                                                                                 assignment, start_row);
             stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint

@@ -118,11 +118,13 @@ namespace nil {
                 }
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams>
             void print(
                 std::ostream &os,
                 const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment) {
+                using FixedPoint = components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
                 os << "memref<";
                 for (int i = 0; i < dims.size(); i++) {
                     os << dims[i];
@@ -159,7 +161,7 @@ namespace nil {
                 } else if (type.isa<mlir::FloatType>()) {
                     for (int i = 0; i < data.size(); i++) {
                         auto value = var_value(assignment, data[i]).data;
-                        components::FixedPoint<BlueprintFieldType, 1, 1> out(value, 16);
+                        FixedPoint out(value, FixedPoint::SCALE);
                         os << out.to_double();
                         if (i != data.size() - 1)
                             os << ",";

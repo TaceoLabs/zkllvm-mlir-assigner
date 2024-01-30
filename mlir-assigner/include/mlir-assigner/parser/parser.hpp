@@ -50,7 +50,8 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<typename BlueprintFieldType, typename ArithmetizationParams, std::uint8_t PreLimbs,
+                 std::uint8_t PostLimbs>
         struct parser {
 
             parser(long stack_size, boost::log::trivial::severity_level log_level, std::uint32_t max_num_provers,
@@ -117,7 +118,7 @@ namespace nil {
             bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module, const boost::json::array &public_input,
                           const boost::json::array &private_input, boost::json::array &public_output) {
 
-                zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams> evaluator(
+                zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams, PreLimbs, PostLimbs> evaluator(
                     circuits[0], assignments[0], public_input, private_input, public_output, print_output_format, log);
                 evaluator.evaluate(std::move(module));
                 std::cout << assignments[0].rows_amount() << " rows\n";

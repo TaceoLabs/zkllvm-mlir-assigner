@@ -387,7 +387,7 @@ bool read_json(std::string input_file_name, boost::json::value &input_json_value
     return true;
 }
 
-template<typename BlueprintFieldType>
+template<typename BlueprintFieldType, std::uint8_t PreLimbs, std::uint8_t PostLimbs>
 int curve_dependent_main(std::string bytecode_file_name,
                          std::string public_input_file_name,
                          std::string private_input_file_name,
@@ -457,7 +457,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     // to our parser instead
     // parser does not have a check_validity argument
 
-    nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams> parser_instance(
+    nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams, PreLimbs, PostLimbs> parser_instance(
         stack_size, log_level, max_num_provers, target_prover, policy, circuit_output_print_format);
 
     mlir::OwningOpRef<mlir::ModuleOp> module = parser_instance.parseMLIRFile(bytecode_file_name.c_str());
@@ -620,6 +620,7 @@ int main(int argc, char *argv[]) {
             ("assignment-table,t", boost::program_options::value<std::string>(), "Assignment table output file")
             ("circuit,c", boost::program_options::value<std::string>(), "Circuit output file")
             ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12381)")
+            ("fixed-bits,x", boost::program_options::value<std::string>(), "Accuracy of floating-point approximation")
             ("stack-size,s", boost::program_options::value<long>(), "Stack size in bytes")
             ("check", "Check satisfiability of the generated circuit")
             ("log-level,l", boost::program_options::value<std::string>(), "Log level (trace, debug, info, warning, error, fatal)")
@@ -662,6 +663,7 @@ int main(int argc, char *argv[]) {
     std::string private_input_file_name;
     std::string public_output_file_name;
     std::string assignment_table_file_name;
+    std::string fixed_type;
     std::string circuit_file_name;
     std::string elliptic_curve;
     nil::blueprint::print_format circuit_output_print_format;
@@ -688,6 +690,12 @@ int main(int argc, char *argv[]) {
 
     if (vm.count("public-input")) {
         public_input_file_name = vm["public-input"].as<std::string>();
+    }
+
+    if (vm.count("fixed-bits")) {
+        fixed_type = vm["fixed-bits"].as<std::string>();
+    } else {
+        fixed_type = "16.16";
     }
 
     // begin of changes
@@ -818,21 +826,29 @@ int main(int argc, char *argv[]) {
                "it is deprecated, use \"-f dec\" instead.\n"
                "Or use \"-f hex\", hex output format is also supported now\n");
 
+#define CURVE_MAIN(CURVE_NAME, PRE, POST)                                                                             \
+    return curve_dependent_main<CURVE_NAME, PRE, POST>(                                                               \
+        bytecode_file_name, public_input_file_name, private_input_file_name, public_output_file_name,                 \
+        assignment_table_file_name, circuit_file_name, stack_size, vm.count("check"), log_options[log_level], policy, \
+        max_num_provers, target_prover, circuit_output_print_format);
+#define CURVE_MAIN_SWITCHER(CURVE_NAME)                                                                             \
+    if ("16.16" == fixed_type) {                                                                                    \
+        CURVE_MAIN(CURVE_NAME, 1, 1)                                                                                \
+    } else if ("16.32" == fixed_type) {                                                                             \
+        CURVE_MAIN(CURVE_NAME, 1, 2)                                                                                \
+    } else if ("32.16" == fixed_type) {                                                                             \
+        CURVE_MAIN(CURVE_NAME, 2, 1)                                                                                \
+    } else if ("32.32" == fixed_type) {                                                                             \
+        CURVE_MAIN(CURVE_NAME, 2, 2)                                                                                \
+    } else {                                                                                                        \
+        std::cerr                                                                                                   \
+            << "Invalid command line argument - supported fixed types of of {16.16, 16.32, 32.16, 32.32}, but got " \
+            << fixed_type << std::endl;                                                                             \
+        return 1;                                                                                                   \
+    }
     switch (curve_options[elliptic_curve]) {
         case 0: {
-            return curve_dependent_main<typename algebra::curves::pallas::base_field_type>(bytecode_file_name,
-                                                                                           public_input_file_name,
-                                                                                           private_input_file_name,
-                                                                                           public_output_file_name,
-                                                                                           assignment_table_file_name,
-                                                                                           circuit_file_name,
-                                                                                           stack_size,
-                                                                                           vm.count("check"),
-                                                                                           log_options[log_level],
-                                                                                           policy,
-                                                                                           max_num_provers,
-                                                                                           target_prover,
-                                                                                           circuit_output_print_format);
+            CURVE_MAIN_SWITCHER(typename algebra::curves::pallas::base_field_type);
             break;
         }
         case 1: {
@@ -844,22 +860,11 @@ int main(int argc, char *argv[]) {
             break;
         }
         case 3: {
-            return curve_dependent_main<typename algebra::fields::bls12_base_field<381>>(bytecode_file_name,
-                                                                                         public_input_file_name,
-                                                                                         private_input_file_name,
-                                                                                         public_output_file_name,
-                                                                                         assignment_table_file_name,
-                                                                                         circuit_file_name,
-                                                                                         stack_size,
-                                                                                         vm.count("check"),
-                                                                                         log_options[log_level],
-                                                                                         policy,
-                                                                                         max_num_provers,
-                                                                                         target_prover,
-                                                                                         circuit_output_print_format);
+            CURVE_MAIN_SWITCHER(typename algebra::fields::bls12_base_field<381>);
             break;
         }
     };
-
+#undef CURVE_MAIN_SWITCHER
+#undef CURVE_MAIN
     return 0;
 }
