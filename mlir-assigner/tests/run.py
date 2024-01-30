@@ -249,7 +249,7 @@ if isfile("table"):
     os.remove("table")
 print("\n")
 print(f"Test Report - run {run_tests} tests, {success_tests} success, {failed_tests} failed, {error_tests} errors, {ignored_tests} ignored")
-print(f"Test Report - took {minutes} min, {seconds} s")
+print(f"Test Report - took {minutes} min, {seconds:.3} s")
 for error in errors:
     print("\t" + error['file'] + ": \"" + error['reason'] + "\"")
     print("")
