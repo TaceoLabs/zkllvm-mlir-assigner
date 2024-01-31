@@ -563,7 +563,7 @@ namespace zk_ml_toolchain {
                 auto opHash = mlir::hash_value(operation->getOperand(0));
                 Type casteeType = operation->getOperand(0).getType();
                 if (casteeType.isa<IntegerType>()) {
-                    UNREACHABLE("I SHOULD NOT WORK");
+                    UNREACHABLE("Illegal cast. Cannot cast from int to index (dynamic shaping of circuit)");
                 } else if (casteeType.isa<IndexType>()) {
                     auto index = stack.get_constant(opHash);
                     typename BlueprintFieldType::value_type field_constant = index;
