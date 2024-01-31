@@ -37,6 +37,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/atan.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tan.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tanh.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/exp_ranged.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>

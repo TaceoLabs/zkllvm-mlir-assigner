@@ -1,6 +1,6 @@
 #include "src/Builder/FrontendDialectTransformer.hpp"
 #include <Passes/mlir/Transform/SetPrivateInputPass.hpp>
-#include "mlir/Dialect/zkml/IR/ZkMlAttributes.hpp"
+#include "mlir/Dialect/zkml/IR/ZkMlAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "src/Dialect/Krnl/KrnlOps.hpp"
 #include <unordered_map>

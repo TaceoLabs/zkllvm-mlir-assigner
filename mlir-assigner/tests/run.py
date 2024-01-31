@@ -28,6 +28,7 @@ errors = []
 mlir_assigner = "build/bin/mlir-assigner"
 zkml_compiler = "build/bin/zkml-onnx-compiler"
 fixed_sizes = ["16.16", "16.32", "32.16", "32.32"]
+file_filter = []
 
 def assert_output(should_output, is_output):
     global MAX_DELTA 
@@ -189,9 +190,13 @@ def test_folder(test_suite, folder, mlir_tests, timeout, verbose, keep_mlir):
     print(f"################### Testing {test_suite} ###################")
     # Iterate over each subfolder
     for subfolder in subfolders:
+        if len(file_filter) > 0:
+            if not any(filter in subfolder.upper() for filter in file_filter):
+                continue
         subfolder_path = os.path.join(folder, subfolder)
         # Get a list of all files within the subfolder
         files = os.listdir(subfolder_path)
+
         files.sort()
         ignore_tests = []
         if ".ignore" in files:
@@ -225,8 +230,11 @@ parser.add_argument('--fast', action='store_true', help='Run fast tests only')
 parser.add_argument('--verbose', action='store_true', help='Print detailed output')
 parser.add_argument('--keep-mlir', action='store_true', help='Keep generated mlir files')
 parser.add_argument('--current', action='store_true', help='do only the current folder')
+parser.add_argument('--filter', nargs='?', help='only tests that have filter in name')
 
 args = parser.parse_args()
+if args.filter:
+    file_filter = list(map(lambda x: x.upper(), list(args.filter.split(','))))
 
 start = time.time()
 if args.current:

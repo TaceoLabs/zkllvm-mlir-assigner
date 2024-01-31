@@ -37,7 +37,7 @@
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/BuiltinTypes.h>
-#include "mlir/Dialect/zkml/IR/ZkMlAttributes.hpp"
+#include "mlir/Dialect/zkml/IR/ZkMlAttributes.h"
 
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
