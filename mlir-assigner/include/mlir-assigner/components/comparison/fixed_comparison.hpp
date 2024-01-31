@@ -45,7 +45,8 @@ namespace nil {
     namespace blueprint {
         namespace {
             enum CmpType { GT, LT, GE, LE, NE, EQ };
-            template<uint8_t limbs, typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams, typename MlirOp>
             void call_component(
                 MlirOp &operation,
                 stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -58,12 +59,13 @@ namespace nil {
                 using component_type = components::fix_cmp_extended<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, limbs, limbs>;
+                using manifest_reader =
+                    detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
                 auto input = PREPARE_BINARY_INPUT(MlirOp);
                 const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
 
                 component_type component(p.witness, manifest_reader::get_constants(),
-                                         manifest_reader::get_public_inputs(), limbs, limbs);
+                                         manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
                 if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                     auto lookup_tables = component.component_custom_lookup_tables();
                     for (auto &t : lookup_tables) {
@@ -106,7 +108,8 @@ namespace nil {
 
         namespace detail {
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams>
             typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
                 handle_f_comparison_component(
                     mlir::arith::CmpFPredicate p,
@@ -122,11 +125,10 @@ namespace nil {
                 using component_type = components::fix_cmp_extended<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                const auto params = PolicyManager::get_parameters(
-                    ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(0));
-                component_type component_instance(
-                    params.witness, ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_constants(),
-                    ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_public_inputs(), 1, 1);
+                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+                const auto params = PolicyManager::get_parameters(manifest_reader::get_witness(0));
+                component_type component_instance(params.witness, manifest_reader::get_constants(),
+                                                  manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
 
                 if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                     auto lookup_tables = component_instance.component_custom_lookup_tables();
@@ -184,7 +186,7 @@ namespace nil {
                 }
             }
         }    // namespace detail
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_fixedpoint_comparison_component(
             mlir::arith::CmpFOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -198,7 +200,7 @@ namespace nil {
 
             // TACEO_TODO: check types
 
-            auto result = detail::handle_f_comparison_component(pred, lhs, rhs, bp, assignment, start_row);
+            auto result = detail::handle_f_comparison_component<PreLimbs, PostLimbs>(pred, lhs, rhs, bp, assignment, start_row);
             stack.push_local(operation.getResult(), result);
         }
 
@@ -234,7 +236,8 @@ namespace nil {
                 default:
                     UNREACHABLE("unsupported predicate for cmpi");
             }
-            call_component<2>(operation, stack, bp, assignment, start_row, cmpType);
+            //we compare 64 bits with this configuration
+            call_component<2, 2>(operation, stack, bp, assignment, start_row, cmpType);
         }
 
     }    // namespace blueprint

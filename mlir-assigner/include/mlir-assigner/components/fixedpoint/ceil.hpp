@@ -18,7 +18,7 @@ namespace nil {
     namespace blueprint {
         namespace detail {
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
             typename components::fix_ceil<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
@@ -37,14 +37,11 @@ namespace nil {
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, 1, 1>;
+                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
                 const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0));
                 component_type component_instance(p.witness, manifest_reader::get_constants(),
-                                                  manifest_reader::get_public_inputs(), 1, 1);
+                                                  manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
 
-                // TACEO_TODO in the previous line I hardcoded 1 for now!!! CHANGE THAT
-                // TACEO_TODO make an assert that both have the same scale?
-                // TACEO_TODO we probably have to extract the field element from the type here
                 if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                     auto lookup_tables = component_instance.component_custom_lookup_tables();
                     for (auto &t : lookup_tables) {
@@ -65,7 +62,7 @@ namespace nil {
             }
 
         }    // namespace detail
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_fixedpoint_ceil_component(
             mlir::math::CeilOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -75,7 +72,7 @@ namespace nil {
             std::uint32_t start_row) {
             auto operand = stack.get_local(operation.getOperand());
 
-            auto result = detail::handle_fixedpoint_ceil_component(operand, bp, assignment, start_row);
+            auto result = detail::handle_fixedpoint_ceil_component<PreLimbs, PostLimbs>(operand, bp, assignment, start_row);
             stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint

@@ -52,7 +52,8 @@
 
 namespace nil {
     namespace blueprint {
-        template<typename BlueprintFieldType, typename var, typename Assignment>
+        template<typename BlueprintFieldType, typename var, typename Assignment, std::uint8_t PreLimbs,
+                 std::uint8_t PostLimbs>
         class InputReader {
         public:
             InputReader(stack_frame<var> &frame, Assignment &assignmnt, std::vector<memref<var>> &output_memrefs) :
@@ -69,7 +70,7 @@ namespace nil {
                 } else {
                     UNREACHABLE("TODO add string support");
                 }
-                nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+                nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs> fixed(d);
                 out = fixed.get_value();
                 return true;
             }

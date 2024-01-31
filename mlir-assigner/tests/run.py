@@ -5,6 +5,7 @@ from os.path import isfile, isdir
 from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
 import argparse
 import tempfile
+import time
 
 class bcolors:
     HEADER = '\033[95m'
@@ -26,6 +27,7 @@ ignored_tests = 0
 errors = []
 mlir_assigner = "build/bin/mlir-assigner"
 zkml_compiler = "build/bin/zkml-onnx-compiler"
+fixed_sizes = ["16.16", "16.32", "32.16", "32.32"]
 
 def assert_output(should_output, is_output):
     global MAX_DELTA 
@@ -68,6 +70,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     global error_tests
     global errors 
     global zkml_compiler
+    global fixed_sizes
     mlir_file = os.path.join(subfolder_path, file.replace(".onnx", ".mlir"))
     args = [zkml_compiler, os.path.join(subfolder_path, file), "-i", mlir_file, "-zk", "ALL_PUBLIC"]
     if verbose:
@@ -75,47 +78,53 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     #todo remove check output
     check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
     # read output file
-    output_file = os.path.join(subfolder_path, file.replace(".onnx", ".res"))
-    if not isfile(output_file):
+    default_output_file = os.path.join(subfolder_path, file.replace(".onnx", ".res"))
+    if not isfile(default_output_file):
         print(f"{bcolors.FAIL} error{bcolors.ENDC}")
         errors.append(build_error_object(file, f"cannot find output file"))
         error_tests += 1
         return
-    with open(output_file,mode='r') as f:
-        should_output = f.read().strip()
-    # Construct the JSON file name by replacing the ".mlir" extension with ".json"
-    json_file = file.replace(".onnx", ".json")
-    json_output_file = file.replace(".onnx", ".output.json")
-    json_file_path = os.path.join(subfolder_path, json_file)
-    json_output_file_path = os.path.join(subfolder_path, json_output_file)
-    # Call the assigner binary with the input files
-    run_tests += 1
-    args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
-
-    if verbose:
-        print("running: '" + " ".join(args) + "'...",  flush=True)
-    try:
-        valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
-        if valid:
-            print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
-            success_tests += 1
-        else: 
-            failed_tests += 1
-            print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
-            errors.append(build_error_object(file, error_string))
-    except CalledProcessError:
-            error_tests += 1
-            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"unexpteced error from subprocess"))
-    except TimeoutExpired:
-            error_tests += 1
-            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
-    finally:
-        if not keep_mlir and isfile(mlir_file):
-            if verbose:
-                print("removing {}".format(mlir_file))
-            os.remove(mlir_file)
+    for fixed_size in fixed_sizes:
+        print(f"Testing {file} {fixed_size}...", end="",flush=True) 
+        specific_output_file = os.path.join(subfolder_path, file.replace(".onnx", f".{fixed_size}.res"))
+        current_output_file = ""
+        if isfile(specific_output_file):
+            current_output_file = specific_output_file
+        else:
+            current_output_file = default_output_file
+        with open(current_output_file,mode='r') as f:
+            should_output = f.read().strip()
+        # Construct the JSON file name by replacing the ".mlir" extension with ".json"
+        json_file = file.replace(".onnx", ".json")
+        json_output_file = file.replace(".onnx", f"{fixed_size}.output.json")
+        json_file_path = os.path.join(subfolder_path, json_file)
+        json_output_file_path = os.path.join(subfolder_path, json_output_file)
+        # Call the assigner binary with the input files
+        run_tests += 1
+        args = [mlir_assigner, "-b" , mlir_file, "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check", "-x", fixed_size]
+        if verbose:
+            print("running: '" + " ".join(args) + "'...",  flush=True)
+        try:
+            valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+            if valid:
+                print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
+                success_tests += 1
+            else: 
+                failed_tests += 1
+                print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
+                errors.append(build_error_object(file, error_string))
+        except CalledProcessError:
+                error_tests += 1
+                print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+                errors.append(build_error_object(file, f"unexpteced error from subprocess"))
+        except TimeoutExpired:
+                error_tests += 1
+                print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+                errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
+    if not keep_mlir and isfile(mlir_file):
+        if verbose:
+            print("removing {}".format(mlir_file))
+        os.remove(mlir_file)
 
 def test_mlir(file, subfolder_path,  timeout, verbose):
     global run_tests 
@@ -134,33 +143,35 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
         return
     with open(output_file,mode='r') as f:
         should_output = f.read().strip()
-    # Construct the JSON file name by replacing the ".mlir" extension with ".json"
-    json_file = file.replace(".mlir", ".json")
-    json_output_file = file.replace(".mlir", ".output.json")
-    json_file_path = os.path.join(subfolder_path, json_file)
-    json_output_file_path = os.path.join(subfolder_path, json_output_file)
-    # Call the assigner binary with the input files
-    run_tests += 1
-    args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check"]
-    if verbose:
-        print("running: '" + " ".join(args) + "'...", flush=True)
-    try:
-        valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
-        if valid:
-            print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
-            success_tests += 1
-        else: 
-            failed_tests += 1
-            print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
-            errors.append(build_error_object(file, error_string))
-    except CalledProcessError:
-            error_tests += 1
-            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"unexpteced error from subprocess"))
-    except TimeoutExpired:
-            error_tests += 1
-            print(f"{bcolors.FAIL} error{bcolors.ENDC}")
-            errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
+    for fixed_size in fixed_sizes:
+        print(f"Testing {file} {fixed_size}...", end="",flush=True) 
+        # Construct the JSON file name by replacing the ".mlir" extension with ".json"
+        json_file = file.replace(".mlir", ".json")
+        json_output_file = file.replace(".mlir", f"{fixed_size}.output.json")
+        json_file_path = os.path.join(subfolder_path, json_file)
+        json_output_file_path = os.path.join(subfolder_path, json_output_file)
+        # Call the assigner binary with the input files
+        run_tests += 1
+        args = [mlir_assigner, "-b" , os.path.join(subfolder_path, file), "-i", json_file_path, "-o", json_output_file_path, "-c", "circuit", "-t", "table", "-e", "pallas", "-f", "dec", "--check", "-x", fixed_size]
+        if verbose:
+            print("running: '" + " ".join(args) + "'...", flush=True)
+        try:
+            valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+            if valid:
+                print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
+                success_tests += 1
+            else: 
+                failed_tests += 1
+                print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
+                errors.append(build_error_object(file, error_string))
+        except CalledProcessError:
+                error_tests += 1
+                print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+                errors.append(build_error_object(file, f"unexpteced error from subprocess"))
+        except TimeoutExpired:
+                error_tests += 1
+                print(f"{bcolors.FAIL} error{bcolors.ENDC}")
+                errors.append(build_error_object(file, f"ran into timeout ({timeout}s)"))
 
 
 def test_folder(test_suite, folder, mlir_tests, timeout, verbose, keep_mlir):
@@ -193,16 +204,16 @@ def test_folder(test_suite, folder, mlir_tests, timeout, verbose, keep_mlir):
 
         for file in files:
             if file.endswith(".onnx") and not mlir_tests: 
-                print(f"Testing {file}...", end="",flush=True) 
                 if file in ignore_tests:
                     ignored_tests += 1
+                    print(f"Testing {file}...", end="",flush=True) 
                     print(f"{bcolors.OKCYAN} ignored {bcolors.ENDC}")
                 else:
                     test_onnx(file, subfolder_path, timeout, verbose, keep_mlir)
             if file.endswith(".mlir") and mlir_tests:
-                print(f"Testing {file}...", end="", flush=True) 
                 if file in ignore_tests:
                     ignored_tests += 1
+                    print(f"Testing {file}...", end="",flush=True) 
                     print(f"{bcolors.OKCYAN} ignored {bcolors.ENDC}")
                 else:
                     test_mlir(file, subfolder_path, timeout, verbose)
@@ -217,18 +228,19 @@ parser.add_argument('--current', action='store_true', help='do only the current 
 
 args = parser.parse_args()
 
-if args.fast:
-    slow_test = False
-else:
-    slow_test = True
-
+start = time.time()
 if args.current:
     test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
 else:
+    if args.fast:
+        fixed_sizes = ["16.16"]
+    else:
+        test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
     test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
     test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
-    if slow_test:
-        test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
+end = time.time()
+_, rem = divmod(end-start, 3600)
+minutes, seconds = divmod(rem, 60)
 
 # cleanup
 if isfile("circuit"):
@@ -237,6 +249,7 @@ if isfile("table"):
     os.remove("table")
 print("\n")
 print(f"Test Report - run {run_tests} tests, {success_tests} success, {failed_tests} failed, {error_tests} errors, {ignored_tests} ignored")
+print(f"Test Report - took {minutes} min, {seconds:.3} s")
 for error in errors:
     print("\t" + error['file'] + ": \"" + error['reason'] + "\"")
     print("")

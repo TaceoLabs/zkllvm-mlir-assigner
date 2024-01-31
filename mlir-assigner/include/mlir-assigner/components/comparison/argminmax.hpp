@@ -3,6 +3,7 @@
 
 #include "mlir/Dialect/zkml/IR/ArgMin.h"
 #include "mlir/Dialect/zkml/IR/ArgMax.h"
+#include <cstdint>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
@@ -18,7 +19,8 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_argmin(
             mlir::zkml::ArgMinOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -37,11 +39,13 @@ namespace nil {
             instance_input.y = stack.get_local(operation.getNext());
             instance_input.index_x = stack.get_local(operation.getAccIndex());
 
-            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
-            const auto p = detail::PolicyManager::get_parameters(
-                detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(0, 1, 1));
+            using manifest_reader =
+                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p =
+                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
-                                     1, 1, var_value(assignment, nextIndex), operation.getSelectLastIndex());
+                                     PreLimbs, PostLimbs, var_value(assignment, nextIndex),
+                                     operation.getSelectLastIndex());
 
             if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                 auto lookup_tables = component.component_custom_lookup_tables();
@@ -67,7 +71,7 @@ namespace nil {
             stack.push_local(operation.getResult(1), result.index);
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_argmax(
             mlir::zkml::ArgMaxOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -86,11 +90,13 @@ namespace nil {
             instance_input.y = stack.get_local(operation.getNext());
             instance_input.index_x = stack.get_local(operation.getAccIndex());
 
-            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
-            const auto p = detail::PolicyManager::get_parameters(
-                detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(0, 1, 1));
+            using manifest_reader =
+                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p =
+                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
-                                     1, 1, var_value(assignment, nextIndex), operation.getSelectLastIndex());
+                                     PreLimbs, PostLimbs, var_value(assignment, nextIndex),
+                                     operation.getSelectLastIndex());
 
             if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                 auto lookup_tables = component.component_custom_lookup_tables();

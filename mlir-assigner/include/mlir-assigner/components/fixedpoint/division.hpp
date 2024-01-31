@@ -18,7 +18,8 @@ namespace nil {
     namespace blueprint {
         namespace detail {
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams>
             typename components::fix_div<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
@@ -36,11 +37,10 @@ namespace nil {
                 using component_type = components::fix_div<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                const auto p = PolicyManager::get_parameters(
-                    ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_witness(0, 1, 1));
-                component_type component_instance(
-                    p.witness, ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_constants(),
-                    ManifestReader<component_type, ArithmetizationParams, 1, 1>::get_public_inputs(), 1, 1);
+                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+                const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+                component_type component_instance(p.witness, manifest_reader::get_constants(),
+                                                  manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
 
                 if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                     auto lookup_tables = component_instance.component_custom_lookup_tables();
@@ -66,7 +66,8 @@ namespace nil {
             }
 
         }    // namespace detail
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_fixedpoint_division_component(
             mlir::arith::DivFOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -77,7 +78,8 @@ namespace nil {
             auto lhs = stack.get_local(operation.getLhs());
             auto rhs = stack.get_local(operation.getRhs());
 
-            auto result = detail::handle_fixedpoint_division_component(lhs, rhs, bp, assignment, start_row);
+            auto result = detail::handle_fixedpoint_division_component<PreLimbs, PostLimbs>(lhs, rhs, bp, assignment,
+                                                                                              start_row);
             stack.push_local(operation.getResult(), result.output);
         }
     }    // namespace blueprint

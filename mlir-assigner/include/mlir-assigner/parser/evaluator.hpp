@@ -174,12 +174,13 @@ namespace zk_ml_toolchain {
 
     using namespace detail;
 
-    template<typename BlueprintFieldType, typename ArithmetizationParams>
+    template<typename BlueprintFieldType, typename ArithmetizationParams, std::uint8_t PreLimbs, std::uint8_t PostLimbs>
     class evaluator {
     public:
         using ArithmetizationType =
             nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
         using VarType = nil::crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
+        using FixedPoint = nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
 
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
@@ -249,7 +250,7 @@ namespace zk_ml_toolchain {
             nil::blueprint::stack_frame<VarType> &main_frame = stack.get_last_frame();
             {
                 nil::blueprint::InputReader<BlueprintFieldType, VarType,
-                                            nil::blueprint::assignment<ArithmetizationType>>
+                                            nil::blueprint::assignment<ArithmetizationType>, PreLimbs, PostLimbs>
                     input_reader(main_frame, assignmnt, output_memrefs);
                 bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
                 if (!ok) {
@@ -345,12 +346,12 @@ namespace zk_ml_toolchain {
 
         double toFixpoint(VarType toConvert) {
             auto val = var_value(assignmnt, toConvert).data;
-            nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> out(val, 16);
+            FixedPoint out(val, FixedPoint::SCALE);
             return out.to_double();
-            // auto Lhs = frames.back().locals[mlir::hash_value(operation.getLhs())];
-            // auto Rhs = frames.back().locals[mlir::hash_value(operation.getRhs())];
-            // auto Result = frames.back().locals[mlir::hash_value(operation.getResult())];
-            // std::cout << toFixpoint(Lhs) << " * " << toFixpoint(Rhs) << " = " << toFixpoint(Result) << "\n";
+            // auto Lhs = stack.get_local(operation.getLhs());
+            // auto Rhs = stack.get_local(operation.getRhs());
+            // auto Result = stack.get_local(operation.getResult());
+            // std::cout << toFixpoint(Lhs) << " + " << toFixpoint(Rhs) << " = " << toFixpoint(Result) << "\n";
         }
 
 #define BITSWITCHER(func, b)                                                                           \
@@ -378,13 +379,13 @@ namespace zk_ml_toolchain {
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
                 handle_fixedpoint_subtraction_component(operation, stack, bp, assignmnt, start_row);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
-                handle_fixedpoint_mul_rescale_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_mul_rescale_component<PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
-                handle_fixedpoint_division_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_division_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
-                handle_fixedpoint_remainder_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_remainder_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
-                handle_fixedpoint_comparison_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_comparison_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
                 ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
                 ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
@@ -553,7 +554,7 @@ namespace zk_ml_toolchain {
                     stack.push_local(operation.getResult(), val);
                 } else if (constantValue.isa<FloatAttr>()) {
                     double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
-                    nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+                    FixedPoint fixed(d);
                     auto value = put_into_assignment(fixed.get_value());
                     // this insert is ok, since this should never change, so we
                     // don't override it if it is already there
@@ -577,13 +578,13 @@ namespace zk_ml_toolchain {
                     UNREACHABLE("unsupported Index Cast");
                 }
             } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
-                handle_to_fixedpoint(operation, stack, bp, assignmnt, start_row);
+                handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::UIToFPOp operation = llvm::dyn_cast<arith::UIToFPOp>(op)) {
-                handle_to_fixedpoint(operation, stack, bp, assignmnt, start_row);
+                handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::FPToSIOp operation = llvm::dyn_cast<arith::FPToSIOp>(op)) {
-                handle_to_int(operation, stack, bp, assignmnt, start_row);
+                handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::FPToUIOp operation = llvm::dyn_cast<arith::FPToUIOp>(op)) {
-                handle_to_int(operation, stack, bp, assignmnt, start_row);
+                handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (llvm::isa<arith::ExtUIOp>(op) || llvm::isa<arith::ExtSIOp>(op) ||
                        llvm::isa<arith::TruncIOp>(op)) {
                 VarType &toExtend = stack.get_local(op->getOperand(0));
@@ -598,32 +599,32 @@ namespace zk_ml_toolchain {
         void handleMathOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
-                handle_fixedpoint_exp_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_exp_component<PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
-                handle_fixedpoint_log_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_log_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
                 UNREACHABLE("TODO: component for powf not ready");
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
-                handle_fixedpoint_abs_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_abs_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
-                handle_fixedpoint_ceil_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_ceil_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
-                handle_fixedpoint_floor_component(operation, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_floor_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
                 // TODO: do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
                 VarType &src = stack.get_local(operation.getLhs());
                 stack.push_local(operation.getResult(), src);
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
-                handle_sqrt(operation, stack, bp, assignmnt, start_row);
+                handle_sqrt<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
-                handle_sin(operation, stack, bp, assignmnt, start_row);
+                handle_sin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
-                handle_cos(operation, stack, bp, assignmnt, start_row);
+                handle_cos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
-                handle_tanh(operation, stack, bp, assignmnt, start_row);
+                handle_tanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
-                handle_erf(operation, stack, bp, assignmnt, start_row);
+                handle_erf<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled math operation: ") + opName);
@@ -792,7 +793,7 @@ namespace zk_ml_toolchain {
                             } else {
                                 UNREACHABLE("unsupported float semantics");
                             }
-                            nil::blueprint::components::FixedPoint<BlueprintFieldType, 1, 1> fixed(d);
+                            FixedPoint fixed(d);
                             auto var = put_into_assignment(fixed.get_value());
                             m.put_flat(idx++, var);
                         }
@@ -822,9 +823,9 @@ namespace zk_ml_toolchain {
             } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
                 UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
-                handle_tan(operation, stack, bp, assignmnt, start_row);
+                handle_tan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
-                handle_atan(operation, stack, bp, assignmnt, start_row);
+                handle_atan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
                 UNREACHABLE("TODO: component for atanh not ready");
             } else {
@@ -842,22 +843,23 @@ namespace zk_ml_toolchain {
                 mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
                 assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
                 logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
-                handle_fixedpoint_dot_product_component(operation, zero_var, stack, bp, assignmnt, start_row);
+                handle_fixedpoint_dot_product_component<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt,
+                                                                             start_row);
                 return;
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
-                handle_argmin(operation, stack, bp, assignmnt, nextIndexVar, start_row);
+                handle_argmin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar, start_row);
             } else if (zkml::ArgMaxOp operation = llvm::dyn_cast<zkml::ArgMaxOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
-                handle_argmax(operation, stack, bp, assignmnt, nextIndexVar, start_row);
+                handle_argmax<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar, start_row);
             } else if (zkml::GatherOp operation = llvm::dyn_cast<zkml::GatherOp>(op)) {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
                 handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
             } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {
-                handle_sinh(operation, stack, bp, assignmnt, start_row);
+                handle_sinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
-                handle_cosh(operation, stack, bp, assignmnt, start_row);
+                handle_cosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
@@ -1007,7 +1009,7 @@ namespace zk_ml_toolchain {
                         std::cout << "Result:\n";
                         for (unsigned i = 0; i < ops.size(); ++i) {
                             nil::blueprint::memref<VarType> &retval = stack.get_memref(ops[i]);
-                            retval.print(std::cout, assignmnt);
+                            retval.template print<PreLimbs, PostLimbs>(std::cout, assignmnt);
                         }
                     }
 
@@ -1045,7 +1047,8 @@ namespace zk_ml_toolchain {
                     if (!output_is_already_assigned) {
                         // if the output was only just calculated, we write it out into the public output file
                         nil::blueprint::OutputWriter<BlueprintFieldType, VarType,
-                                                     nil::blueprint::assignment<ArithmetizationType>>
+                                                     nil::blueprint::assignment<ArithmetizationType>, PreLimbs,
+                                                     PostLimbs>
                             output_writer(assignmnt, output_memrefs);
                         bool ok = output_writer.make_outputs_to_json(public_output);
                         if (!ok) {

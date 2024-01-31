@@ -18,7 +18,8 @@
 namespace nil {
     namespace blueprint {
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams, typename MlirOp>
         void handle_to_fixedpoint(
             MlirOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -31,19 +32,22 @@ namespace nil {
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             auto input = PREPARE_UNARY_INPUT(MlirOp);
-            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1>;
+            using manifest_reader =
+                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            //TODO are those manifest readers correct?
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
-                                     1);
+                                     PostLimbs);
             fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
         namespace detail {
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename MlirOp, uint8_t OutputType>
+            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                     typename ArithmetizationParams, typename MlirOp, uint8_t OutputType>
             void handle_to_int(
                 MlirOp &operation,
-            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+                stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
                 circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &bp,
                 assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -55,23 +59,25 @@ namespace nil {
                 typename component_type::OutputType outputType =
                     static_cast<typename component_type::OutputType>(OutputType);
                 auto input = PREPARE_UNARY_INPUT(MlirOp);
-                using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, 1, 1, OutputType>;
+                using manifest_reader =
+                    detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs, OutputType>;
                 const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
 
                 component_type component(p.witness, manifest_reader::get_constants(),
-                                         manifest_reader::get_public_inputs(), 1, 1, outputType);
+                                         manifest_reader::get_public_inputs(), PreLimbs, PostLimbs, outputType);
                 fill_trace(component, input, operation, stack, bp, assignment, start_row);
             }
         }    // namespace detail
 
-#define HANDLE_TO_INT(TY)                                                                        \
-    detail::handle_to_int<BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToSIOp, TY>( \
-        operation, stack, bp, assignment, start_row);
+#define HANDLE_TO_INT(TY)                                                                                          \
+    detail::handle_to_int<PreLimbs, PostLimbs, BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToSIOp, \
+                          TY>(operation, stack, bp, assignment, start_row);
 
-#define HANDLE_TO_UINT(TY)                                                                       \
-    detail::handle_to_int<BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToUIOp, TY>( \
-        operation, stack, bp, assignment, start_row);
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+#define HANDLE_TO_UINT(TY)                                                                                         \
+    detail::handle_to_int<PreLimbs, PostLimbs, BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToUIOp, \
+                          TY>(operation, stack, bp, assignment, start_row);
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_to_int(
             mlir::arith::FPToSIOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -98,7 +104,8 @@ namespace nil {
             }
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_to_int(
             mlir::arith::FPToUIOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
