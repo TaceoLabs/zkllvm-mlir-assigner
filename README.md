@@ -90,7 +90,7 @@ We expect that you already built the two binaries `build/bin/zk-ml-opt` and
 `build/bin/mlir-assigner` from source or obtained them in another way. If not,
 follow the [build instructions](#build).
 
-1. **Setup:** We start by creating an empty folder here we place our binaries
+1. **Setup:** We start by creating an empty folder where we place our binaries
    and our model. So when you built from source we do:
 
 ```bash
@@ -106,10 +106,10 @@ CNN-Mnist model.
 2. **Compile ONNX to MLIR:** Having your pre-trained model at place, we use the
    `zkml-onnx-compiler` to compile the model to `.mlir`.
    ![compile](docs/pics/GitHubReadMeStep2.svg) You can do this by calling the
-   `zkml-onnx-compiler`:
+   `zkml-onnx-compiler`, where you also have to specify which inputs are public/private by passing a comma seperated list (e.g. `--zk 1,1,0`). Here we set all inputs public as follows:
 
 ```bash
-./zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir
+./zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir --zk ALL_PUBLIC
 ```
 
 > The `zkml-onnx-compiler` can also lower the model to different IRs. Have a
@@ -142,7 +142,7 @@ perform inference of the model and the provided input within the plonkish
 arithmetization of the proof system. We do this by calling:
 
 ```bash
-./mlir-assigner -b mnist-12.mlir -i mnist-12.json -e pallas -c circuit.crt -t assignment.tbl --print_circuit_output --check
+./mlir-assigner -b mnist-12.mlir -i mnist-12.json -e pallas -c circuit.crt -o mnist-12.output.json -t assignment.tbl -f dec --check
 ```
 
 > Again, have a look on the configurations of the `mlir-assigner` by adding the
