@@ -46,8 +46,7 @@
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>
-#include <nil/blueprint/components/algebra/fields/plonk/non_native/lookup_logic_ops.hpp>
-#include <nil/blueprint/components/algebra/fields/plonk/logic_or_flag.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/non_native/logic_ops.hpp>
 
 #define PREPARE_UNARY_INPUT(OP)                                                             \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
