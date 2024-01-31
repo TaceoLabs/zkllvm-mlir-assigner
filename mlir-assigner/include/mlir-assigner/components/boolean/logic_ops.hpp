@@ -38,7 +38,7 @@
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/components/handle_component.hpp>
 
-//TODO We want to use the flags not the logic_ops
+// TODO We want to use the flags not the logic_ops
 
 namespace nil {
     namespace blueprint {
@@ -51,7 +51,7 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            using component_type = components::lookup_logic_and<
+            using component_type = components::logic_and<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
             typename component_type::input_type input;
             input.input[0] = stack.get_local(operation.getLhs());
@@ -73,10 +73,14 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            using component_type = components::logic_or_flag<
+            using component_type = components::logic_or<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
 
-            auto input = PREPARE_BINARY_INPUT(mlir::arith::OrIOp) const auto p = detail::PolicyManager::get_parameters(
+            typename component_type::input_type input;
+            input.input[0] = stack.get_local(operation.getLhs());
+            input.input[1] = stack.get_local(operation.getRhs());
+
+            const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
@@ -91,7 +95,7 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            using component_type = components::lookup_logic_xor<
+            using component_type = components::logic_xor<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>;
             typename component_type::input_type input;
             input.input[0] = stack.get_local(operation.getLhs());

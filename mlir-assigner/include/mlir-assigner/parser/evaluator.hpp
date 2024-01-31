@@ -18,12 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/MathExtras.h"
-#include "mlir/Dialect/zkml/IR/DotProduct.h"
-#include "mlir/Dialect/zkml/IR/ArgMin.h"
-#include "mlir/Dialect/zkml/IR/ArgMax.h"
-#include "mlir/Dialect/zkml/IR/Trigonometric.h"
-#include "mlir/Dialect/zkml/IR/Trace.h"
-#include "mlir/Dialect/zkml/IR/OnnxAmount.h"
+#include "mlir/Dialect/zkml/ZkMlOps.h"
 
 #include <cstddef>
 #include <cstdlib>
@@ -568,7 +563,7 @@ namespace zk_ml_toolchain {
                 auto opHash = mlir::hash_value(operation->getOperand(0));
                 Type casteeType = operation->getOperand(0).getType();
                 if (casteeType.isa<IntegerType>()) {
-                    UNREACHABLE("I SHOULD NOT WORK");
+                    UNREACHABLE("Illegal cast. Cannot cast from int to index (dynamic shaping of circuit)");
                 } else if (casteeType.isa<IndexType>()) {
                     auto index = stack.get_constant(opHash);
                     typename BlueprintFieldType::value_type field_constant = index;
@@ -599,7 +594,7 @@ namespace zk_ml_toolchain {
         void handleMathOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
-                handle_fixedpoint_exp_component<PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_exp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
                 handle_fixedpoint_log_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
@@ -856,6 +851,8 @@ namespace zk_ml_toolchain {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
                 handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
+            } else if (zkml::ExpNoClipOp operation = llvm::dyn_cast<zkml::ExpNoClipOp>(op)) {
+                handle_exp_no_clip<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {
                 handle_sinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
