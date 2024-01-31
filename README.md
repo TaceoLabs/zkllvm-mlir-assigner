@@ -97,7 +97,7 @@ follow the [build instructions](#build).
 mkdir CNN-Mnist
 cp build/bin/mlir-assigner CNN-Mnist && cp build/bin/zkml-onnx-compiler CNN-Mnist
 cd CNN-Mnist
-wget https://github.com/onnx/models/raw/main/vision/classification/mnist/model/mnist-12.onnx
+wget https://github.com/onnx/models/raw/main/validated/vision/classification/mnist/model/mnist-12.onnx
 ```
 
 In case you have another model you want to proof, use that instead of the
