@@ -444,6 +444,16 @@ namespace zk_ml_toolchain {
                         BITSWITCHER(handle_bitwise_or, bits);
                     }
                 }
+            } else if (arith::ExtFOp operation = llvm::dyn_cast<arith::ExtFOp>(op)) {
+                // nothing for us to do here. just copy in stack
+                auto opHash = mlir::hash_value(operation->getOperand(0));
+                if (stack.peek_local(opHash)) {
+                    stack.push_local(operation.getResult(), stack.get_local(opHash));
+                } else if (stack.peek_memref(opHash)) {
+                    stack.push_memref(operation.getResult(), stack.get_memref(opHash));
+                } else {
+                    UNREACHABLE("cannot find operand for extf");
+                }
             } else if (arith::XOrIOp operation = llvm::dyn_cast<arith::XOrIOp>(op)) {
                 // check if logical and or bitwise and
                 mlir::Type LhsType = operation.getLhs().getType();

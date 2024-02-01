@@ -229,6 +229,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--fast', action='store_true', help='Run fast tests only')
 parser.add_argument('--verbose', action='store_true', help='Print detailed output')
 parser.add_argument('--keep-mlir', action='store_true', help='Keep generated mlir files')
+parser.add_argument('--models', action='store_true', help='Test only the models')
 parser.add_argument('--current', action='store_true', help='do only the current folder')
 parser.add_argument('--filter', nargs='?', help='only tests that have filter in name')
 
@@ -240,13 +241,14 @@ start = time.time()
 if args.current:
     test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
 else:
-    test_models = file_filter != [] or not args.fast
+    test_models = file_filter != [] or not args.fast or args.models
     if args.fast:
         fixed_sizes = ["16.16"]
     if test_models:
         test_folder("Models", "mlir-assigner/tests/Models/", False, 500, args.verbose, args.keep_mlir)
-    test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
-    test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
+    if not args.models:
+        test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Onnx", False, 30, args.verbose, args.keep_mlir)
+        test_folder("SingleOps special MLIR", "mlir-assigner/tests/Ops/Mlir", True, 30, args.verbose, args.keep_mlir)
 end = time.time()
 _, rem = divmod(end-start, 3600)
 minutes, seconds = divmod(rem, 60)

@@ -126,8 +126,12 @@ namespace nil {
                     auto &memref = output_memrefs[i];
                     boost::json::object mo;
                     std::string type;
-                    if (memref.getType().isF32()) {
+                    if (memref.getType().isF16()) {
+                        type = "f16";
+                    } else if (memref.getType().isF32()) {
                         type = "f32";
+                    } else if (memref.getType().isF64()) {
+                        type = "f64";
                     } else if (memref.getType().isInteger(1)) {
                         type = "bool";
                     } else if (memref.getType().isIntOrIndex()) {
@@ -143,7 +147,7 @@ namespace nil {
                     mo.emplace("dims", dims);
                     boost::json::array data;
 
-                    if (type == "f32") {
+                    if (type == "f16" || type == "f32" || type == "f64") {
                         for (size_t j = 0; j < memref.size(); ++j) {
                             auto val = var_value(assignmnt, memref.get_flat(j));
                             FixedPoint fixed(val, FixedPoint::SCALE);
