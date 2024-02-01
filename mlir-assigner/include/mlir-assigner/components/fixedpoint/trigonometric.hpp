@@ -1,8 +1,6 @@
 #ifndef CRYPTO3_ASSIGNER_FIXEDPOINT_TRIGONOMETRIC_HPP
 #define CRYPTO3_ASSIGNER_FIXEDPOINT_TRIGONOMETRIC_HPP
 
-#include "mlir/Dialect/zkml/IR/DotProduct.h"
-#include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 

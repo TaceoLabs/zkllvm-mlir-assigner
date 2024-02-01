@@ -40,6 +40,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/exp_ranged.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/neg.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cmp_set.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/gather_acc.hpp>
@@ -48,6 +49,9 @@
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/logic_ops.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/multiplication.hpp>
 
 #define PREPARE_UNARY_INPUT(OP)                                                             \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
