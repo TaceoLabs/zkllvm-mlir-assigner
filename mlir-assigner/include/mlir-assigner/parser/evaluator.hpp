@@ -41,7 +41,6 @@
 #include <mlir-assigner/components/comparison/argminmax.hpp>
 #include <mlir-assigner/components/comparison/select.hpp>
 #include <mlir-assigner/components/fixedpoint/abs.hpp>
-#include <mlir-assigner/components/fixedpoint/addition.hpp>
 #include <mlir-assigner/components/fixedpoint/ceil.hpp>
 #include <mlir-assigner/components/fixedpoint/division.hpp>
 #include <mlir-assigner/components/fixedpoint/exp.hpp>
@@ -51,7 +50,6 @@
 #include <mlir-assigner/components/fixedpoint/mul_rescale.hpp>
 #include <mlir-assigner/components/fixedpoint/neg.hpp>
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
-#include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
 #include <mlir-assigner/components/fixedpoint/cmp_set.hpp>
 #include <mlir-assigner/components/fixedpoint/gather.hpp>
@@ -59,7 +57,8 @@
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
 #include <mlir-assigner/components/fixedpoint/conversion.hpp>
 #include <mlir-assigner/components/boolean/logic_ops.hpp>
-#include <mlir-assigner/components/integer/arith.hpp>
+#include <mlir-assigner/components/fields/basic_arith.hpp>
+#include <mlir-assigner/components/integer/mul_div.hpp>
 
 #include <mlir-assigner/memory/memref.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
@@ -371,9 +370,9 @@ namespace zk_ml_toolchain {
         void handleArithOperation(Operation *op) {
             std::uint32_t start_row = assignmnt.allocated_rows();
             if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
-                handle_fixedpoint_addition_component(operation, stack, bp, assignmnt, start_row);
+                handle_add(operation, stack, bp, assignmnt, start_row);
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
-                handle_fixedpoint_subtraction_component(operation, stack, bp, assignmnt, start_row);
+                handle_sub(operation, stack, bp, assignmnt, start_row);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
                 handle_fixedpoint_mul_rescale_component<PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
@@ -409,7 +408,7 @@ namespace zk_ml_toolchain {
                     UNREACHABLE(std::string("unhandled select operand: ") + typeStr);
                 }
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
-                handle_fixedpoint_neg_component(operation, stack, bp, assignmnt, start_row);
+                handle_neg(operation, stack, bp, assignmnt, start_row);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
                 // check if logical and or bitwise and
                 mlir::Type LhsType = operation.getLhs().getType();
@@ -463,24 +462,26 @@ namespace zk_ml_toolchain {
                     auto rhs = stack.get_constant(operation.getRhs());
                     stack.push_constant(operation.getResult(), lhs + rhs);
                 } else {
-                    handle_integer_addition_component(operation, stack, bp, assignmnt, start_row);
+                    handle_add(operation, stack, bp, assignmnt, start_row);
                 }
             } else if (arith::SubIOp operation = llvm::dyn_cast<arith::SubIOp>(op)) {
-                assert(operation.getLhs().getType().isa<IndexType>());
-                assert(operation.getRhs().getType().isa<IndexType>());
-                // TODO: ATM, handle only the case where we work on indices that are
-                // constant values
-                auto lhs = stack.get_constant(operation.getLhs());
-                auto rhs = stack.get_constant(operation.getRhs());
-                stack.push_constant(operation.getResult(), lhs - rhs);
+                if (operation.getLhs().getType().isa<IndexType>()) {
+                    assert(operation.getRhs().getType().isa<IndexType>());
+                    auto lhs = stack.get_constant(operation.getLhs());
+                    auto rhs = stack.get_constant(operation.getRhs());
+                    stack.push_constant(operation.getResult(), lhs - rhs);
+                } else {
+                    handle_sub(operation, stack, bp, assignmnt, start_row);
+                }
             } else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
-                assert(operation.getLhs().getType().isa<IndexType>());
-                assert(operation.getRhs().getType().isa<IndexType>());
-                // TODO: ATM, handle only the case where we work on indices that are
-                // constant values
-                auto lhs = stack.get_constant(operation.getLhs());
-                auto rhs = stack.get_constant(operation.getRhs());
-                stack.push_constant(operation.getResult(), lhs * rhs);
+                if (operation.getLhs().getType().isa<IndexType>()) {
+                    assert(operation.getRhs().getType().isa<IndexType>());
+                    auto lhs = stack.get_constant(operation.getLhs());
+                    auto rhs = stack.get_constant(operation.getRhs());
+                    stack.push_constant(operation.getResult(), lhs * rhs);
+                } else {
+                    handle_integer_mul(operation, stack, bp, assignmnt, start_row);
+                }
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
                     assert(operation.getRhs().getType().isa<IndexType>());
