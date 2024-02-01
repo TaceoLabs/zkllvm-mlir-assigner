@@ -88,7 +88,7 @@ namespace nil {
                         return iter->constant_values[hash_code];
                     }
                 }
-                UNREACHABLE("empty");
+                UNREACHABLE("Tried to obtain values in constant_values, but not present");
             }
 
             template<typename MlirType>
@@ -106,6 +106,39 @@ namespace nil {
                 }
                 return false;
             }
+
+            template<typename MlirType>
+            bool peek_local(MlirType identifier) {
+                return peek_local(mlir::hash_value(identifier));
+            }
+
+            bool peek_local(llvm::hash_code hash_code) {
+                size_t hash = size_t(hash_code);
+                for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter) {
+                    if (iter->locals.find(hash) != iter->locals.end()) {
+                        // yay we found it
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            template<typename MlirType>
+            bool peek_memref(MlirType identifier) {
+                return peek_memref(mlir::hash_value(identifier));
+            }
+
+            bool peek_memref(llvm::hash_code hash_code) {
+                size_t hash = size_t(hash_code);
+                for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter) {
+                    if (iter->memrefs.find(hash) != iter->memrefs.end()) {
+                        // yay we found it
+                        return true;
+                    }
+                }
+                return false;
+            }
+
 
             template<typename MlirType>
             void push_local(MlirType identifier, VarType &local, bool allow_overwrite = true) {
@@ -145,7 +178,7 @@ namespace nil {
                         return iter->locals[hash_code];
                     }
                 }
-                UNREACHABLE("empty");
+                UNREACHABLE("Tried to obtain values in locals, but not present");
             }
 
             template<typename MlirType>

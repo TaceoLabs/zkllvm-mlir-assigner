@@ -214,7 +214,7 @@ namespace nil {
 
             /// parse a memref from the input file into the public input column
             bool parse_memref_data_public(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
-                if (type == "f32") {
+                if (type == "f16" || type == "f32" || type == "f64") {
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_fixedpoint(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";
