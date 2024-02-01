@@ -53,6 +53,7 @@
 #include <mlir-assigner/components/fixedpoint/remainder.hpp>
 #include <mlir-assigner/components/fixedpoint/subtraction.hpp>
 #include <mlir-assigner/components/fixedpoint/dot_product.hpp>
+#include <mlir-assigner/components/fixedpoint/cmp_set.hpp>
 #include <mlir-assigner/components/fixedpoint/gather.hpp>
 #include <mlir-assigner/components/fixedpoint/erf.hpp>
 #include <mlir-assigner/components/fixedpoint/trigonometric.hpp>
@@ -534,9 +535,6 @@ namespace zk_ml_toolchain {
                 } else if (constantValue.isa<IntegerAttr>()) {
                     // this insert is ok, since this should never change, so we don't
                     // override it if it is already there
-
-                    // TACEO_TODO: better separation of constant values that come from the
-                    // loop bounds an normal ones, ATM just do both
                     int64_t value;
                     if (constantValue.isa<BoolAttr>()) {
                         value = llvm::dyn_cast<BoolAttr>(constantValue).getValue() ? 1 : 0;
@@ -849,6 +847,10 @@ namespace zk_ml_toolchain {
                 handle_argmax<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar, start_row);
             } else if (zkml::GatherOp operation = llvm::dyn_cast<zkml::GatherOp>(op)) {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
+                auto dataIndexVar = put_into_assignment(dataIndex);
+                handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
+            } else if (zkml::CmpSetOp operation = llvm::dyn_cast<zkml::CmpSetOp>(op)) {
+                auto dataIndex = stack.get_constant(operation.getIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
                 handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
             } else if (zkml::ExpNoClipOp operation = llvm::dyn_cast<zkml::ExpNoClipOp>(op)) {
