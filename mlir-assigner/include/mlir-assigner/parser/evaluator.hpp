@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
