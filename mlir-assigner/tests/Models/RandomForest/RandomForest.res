@@ -1,3 +1,3 @@
 Result:
-memref<1x1xf32>[0.0]
-458
+memref<1xf64>[0.0]
+30605
