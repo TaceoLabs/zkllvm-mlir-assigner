@@ -89,7 +89,7 @@ long as it is applicable for ZK).
 | **ArrayFeatureExtractor**     |        :x:         |        :x:         |                                                    |
 | **Asin**                      |        :x:         | :white_check_mark: |                                                    |
 | **Asinh**                     |        :x:         | :white_check_mark: |                                                    |
-| **Atan**                      |        :x:         | :white_check_mark: |                                                    |
+| **Atan**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Atanh**                     |        :x:         | :white_check_mark: |                                                    |
 | **AveragePool**               | :white_check_mark: | :white_check_mark: |                                                    |
 | **BatchNormalization**        |        :x:         | :white_check_mark: |                                                    |
@@ -111,7 +111,7 @@ long as it is applicable for ZK).
 | **Clip**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Col2Im**                    |        :x:         |        :x:         |                                                    |
 | **Compress**                  |        :x:         | :white_check_mark: |                                                    |
-| **Concat**                    |        :x:         | :white_check_mark: |                                                    |
+| **Concat**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConcatFromSequence**        |        :x:         |        :x:         |                                                    |
 | **Constant**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConstantOfShape**           | :white_check_mark: | :white_check_mark: |                                                    |
@@ -120,7 +120,7 @@ long as it is applicable for ZK).
 | **ConvTranspose**             |        :x:         | :white_check_mark: |                                                    |
 | **Cos**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Cosh**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **CumSum**                    |        :x:         | :white_check_mark: |                                                    |
+| **CumSum**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **DFT**                       |        :x:         |        :x:         |                                                    |
 | **DeformConv**                |        :x:         |        :x:         |                                                    |
 | **DepthToSpace**              | :white_check_mark: | :white_check_mark: |                                                    |
@@ -133,7 +133,7 @@ long as it is applicable for ZK).
 | **Einsum**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **Elu**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Equal**                     | :white_check_mark: | :white_check_mark: |                                                    |
-| **Erf**                       |        :x:         | :white_check_mark: |                                                    |
+| **Erf**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Exp**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Expand**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **EyeLike**                   |        :x:         |        :x:         |                                                    |
@@ -141,8 +141,8 @@ long as it is applicable for ZK).
 | **Flatten**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Floor**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **GRU**                       | :white_check_mark: | :white_check_mark: |                                                    |
-| **Gather**                    |        :x:         | :white_check_mark: |                                                    |
-| **GatherElements**            |        :x:         | :white_check_mark: |                                                    |
+| **Gather**                    | :white_check_mark: | :white_check_mark: |                                                    |
+| **GatherElements**            | :white_check_mark: | :white_check_mark: |                                                    |
 | **GatherND**                  |        :x:         | :white_check_mark: |                                                    |
 | **Gemm**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **GlobalAveragePool**         | :white_check_mark: | :white_check_mark: |                                                    |
