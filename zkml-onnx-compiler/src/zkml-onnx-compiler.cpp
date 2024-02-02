@@ -28,19 +28,23 @@
 
 enum EmitLevel { zkMLIR, ONNX, MLIR, LLVMIR };
 
-llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::Required);
-llvm::cl::opt<std::string> OutputFilename("i", llvm::cl::desc("Specify output filename"),
-                                          llvm::cl::value_desc("filename"), llvm::cl::init(STDOUT_MARKER));
+// Category for options for ZkMlOptions only.
+llvm::cl::OptionCategory ZkMlOptions("ZKML options", "These are ZKML options");
 
-llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you want?"),
+llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::Required);
+llvm::cl::opt<std::string> OutputFilename("output", llvm::cl::desc("Specify output filename"),
+                                          llvm::cl::value_desc("filename"),
+                                          llvm::cl::cat(ZkMlOptions), llvm::cl::init(STDOUT_MARKER));
+
+llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you want?"), llvm::cl::cat(ZkMlOptions),
                                    llvm::cl::values(clEnumVal(ONNX, "Lower to \"ONNX\" dialect."),
                                                     clEnumVal(MLIR, "Lower to \"MLIR-IR\"."),
                                                     clEnumVal(zkMLIR, "Lower to \"zkMLIR-IR\"."),
                                                     clEnumVal(LLVMIR, "Lower to \"LLVM-IR\".")));
 
-llvm::cl::opt<std::string> PrivateInputs("zk", llvm::cl::desc("Specify output filename"), llvm::cl::init("NOT_SET"));
+llvm::cl::opt<std::string> PrivateInputs("zk", llvm::cl::desc("specifies which inputs to the model are private. Comma separated list of {0,1}"), llvm::cl::cat(ZkMlOptions), llvm::cl::init("NOT_SET"));
 
-llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::init(false));
+llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::cat(ZkMlOptions), llvm::cl::init(false));
 
 bool hasEnding(std::string const &fullString, std::string const &ending) {
     if (fullString.length() >= ending.length()) {
@@ -55,6 +59,7 @@ std::string dirName(llvm::StringRef inputFilename) {
     llvm::sys::path::remove_filename(path);
     return std::string(path.data(), path.size());
 }
+
 int loadOnnxFile(llvm::StringRef inputFilename, mlir::MLIRContext &context, mlir::OwningOpRef<mlir::ModuleOp> &module,
                  std::string *errorMessage) {
     // we use default options for now from onnx-mlir, lets see if we need
@@ -141,6 +146,7 @@ bool parseComaSeperatedList(std::string &str, std::vector<bool> &vect) {
 }
 
 int main(int argc, char **argv) {
+    onnx_mlir::removeUnrelatedOptions({&ZkMlOptions});
     llvm::cl::ParseCommandLineOptions(argc, argv);
     std::string inputFilename = InputFilename.c_str();
     mlir::registerAsmPrinterCLOptions();
@@ -151,7 +157,6 @@ int main(int argc, char **argv) {
 
     llvm::cl::SetVersionPrinter(onnx_mlir::getVersionPrinter);
 
-    onnx_mlir::removeUnrelatedOptions({&onnx_mlir::OnnxMlirCommonOptions, &onnx_mlir::OnnxMlirOptions});
     onnx_mlir::initCompilerConfig();
     //===========================
     //
