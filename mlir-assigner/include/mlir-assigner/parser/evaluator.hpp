@@ -388,10 +388,7 @@ namespace zk_ml_toolchain {
                 // check if we work on indices
                 Type operandType = operation->getOperand(1).getType();
                 auto i1Hash = mlir::hash_value(operation->getOperand(0));
-                if (operandType.isa<IndexType>() || stack.peek_constant(i1Hash)) {
-                    // for now we expect that if we select on indices, that we also have the cmp result in
-                    // constant values. Let's see if this holds true in the future
-                    // we come from index comparision but we do not work on indices, ergo we need to get from locals
+                if (operandType.isa<IndexType>()) {
                     if (stack.get_constant(i1Hash)) {
                         auto truthy = stack.get_constant(operation->getOperand(1));
                         stack.push_constant(operation->getResult(0), truthy);
@@ -400,7 +397,18 @@ namespace zk_ml_toolchain {
                         stack.push_constant(operation->getResult(0), falsy);
                     }
                 } else if (operandType.isa<FloatType>() || operandType.isa<IntegerType>()) {
-                    handle_select_component(operation, stack, bp, assignmnt, start_row);
+                    if (stack.peek_constant(i1Hash)) {
+                        // we can just pick as selector was produces by index
+                        if (stack.get_constant(i1Hash)) {
+                            auto truthy = stack.get_local(operation->getOperand(1));
+                            stack.push_local(operation->getResult(0), truthy);
+                        } else {
+                            auto falsy = stack.get_local(operation->getOperand(2));
+                            stack.push_local(operation->getResult(0), falsy);
+                        }
+                    } else {
+                        handle_select_component(operation, stack, bp, assignmnt, start_row);
+                    }
                 } else {
                     std::string typeStr;
                     llvm::raw_string_ostream ss(typeStr);
@@ -607,7 +615,15 @@ namespace zk_ml_toolchain {
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
                 handle_fixedpoint_log_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
-                UNREACHABLE("TODO: component for powf not ready");
+                UNREACHABLE("powf not supported. Did you compile the model with standard MLIR?");
+            } else if (math::IPowIOp operation = llvm::dyn_cast<math::IPowIOp>(op)) {
+                // we only allow that on index for now
+                assert(operation.getLhs().getType().isa<IndexType>() && "powi only allowed for indices");
+                assert(operation.getRhs().getType().isa<IndexType>() && "powi only allowed for indices");
+                int64_t base = stack.get_constant(operation.getLhs());
+                int64_t pow = stack.get_constant(operation.getRhs());
+                assert(base == 2 && "For now we only support powi to power of 2");
+                stack.push_constant(operation.getResult(), 1 << pow);
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
                 handle_fixedpoint_abs_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {

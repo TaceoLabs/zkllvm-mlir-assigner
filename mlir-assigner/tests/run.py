@@ -239,6 +239,8 @@ if args.filter:
 
 start = time.time()
 if args.current:
+    if args.fast:
+        fixed_sizes = ["16.16"]
     test_folder("SingleOps E2E", "mlir-assigner/tests/Ops/Current", False, 30, args.verbose, args.keep_mlir)
 else:
     test_models = file_filter != [] or not args.fast or args.models
