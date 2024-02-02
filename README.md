@@ -109,7 +109,7 @@ CNN-Mnist model.
    `zkml-onnx-compiler`, where you also have to specify which inputs are public/private by passing a comma seperated list (e.g. `--zk 1,1,0`). Here we set all inputs public as follows:
 
 ```bash
-./zkml-onnx-compiler mnist-12.onnx -i mnist-12.mlir --zk ALL_PUBLIC
+./zkml-onnx-compiler mnist-12.onnx --output mnist-12.mlir --zk ALL_PUBLIC
 ```
 
 > The `zkml-onnx-compiler` can also lower the model to different IRs. Have a

@@ -1,5 +1,5 @@
 # build the mlir-assigner
-build: 
+build:
   make -C build/ -j 12 zkml-onnx-compiler mlir-assigner 3>&1 1>&2 2>&3 | python filter.py
 
 # setup the build folder
@@ -12,11 +12,11 @@ run-fast-tests: build
 
 # runs all tests. This will take A LONG time
 run-tests: build
-  python mlir-assigner/tests/run.py 
+  python mlir-assigner/tests/run.py
 
 # runs the basic mnist model and prints the output to stdout
 run-basic-mnist: build
-  ./build/bin/zkml-onnx-compiler mlir-assigner/tests/Models/BasicMnist/basic_mnist.onnx -i mlir-assigner/tests/Models/BasicMnist/basic_mnist.mlir -zk ALL_PUBLIC
+  ./build/bin/zkml-onnx-compiler mlir-assigner/tests/Models/BasicMnist/basic_mnist.onnx --output mlir-assigner/tests/Models/BasicMnist/basic_mnist.mlir -zk ALL_PUBLIC
   ./build/bin/mlir-assigner -b mlir-assigner/tests/Models/BasicMnist/basic_mnist.mlir -i mlir-assigner/tests/Models/BasicMnist/basic_mnist.json -o mlir-assigner/tests/Models/BasicMnist/basic_mnist.output.json -e pallas -c circuit -t table -f dec --check
   rm mlir-assigner/tests/Models/BasicMnist/basic_mnist.mlir
   rm mlir-assigner/tests/Models/BasicMnist/basic_mnist.output.json

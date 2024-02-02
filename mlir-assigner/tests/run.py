@@ -31,7 +31,7 @@ fixed_sizes = ["16.16", "16.32", "32.16", "32.32"]
 file_filter = []
 
 def assert_output(should_output, is_output):
-    global MAX_DELTA 
+    global MAX_DELTA
     is_lines = is_output.splitlines()
     if len(is_lines) < 3:
         return False, "Output incomplete got less than 3 lines"
@@ -65,15 +65,15 @@ def build_error_object(file, reason):
     })
 
 def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
-    global run_tests 
+    global run_tests
     global success_tests
     global failed_tests
     global error_tests
-    global errors 
+    global errors
     global zkml_compiler
     global fixed_sizes
     mlir_file = os.path.join(subfolder_path, file.replace(".onnx", ".mlir"))
-    args = [zkml_compiler, os.path.join(subfolder_path, file), "-i", mlir_file, "-zk", "ALL_PUBLIC"]
+    args = [zkml_compiler, os.path.join(subfolder_path, file), "--output", mlir_file, "-zk", "ALL_PUBLIC"]
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     #todo remove check output
@@ -86,7 +86,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
         error_tests += 1
         return
     for fixed_size in fixed_sizes:
-        print(f"Testing {file} {fixed_size}...", end="",flush=True) 
+        print(f"Testing {file} {fixed_size}...", end="",flush=True)
         specific_output_file = os.path.join(subfolder_path, file.replace(".onnx", f".{fixed_size}.res"))
         current_output_file = ""
         if isfile(specific_output_file):
@@ -110,7 +110,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
             if valid:
                 print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
                 success_tests += 1
-            else: 
+            else:
                 failed_tests += 1
                 print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
                 errors.append(build_error_object(file, error_string))
@@ -128,11 +128,11 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
         os.remove(mlir_file)
 
 def test_mlir(file, subfolder_path,  timeout, verbose):
-    global run_tests 
+    global run_tests
     global success_tests
     global failed_tests
     global error_tests
-    global errors 
+    global errors
     global mlir_assigner
 
     # read output file
@@ -145,7 +145,7 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
     with open(output_file,mode='r') as f:
         should_output = f.read().strip()
     for fixed_size in fixed_sizes:
-        print(f"Testing {file} {fixed_size}...", end="",flush=True) 
+        print(f"Testing {file} {fixed_size}...", end="",flush=True)
         # Construct the JSON file name by replacing the ".mlir" extension with ".json"
         json_file = file.replace(".mlir", ".json")
         json_output_file = file.replace(".mlir", f"{fixed_size}.output.json")
@@ -161,7 +161,7 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
             if valid:
                 print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
                 success_tests += 1
-            else: 
+            else:
                 failed_tests += 1
                 print(f"{bcolors.FAIL} failed{bcolors.ENDC}")
                 errors.append(build_error_object(file, error_string))
@@ -208,17 +208,17 @@ def test_folder(test_suite, folder, mlir_tests, timeout, verbose, keep_mlir):
                     ignore_tests = list(ignore_tests.splitlines())
 
         for file in files:
-            if file.endswith(".onnx") and not mlir_tests: 
+            if file.endswith(".onnx") and not mlir_tests:
                 if file in ignore_tests:
                     ignored_tests += 1
-                    print(f"Testing {file}...", end="",flush=True) 
+                    print(f"Testing {file}...", end="",flush=True)
                     print(f"{bcolors.OKCYAN} ignored {bcolors.ENDC}")
                 else:
                     test_onnx(file, subfolder_path, timeout, verbose, keep_mlir)
             if file.endswith(".mlir") and mlir_tests:
                 if file in ignore_tests:
                     ignored_tests += 1
-                    print(f"Testing {file}...", end="",flush=True) 
+                    print(f"Testing {file}...", end="",flush=True)
                     print(f"{bcolors.OKCYAN} ignored {bcolors.ENDC}")
                 else:
                     test_mlir(file, subfolder_path, timeout, verbose)
