@@ -185,6 +185,7 @@ namespace zk_ml_toolchain {
             bp(circuit),
             assignmnt(assignment), public_input(public_input), private_input(private_input),
             public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
+            lower_bound = FixedPoint(1, FixedPoint::SCALE).to_double();
         }
 
         evaluator(const evaluator &pass) = delete;
@@ -566,11 +567,19 @@ namespace zk_ml_toolchain {
                     stack.push_local(operation.getResult(), val);
                 } else if (constantValue.isa<FloatAttr>()) {
                     double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
-                    FixedPoint fixed(d);
-                    auto value = put_into_assignment(fixed.get_value());
-                    // this insert is ok, since this should never change, so we
-                    // don't override it if it is already there
-                    stack.push_local(operation.getResult(), value);
+                    if (d < lower_bound) {
+                        // lowest possible element
+                        auto value = put_into_assignment(typename BlueprintFieldType::value_type(1));
+                        // this insert is ok, since this should never change, so we
+                        // don't override it if it is already there
+                        stack.push_local(operation.getResult(), value);
+                    } else {
+                        FixedPoint fixed(d);
+                        auto value = put_into_assignment(fixed.get_value());
+                        // this insert is ok, since this should never change, so we
+                        // don't override it if it is already there
+                        stack.push_local(operation.getResult(), value);
+                    }
                 } else {
                     logger << constantValue;
                     UNREACHABLE("unhandled constant");
@@ -813,9 +822,14 @@ namespace zk_ml_toolchain {
                             } else {
                                 UNREACHABLE("unsupported float semantics");
                             }
-                            FixedPoint fixed(d);
-                            auto var = put_into_assignment(fixed.get_value());
-                            m.put_flat(idx++, var);
+                            if (d < lower_bound) {
+                                auto var = put_into_assignment(typename BlueprintFieldType::value_type(1));
+                                m.put_flat(idx++, var);
+                            } else {
+                                FixedPoint fixed(d);
+                                auto var = put_into_assignment(fixed.get_value());
+                                m.put_flat(idx++, var);
+                            }
                         }
                     } else {
                         UNREACHABLE("Unsupported attribute type");
@@ -1154,6 +1168,7 @@ namespace zk_ml_toolchain {
         VarType undef_var;
         VarType zero_var;
         std::optional<VarType> true_var;
+        double lower_bound;
     };
 }    // namespace zk_ml_toolchain
 
