@@ -1,8 +1,9 @@
 #ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
-#define CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
+
 
 #include "nil/blueprint/blueprint/plonk/assignment.hpp"
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -567,7 +568,7 @@ namespace zk_ml_toolchain {
                     stack.push_local(operation.getResult(), val);
                 } else if (constantValue.isa<FloatAttr>()) {
                     double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
-                    if (d < lower_bound) {
+                    if (d > 0 && d < lower_bound && std::isfinite(d)) {
                         // lowest possible element
                         auto value = put_into_assignment(typename BlueprintFieldType::value_type(1));
                         // this insert is ok, since this should never change, so we
@@ -822,7 +823,7 @@ namespace zk_ml_toolchain {
                             } else {
                                 UNREACHABLE("unsupported float semantics");
                             }
-                            if (d < lower_bound) {
+                            if (d > 0 && d < lower_bound && std::isfinite(d)) {
                                 auto var = put_into_assignment(typename BlueprintFieldType::value_type(1));
                                 m.put_flat(idx++, var);
                             } else {
