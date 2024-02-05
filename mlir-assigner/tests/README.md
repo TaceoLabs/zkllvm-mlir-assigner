@@ -92,7 +92,7 @@ long as it is applicable for ZK).
 | **Atan**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Atanh**                     |        :x:         | :white_check_mark: |                                                    |
 | **AveragePool**               | :white_check_mark: | :white_check_mark: |                                                    |
-| **BatchNormalization**        |        :x:         | :white_check_mark: |                                                    |
+| **BatchNormalization**        | :white_check_mark: | :white_check_mark: |                                                    |
 | **Bernoulli**                 |        :x:         |        :x:         |                                                    |
 | **Binarizer**                 |        :x:         |        :x:         |                                                    |
 | **BitShift**                  |        :x:         |        :x:         |                                                    |
