@@ -9,6 +9,9 @@
 # Direnv
 .direnv/
 
+# nix
+nix/zkllvm/result
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
