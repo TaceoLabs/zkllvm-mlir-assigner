@@ -410,7 +410,8 @@ int curve_dependent_main(std::string bytecode_file_name,
                          std::uint32_t max_num_provers,
                          std::uint32_t max_lookup_rows,
                          std::uint32_t target_prover,
-                         nil::blueprint::print_format circuit_output_print_format) {
+                         nil::blueprint::print_format circuit_output_print_format,
+                         std::string clip) {
 
     constexpr std::size_t ComponentConstantColumns = ParametersPolicy::ComponentConstantColumns;
     constexpr std::size_t LookupConstantColumns = ParametersPolicy::LookupConstantColumns;
@@ -478,7 +479,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     boost::json::array public_output_json_array = public_output_json_value.as_array();
 
     if (!parser_instance.evaluate(std::move(module), public_input_json_value.as_array(),
-                                  private_input_json_value.as_array(), public_output_json_array)) {
+                                  private_input_json_value.as_array(), public_output_json_array, clip)) {
         return 1;
     }
     // we also write our output file
@@ -630,6 +631,7 @@ int main(int argc, char *argv[]) {
             ("circuit,c", boost::program_options::value<std::string>(), "Circuit output file")
             ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12381)")
             ("fixed-bits,x", boost::program_options::value<std::string>(), "Accuracy of floating-point approximation")
+            ("clip", boost::program_options::value<std::string>(), "Sets strategy for clipping smaller values than fixed-bits allows. Default [clip] sets to smallest real number possible (clip, zero, panic)")
             ("stack-size,s", boost::program_options::value<long>(), "Stack size in bytes")
             ("check", "Check satisfiability of the generated circuit")
             ("log-level,l", boost::program_options::value<std::string>(), "Log level (trace, debug, info, warning, error, fatal)")
@@ -674,6 +676,7 @@ int main(int argc, char *argv[]) {
     std::string public_output_file_name;
     std::string assignment_table_file_name;
     std::string fixed_type;
+    std::string clip;
     std::string circuit_file_name;
     std::string elliptic_curve;
     nil::blueprint::print_format circuit_output_print_format;
@@ -741,6 +744,18 @@ int main(int argc, char *argv[]) {
         std::cerr << "Invalid command line argument - elliptic curve type is not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
+    }
+
+    if (vm.count("clip")) {
+        clip = vm["clip"].as<std::string>();
+        if ("clip" != clip && "zero" != clip && "panic" != clip) {
+            std::cerr << "Invalid command line argument - clip must be one of (clip, zero, panic) was " << clip
+                      << std::endl;
+            std::cout << options_desc << std::endl;
+            return 1;
+        }
+    } else {
+        clip = "clip";
     }
 
     if (vm.count("log-level")) {
@@ -851,7 +866,7 @@ int main(int argc, char *argv[]) {
     return curve_dependent_main<CURVE_NAME, PRE, POST>(                                                               \
         bytecode_file_name, public_input_file_name, private_input_file_name, public_output_file_name,                 \
         assignment_table_file_name, circuit_file_name, stack_size, vm.count("check"), log_options[log_level], policy, \
-        max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format);
+        max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format, clip);
 #define CURVE_MAIN_SWITCHER(CURVE_NAME)                                                                             \
     if ("16.16" == fixed_type) {                                                                                    \
         CURVE_MAIN(CURVE_NAME, 1, 1)                                                                                \
