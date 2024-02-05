@@ -2,7 +2,7 @@ import os
 import ast
 import sys
 from os.path import isfile, isdir
-from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
+from subprocess import DEVNULL, check_output, CalledProcessError, TimeoutExpired 
 import argparse
 import tempfile
 import time
@@ -77,7 +77,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
     if verbose:
         print("running: '" + " ".join(args) + "'...", flush=True)
     #todo remove check output
-    check_output(args, stderr=STDOUT, timeout=timeout).decode().strip()
+    check_output(args, stderr=DEVNULL, timeout=timeout).decode().strip()
     # read output file
     default_output_file = os.path.join(subfolder_path, file.replace(".onnx", ".res"))
     if not isfile(default_output_file):
@@ -106,7 +106,7 @@ def test_onnx(file, subfolder_path, timeout, verbose, keep_mlir):
         if verbose:
             print("running: '" + " ".join(args) + "'...",  flush=True)
         try:
-            valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+            valid, error_string = assert_output(should_output, check_output(args, stderr=DEVNULL, timeout=timeout).decode().strip())
             if valid:
                 print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
                 success_tests += 1
@@ -157,7 +157,7 @@ def test_mlir(file, subfolder_path,  timeout, verbose):
         if verbose:
             print("running: '" + " ".join(args) + "'...", flush=True)
         try:
-            valid, error_string = assert_output(should_output, check_output(args, stderr=STDOUT, timeout=timeout).decode().strip())
+            valid, error_string = assert_output(should_output, check_output(args, stderr=DEVNULL, timeout=timeout).decode().strip())
             if valid:
                 print(f"{bcolors.OKGREEN} success{bcolors.ENDC}")
                 success_tests += 1

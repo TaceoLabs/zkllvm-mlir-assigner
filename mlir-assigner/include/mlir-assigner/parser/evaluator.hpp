@@ -1,6 +1,5 @@
 #ifndef CRYPTO3_BLUEPRINT_COMPONENT_INSTRUCTION_MLIR_EVALUATOR_HPP
 
-
 #include "nil/blueprint/blueprint/plonk/assignment.hpp"
 #include <cassert>
 #include <cmath>
@@ -178,15 +177,26 @@ namespace zk_ml_toolchain {
         using VarType = nil::crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
         using FixedPoint = nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
 
+        enum class ClipStrategy { PANIC, CLIP, ZERO };
+
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
                   const boost::json::array &public_input, const boost::json::array &private_input,
                   boost::json::array &public_output, nil::blueprint::print_format print_circuit_format,
-                  nil::blueprint::logger &logger) :
+                  std::string clip, nil::blueprint::logger &logger) :
             bp(circuit),
             assignmnt(assignment), public_input(public_input), private_input(private_input),
             public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
             lower_bound = FixedPoint(1, FixedPoint::SCALE).to_double();
+            if ("clip" == clip) {
+                clip_strategy = ClipStrategy::CLIP;
+            } else if ("zero" == clip) {
+                clip_strategy = ClipStrategy::ZERO;
+            } else if ("panic" == clip) {
+                clip_strategy = ClipStrategy::PANIC;
+            } else {
+                UNREACHABLE("unsupported clipping strategy: " + clip);
+            }
         }
 
         evaluator(const evaluator &pass) = delete;
@@ -568,19 +578,8 @@ namespace zk_ml_toolchain {
                     stack.push_local(operation.getResult(), val);
                 } else if (constantValue.isa<FloatAttr>()) {
                     double d = llvm::dyn_cast<FloatAttr>(constantValue).getValueAsDouble();
-                    if (d > 0 && d < lower_bound && std::isfinite(d)) {
-                        // lowest possible element
-                        auto value = put_into_assignment(typename BlueprintFieldType::value_type(1));
-                        // this insert is ok, since this should never change, so we
-                        // don't override it if it is already there
-                        stack.push_local(operation.getResult(), value);
-                    } else {
-                        FixedPoint fixed(d);
-                        auto value = put_into_assignment(fixed.get_value());
-                        // this insert is ok, since this should never change, so we
-                        // don't override it if it is already there
-                        stack.push_local(operation.getResult(), value);
-                    }
+                    VarType var = put_float_into_assignment(d);
+                    stack.push_local(operation.getResult(), var);
                 } else {
                     logger << constantValue;
                     UNREACHABLE("unhandled constant");
@@ -823,14 +822,8 @@ namespace zk_ml_toolchain {
                             } else {
                                 UNREACHABLE("unsupported float semantics");
                             }
-                            if (d > 0 && d < lower_bound && std::isfinite(d)) {
-                                auto var = put_into_assignment(typename BlueprintFieldType::value_type(1));
-                                m.put_flat(idx++, var);
-                            } else {
-                                FixedPoint fixed(d);
-                                auto var = put_into_assignment(fixed.get_value());
-                                m.put_flat(idx++, var);
-                            }
+                            VarType var = put_float_into_assignment(d);
+                            m.put_flat(idx++, var);
                         }
                     } else {
                         UNREACHABLE("Unsupported attribute type");
@@ -1150,6 +1143,36 @@ namespace zk_ml_toolchain {
             return VarType(0, constant_idx++, false, VarType::column_type::constant);
         }
 
+        VarType put_float_into_assignment(double d) {
+            if (d > 0 && d < lower_bound && std::isfinite(d)) {
+                // check clip strategy
+                if (ClipStrategy::PANIC == clip_strategy) {
+                    std::cerr << "model has value lower than lowest bound \"" << lower_bound
+                              << "\" and clip strategy is panic!" << std::endl;
+                    std::cerr << "Try either other clip strategy or increase fixed-bits if this is not desired."
+                              << std::endl;
+                    UNREACHABLE("clipping");
+                } else if (ClipStrategy::CLIP == clip_strategy) {
+                    // lowest possible element
+                    std::cerr << "warning: small element (" << d << ") encountered. Setting to smallest fixed-point."
+                              << std::endl;
+                    std::cerr << "Try either other clip strategy or increase fixed-bits if this is not desired."
+                              << std::endl;
+                    return put_into_assignment(typename BlueprintFieldType::value_type(1));
+                } else if (ClipStrategy::ZERO == clip_strategy) {
+                    std::cerr << "warning: small element (" << d << ") encountered. Setting to zero." << std::endl;
+                    std::cerr << "Try either other clip strategy or increase fixed-bits if this is not desired."
+                              << std::endl;
+                    return put_into_assignment(typename BlueprintFieldType::value_type(0));
+                } else {
+                    UNREACHABLE("unsupported clip strategy but should be caught in constructor?");
+                }
+            } else {
+                FixedPoint fixed(d);
+                return put_into_assignment(fixed.get_value());
+            }
+        }
+
         nil::blueprint::print_format print_circuit_format;
         nil::blueprint::logger &logger;
 
@@ -1170,6 +1193,7 @@ namespace zk_ml_toolchain {
         VarType zero_var;
         std::optional<VarType> true_var;
         double lower_bound;
+        ClipStrategy clip_strategy;
     };
 }    // namespace zk_ml_toolchain
 
