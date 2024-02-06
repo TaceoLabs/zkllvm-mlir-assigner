@@ -225,7 +225,7 @@ To check if your model has dynamic inputs, we recommend the
 [Netron App](https://netron.app/). It's an excellent tool for visualizing and
 inspecting ONNX models. Below is an example illustrating a dynamic input:
 
-![Dynamic Input nano-GPT](pics/dynamic_input.png)
+![Dynamic Input nano-GPT](docs/pics/NanoGPT-dynamic.png)
 
 > The input highlights the dynamic input dimension `batch_size`. This is a
 > screenshot of the [nano-GPT model](https://github.com/karpathy/nanoGPT).
