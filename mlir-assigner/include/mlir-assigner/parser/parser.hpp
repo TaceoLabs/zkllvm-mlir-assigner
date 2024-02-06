@@ -117,7 +117,7 @@ namespace nil {
 
             bool evaluate(mlir::OwningOpRef<mlir::ModuleOp> module, const boost::json::array &public_input,
                           const boost::json::array &private_input, boost::json::array &public_output,
-                          std::string clip) {
+                          std::string &clip) {
 
                 zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams, PreLimbs, PostLimbs> evaluator(
                     circuits[0], assignments[0], public_input, private_input, public_output, print_output_format, clip,

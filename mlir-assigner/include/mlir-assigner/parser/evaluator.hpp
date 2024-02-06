@@ -183,7 +183,7 @@ namespace zk_ml_toolchain {
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
                   const boost::json::array &public_input, const boost::json::array &private_input,
                   boost::json::array &public_output, nil::blueprint::print_format print_circuit_format,
-                  std::string clip, nil::blueprint::logger &logger) :
+                  std::string &clip, nil::blueprint::logger &logger) :
             bp(circuit),
             assignmnt(assignment), public_input(public_input), private_input(private_input),
             public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
@@ -291,27 +291,6 @@ namespace zk_ml_toolchain {
         }
 
     private:
-        int64_t resolve_number(VarType scalar) {
-            auto scalar_value = var_value(assignmnt, scalar);
-            static constexpr auto limit_value_max =
-                typename BlueprintFieldType::integral_type(std::numeric_limits<int64_t>::max());
-            static constexpr auto limit_value_min =
-                BlueprintFieldType::modulus - limit_value_max - typename BlueprintFieldType::integral_type(1);
-            static constexpr typename BlueprintFieldType::integral_type half_p =
-                (BlueprintFieldType::modulus - typename BlueprintFieldType::integral_type(1)) /
-                typename BlueprintFieldType::integral_type(2);
-            auto integral_value = static_cast<typename BlueprintFieldType::integral_type>(scalar_value.data);
-            ASSERT_MSG(integral_value <= limit_value_max || integral_value >= limit_value_min,
-                       "cannot fit into requested number");
-            // check if negative
-            if (integral_value > half_p) {
-                integral_value = BlueprintFieldType::modulus - integral_value;
-                return -static_cast<int64_t>(integral_value);
-            } else {
-                return static_cast<int64_t>(integral_value);
-            }
-        }
-
         void doAffineFor(affine::AffineForOp &op, int64_t from, int64_t to, int64_t step) {
             assert(from < to);
             assert(step);
