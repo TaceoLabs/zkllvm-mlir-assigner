@@ -36,7 +36,7 @@ def assert_output(should_output, is_output):
     if len(is_lines) < 3:
         return False, "Output incomplete got less than 3 lines"
     should_lines = should_output.splitlines()
-    if should_lines != is_lines:
+    if len(should_lines) != len(is_lines):
         return False, "Output length differs from should output"
     amount_results = len(should_lines) - 2
     ziped = zip(should_lines, is_lines)
