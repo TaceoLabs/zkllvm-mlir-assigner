@@ -411,7 +411,8 @@ int curve_dependent_main(std::string bytecode_file_name,
                          std::uint32_t max_lookup_rows,
                          std::uint32_t target_prover,
                          nil::blueprint::print_format circuit_output_print_format,
-                         std::string clip) {
+                         std::string &clip,
+                         std::string &evm_output_file_name) {
 
     constexpr std::size_t ComponentConstantColumns = ParametersPolicy::ComponentConstantColumns;
     constexpr std::size_t LookupConstantColumns = ParametersPolicy::LookupConstantColumns;
@@ -546,6 +547,30 @@ int curve_dependent_main(std::string bytecode_file_name,
         print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
             parser_instance.circuits[0], parser_instance.assignments[0], false, ocircuit);
         ocircuit.close();
+        if (!evm_output_file_name.empty()) {
+            // write the json for EVM verifier if necessary
+            assert(1 == parser_instance.assignments[0].public_inputs_amount() &&
+                   "More than one public input column - cannot serialize for EVM proofer");
+            std::uint32_t pub_input_rows = parser_instance.assignments[0].public_input_column_size(0);
+
+            std::ofstream oevm_input;
+            oevm_input.open(evm_output_file_name, std::ios_base::out);
+            if (!oevm_input) {
+                std::cout << "Something wrong with output "
+                          << evm_output_file_name << std::endl;
+                return 1;
+            }
+            auto &pub_input_column = parser_instance.assignments[0].public_input(0);
+            oevm_input << "[";
+            // we just print it without boost as we do not want to keep the whole column multiple times
+            // in memory
+            for (std::uint32_t i = 0; i < pub_input_rows - 1; ++i) {
+                oevm_input << "{\"field\": " << pub_input_column[i] << "},";
+            }
+            oevm_input << "{\"field\": " << pub_input_column[pub_input_rows - 1] << "}]";
+            oevm_input.close();
+        }
+
     } else if (parser_instance.assignments.size() > 1 &&
                (target_prover < parser_instance.assignments.size() || invalid_target_prover == invalid_target_prover)) {
         std::uint32_t start_idx = (target_prover == invalid_target_prover) ? 0 : target_prover;
@@ -632,6 +657,7 @@ int main(int argc, char *argv[]) {
             ("elliptic-curve-type,e", boost::program_options::value<std::string>(), "Native elliptic curve type (pallas, vesta, ed25519, bls12381)")
             ("fixed-bits,x", boost::program_options::value<std::string>(), "Accuracy of floating-point approximation")
             ("clip", boost::program_options::value<std::string>(), "Sets strategy for clipping smaller values than fixed-bits allows. Default [clip] sets to smallest real number possible (clip, zero, panic)")
+            ("evm-output", boost::program_options::value<std::string>(), "The output file for the public input column for the EVM verifier")
             ("stack-size,s", boost::program_options::value<long>(), "Stack size in bytes")
             ("check", "Check satisfiability of the generated circuit")
             ("log-level,l", boost::program_options::value<std::string>(), "Log level (trace, debug, info, warning, error, fatal)")
@@ -677,6 +703,7 @@ int main(int argc, char *argv[]) {
     std::string assignment_table_file_name;
     std::string fixed_type;
     std::string clip;
+    std::string evm_output_file_name;
     std::string circuit_file_name;
     std::string elliptic_curve;
     nil::blueprint::print_format circuit_output_print_format;
@@ -762,6 +789,12 @@ int main(int argc, char *argv[]) {
         log_level = vm["log-level"].as<std::string>();
     } else {
         log_level = "info";
+    }
+
+    if (vm.count("evm-output")) {
+        evm_output_file_name = vm["evm-output"].as<std::string>();
+    } else {
+        evm_output_file_name = "";
     }
 
     std::map<std::string, int> curve_options {
@@ -866,7 +899,7 @@ int main(int argc, char *argv[]) {
     return curve_dependent_main<CURVE_NAME, PRE, POST>(                                                               \
         bytecode_file_name, public_input_file_name, private_input_file_name, public_output_file_name,                 \
         assignment_table_file_name, circuit_file_name, stack_size, vm.count("check"), log_options[log_level], policy, \
-        max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format, clip);
+        max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format, clip, evm_output_file_name);
 #define CURVE_MAIN_SWITCHER(CURVE_NAME)                                                                             \
     if ("16.16" == fixed_type) {                                                                                    \
         CURVE_MAIN(CURVE_NAME, 1, 1)                                                                                \
