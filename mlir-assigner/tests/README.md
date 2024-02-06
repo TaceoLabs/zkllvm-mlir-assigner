@@ -11,30 +11,33 @@ This document serves two purposes.
 In the home directory of this repository, after building the project, run the
 following command for a quick check:
 
-```
-python tests/run.py --fast
+```bash
+python mlir-assigner/tests/run.py --fast
 ```
 
 If you have some time, run the same script without the `--fast` flag (in the
 home directory, after building). Moreover, grab a coffee. This takes some time:
 
 ```
-python tests/run.py
+python mlir-assigner/tests/run.py
 ```
+
+For users with advanced needs, additional flags and options are available within
+the Python script. However, in most cases, these additional options may not be
+necessary.
 
 ## Folder Structure
 
 Inside the `/tests` folder (where you found this README.md) is a Python script
 and two subfolders.
 
-- `/Models` Inside this folder are test cases for pre-trained models. Currently,
-  there are tests for two MNIST models, one of which is a CNN.
+- `/Models` Inside this folder are test cases for pre-trained models. 
 - `/Ops` Inside this folder, you can find specific test cases for supported ONNX
   operations.
 - `run.py` A python script that executes the tests and gathers the information
   of a run of the test suite. Add the additional flag `--fast` to run only the
   tests in the `/Ops` folder. If you omit the flag, it will also run the tests
-  in the `/Models` folder. Testing the pre-trained models will take some time.
+  in the `/Models` folder. 
 - `README.md` This README.
 
 ### Quick Check

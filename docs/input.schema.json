@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema for input to compiler models",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "memref": {
+        "type": "object",
+        "properties": {
+          "idx": {
+            "type": "number"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "dims": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idx",
+          "data",
+          "dims",
+          "type"
+        ]
+      }
+    },
+    "required": [
+      "memref"
+    ]
+  }
+}
