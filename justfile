@@ -36,3 +36,6 @@ setup-build-bptests:
 # build blueprint fixedpoint tester test
 buildbpfptester:
   make -C build/ -j 12 blueprint_algebra_fixedpoint_plonk_tester_test
+
+build-warn:
+  make -C build/ -j 12 zkml-onnx-compiler mlir-assigner
