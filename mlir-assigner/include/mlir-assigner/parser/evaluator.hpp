@@ -821,20 +821,20 @@ namespace zk_ml_toolchain {
                 auto DstOffset = stack.get_constant(operation.getDestOffset());
                 auto SrcOffset = stack.get_constant(operation.getSrcOffset());
                 DstMemref.copyFrom(SrcMemref, NumElements, DstOffset, SrcOffset);
-            } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
-                UNREACHABLE(std::string("TODO KrnlAcos: link to bluebrint component"));
             } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
-                UNREACHABLE(std::string("TODO KrnlSin: link to bluebrint component"));
-            } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
-                UNREACHABLE(std::string("TODO KrnlAcosh: link to bluebrint component"));
+                handle_asin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
-                UNREACHABLE(std::string("TODO KrnlSinh: link to bluebrint component"));
+                handle_asinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+            } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
+                handle_acos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+            } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
+                handle_acosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
                 handle_tan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
                 handle_atan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
-                UNREACHABLE("TODO: component for atanh not ready");
+                handle_atanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled krnl operation: ") + opName);

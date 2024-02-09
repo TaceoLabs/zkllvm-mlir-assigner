@@ -60,6 +60,50 @@ namespace nil {
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
+        void handle_asin(
+            mlir::KrnlAsinOp &operation,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_asin<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::KrnlAsinOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+        }
+
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
+        void handle_asinh(
+            mlir::KrnlAsinhOp &operation,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_asinh<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::KrnlAsinhOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+        }
+
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_cos(
             mlir::math::CosOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -104,6 +148,51 @@ namespace nil {
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
+        void handle_acos(
+            mlir::KrnlAcosOp &operation,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_acos<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::KrnlAcosOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+        }
+
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
+        void handle_acosh(
+            mlir::KrnlAcoshOp &operation,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_acosh<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::KrnlAcoshOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+        }
+
+
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_tan(
             mlir::KrnlTanOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -123,6 +212,7 @@ namespace nil {
                                      PreLimbs, PostLimbs);
             fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
+
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
         void handle_tanh(
@@ -161,6 +251,28 @@ namespace nil {
             auto input = PREPARE_UNARY_INPUT(mlir::KrnlAtanOp);
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+        }
+
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
+        void handle_atanh(
+            mlir::KrnlAtanhOp &operation,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            using component_type = components::fix_atanh<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
+            auto input = PREPARE_UNARY_INPUT(mlir::KrnlAtanhOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);

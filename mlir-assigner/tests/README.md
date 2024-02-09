@@ -31,13 +31,13 @@ necessary.
 Inside the `/tests` folder (where you found this README.md) is a Python script
 and two subfolders.
 
-- `/Models` Inside this folder are test cases for pre-trained models. 
+- `/Models` Inside this folder are test cases for pre-trained models.
 - `/Ops` Inside this folder, you can find specific test cases for supported ONNX
   operations.
 - `run.py` A python script that executes the tests and gathers the information
   of a run of the test suite. Add the additional flag `--fast` to run only the
   tests in the `/Ops` folder. If you omit the flag, it will also run the tests
-  in the `/Models` folder. 
+  in the `/Models` folder.
 - `README.md` This README.
 
 ### Quick Check
@@ -93,7 +93,7 @@ long as it is applicable for ZK).
 | **Asin**                      |        :x:         | :white_check_mark: |                                                    |
 | **Asinh**                     |        :x:         | :white_check_mark: |                                                    |
 | **Atan**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **Atanh**                     |        :x:         | :white_check_mark: |                                                    |
+| **Atanh**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **AveragePool**               | :white_check_mark: | :white_check_mark: |                                                    |
 | **BatchNormalization**        | :white_check_mark: | :white_check_mark: |                                                    |
 | **Bernoulli**                 |        :x:         |        :x:         |                                                    |
