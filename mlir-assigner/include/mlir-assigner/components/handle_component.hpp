@@ -32,11 +32,16 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_int.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sinh.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/asin.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/asinh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cosh.hpp>
-#include <nil/blueprint/components/algebra/fixedpoint/plonk/atan.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/acos.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/acosh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tan.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tanh.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/atan.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/atanh.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/exp_ranged.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmin.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/argmax.hpp>
