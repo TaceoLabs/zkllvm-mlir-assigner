@@ -85,7 +85,7 @@ long as it is applicable for ZK).
 | **Acosh**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Adagrad**                   |        :x:         |        :x:         |                                                    |
 | **Adam**                      |        :x:         |        :x:         |                                                    |
-| **Add**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Add**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **And**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **ArgMax**                    | :white_check_mark: | :white_check_mark: | Apparently select_last_index always 1 in ONNX-MLIR |
 | **ArgMin**                    | :white_check_mark: | :white_check_mark: | Apparently select_last_index always 1 in ONNX-MLIR |
@@ -162,11 +162,11 @@ long as it is applicable for ZK).
 | **HardSwish**                 |        :x:         |        :x:         |                                                    |
 | **Hardmax**                   |        :x:         | :white_check_mark: |                                                    |
 | **Identity**                  | :white_check_mark: | :white_check_mark: |                                                    |
-| **If**                        |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **If**                        |        :x:         | :white_check_mark: | Not supported at the moment due to Zk limitations. |
 | **Imputer**                   |        :x:         |        :x:         |                                                    |
 | **InstanceNormalization**     | :white_check_mark: | :white_check_mark: |                                                    |
-| **IsInf**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
-| **IsNaN**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **IsInf**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations.              |
+| **IsNaN**                     |        :x:         | :white_check_mark: | Cannot support due to zk limitations.              |
 | **LRN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LSTM**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **LabelEncoder**              |        :x:         |        :x:         |                                                    |
@@ -178,7 +178,7 @@ long as it is applicable for ZK).
 | **LinearRegressor**           |        :x:         |        :x:         |                                                    |
 | **Log**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LogSoftmax**                | :white_check_mark: | :white_check_mark: |                                                    |
-| **Loop**                      |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **Loop**                      |        :x:         | :white_check_mark: | Cannot support due to zk limitations.              |
 | **LpNormalization**           |        :x:         |        :x:         |                                                    |
 | **LpPool**                    |        :x:         |        :x:         |                                                    |
 | **MatMul**                    | :white_check_mark: | :white_check_mark: |                                                    |
@@ -241,7 +241,7 @@ long as it is applicable for ZK).
 | **SVMClassifier**             |        :x:         |        :x:         |                                                    |
 | **SVMRegressor**              |        :x:         |        :x:         |                                                    |
 | **Scaler**                    |        :x:         |        :x:         |                                                    |
-| **Scan**                      |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
+| **Scan**                      |        :x:         | :white_check_mark: | Not supported at the moment due to ZK limitations. |
 | **Scatter**                   |        :x:         |        :x:         |                                                    |
 | **ScatterElements**           |        :x:         | :white_check_mark: |                                                    |
 | **ScatterND**                 |        :x:         | :white_check_mark: |                                                    |
@@ -256,7 +256,7 @@ long as it is applicable for ZK).
 | **Shape**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Shrink**                    |        :x:         |        :x:         |                                                    |
 | **Sigmoid**                   | :white_check_mark: | :white_check_mark: |                                                    |
-| **Sign**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Sign**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Sin**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Sinh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Size**                      | :white_check_mark: | :white_check_mark: |                                                    |
@@ -271,8 +271,8 @@ long as it is applicable for ZK).
 | **Sqrt**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Squeeze**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **StringNormalizer**          |        :x:         |        :x:         |                                                    |
-| **Sub**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
-| **Sum**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Sub**                       | :white_check_mark: | :white_check_mark: |                                                    |
+| **Sum**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Tan**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Tanh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **TfIdfVectorizer**           |        :x:         |        :x:         |                                                    |
@@ -285,7 +285,7 @@ long as it is applicable for ZK).
 | **Trilu**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Unique**                    |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **Unsqueeze**                 | :white_check_mark: | :white_check_mark: |                                                    |
-| **Upsample**                  |        :x:         | :white_check_mark: | Deprecated since version 10, therefore not support |
+| **Upsample**                  |        :x:         | :white_check_mark: | Deprecated since version 10, therefore no support. |
 | **Where**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Xor**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **ZipMap**                    |        :x:         |        :x:         |                                                    |
