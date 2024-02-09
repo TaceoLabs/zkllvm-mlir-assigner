@@ -127,12 +127,12 @@ long as it is applicable for ZK).
 | **DFT**                       |        :x:         |        :x:         |                                                    |
 | **DeformConv**                |        :x:         |        :x:         |                                                    |
 | **DepthToSpace**              | :white_check_mark: | :white_check_mark: |                                                    |
-| **DequantizeLinear**          |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
+| **DequantizeLinear**          |        :x:         | :white_check_mark: | Quantize operations not supported at the moment    |
 | **Det**                       |        :x:         |        :x:         |                                                    |
 | **DictVectorizer**            |        :x:         |        :x:         |                                                    |
 | **Div**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Dropout**                   | :white_check_mark: | :white_check_mark: | This is a noop in inference                        |
-| **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
+| **DynamicQuantizeLinear**     |        :x:         | :white_check_mark: | Quantize operations not supported at the moment    |
 | **Einsum**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **Elu**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Equal**                     | :white_check_mark: | :white_check_mark: |                                                    |
@@ -213,7 +213,7 @@ long as it is applicable for ZK).
 | **Pow**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **QLinearConv**               |        :x:         |        :x:         |                                                    |
 | **QLinearMatMul**             |        :x:         |        :x:         |                                                    |
-| **QuantizeLinear**            |        :x:         | :white_check_mark: | Low priority as this is a quantize operation       |
+| **QuantizeLinear**            |        :x:         | :white_check_mark: | Quantize operations not supported at the moment    |
 | **RNN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **RandomNormal**              |        :x:         |        :x:         |                                                    |
 | **RandomNormalLike**          |        :x:         |        :x:         |                                                    |
@@ -234,7 +234,7 @@ long as it is applicable for ZK).
 | **Relu**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Reshape**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Resize**                    |        :x:         | :white_check_mark: |                                                    |
-| **ReverseSequence**           |        :x:         | :white_check_mark: |                                                    |
+| **ReverseSequence**           |        :x:         | :white_check_mark: | Sequences not supported at the moment.             |
 | **RoiAlign**                  |        :x:         |        :x:         |                                                    |
 | **Round**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **STFT**                      |        :x:         |        :x:         |                                                    |
@@ -250,7 +250,7 @@ long as it is applicable for ZK).
 | **SequenceConstruct**         |        :x:         |        :x:         |                                                    |
 | **SequenceEmpty**             |        :x:         |        :x:         |                                                    |
 | **SequenceErase**             |        :x:         |        :x:         |                                                    |
-| **SequenceInsert**            |        :x:         | :white_check_mark: |                                                    |
+| **SequenceInsert**            |        :x:         | :white_check_mark: | Sequences not supported at the moment.             |
 | **SequenceLength**            |        :x:         |        :x:         |                                                    |
 | **SequenceMap**               |        :x:         |        :x:         |                                                    |
 | **Shape**                     | :white_check_mark: | :white_check_mark: |                                                    |
