@@ -81,8 +81,8 @@ long as it is applicable for ZK).
 | Op                            |    zkML Support    | ONNX-MLIR support  | Limitations                                        |
 | ----------------------------- | :----------------: | :----------------: | -------------------------------------------------- |
 | **Abs**                       | :white_check_mark: | :white_check_mark: |                                                    |
-| **Acos**                      |        :x:         | :white_check_mark: | Supported in assigner, no backend support          |
-| **Acosh**                     |        :x:         | :white_check_mark: | Supported in assigner, no backend support          |
+| **Acos**                      | :white_check_mark: | :white_check_mark: |                                                    |
+| **Acosh**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Adagrad**                   |        :x:         |        :x:         |                                                    |
 | **Adam**                      |        :x:         |        :x:         |                                                    |
 | **Add**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
@@ -90,8 +90,8 @@ long as it is applicable for ZK).
 | **ArgMax**                    | :white_check_mark: | :white_check_mark: | Apparently select_last_index always 1 in ONNX-MLIR |
 | **ArgMin**                    | :white_check_mark: | :white_check_mark: | Apparently select_last_index always 1 in ONNX-MLIR |
 | **ArrayFeatureExtractor**     |        :x:         |        :x:         |                                                    |
-| **Asin**                      |        :x:         | :white_check_mark: |                                                    |
-| **Asinh**                     |        :x:         | :white_check_mark: |                                                    |
+| **Asin**                      | :white_check_mark: | :white_check_mark: |                                                    |
+| **Asinh**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **Atan**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Atanh**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **AveragePool**               | :white_check_mark: | :white_check_mark: |                                                    |
