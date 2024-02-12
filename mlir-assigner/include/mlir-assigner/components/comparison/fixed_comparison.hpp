@@ -53,7 +53,8 @@ namespace nil {
                     &bp,
                 assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                std::uint32_t start_row) {
+                std::uint32_t start_row,
+                generation_mode gen_mode) {
                 using component_type = FCmpComponent;
                 using manifest_reader =
                     detail::ManifestReader<FCmpComponent, ArithmetizationParams, PreLimbs, PostLimbs>;
@@ -62,7 +63,7 @@ namespace nil {
 
                 FCmpComponent component(p.witness, manifest_reader::get_constants(),
                                         manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
-                return fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row);
+                return fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
             }
         }    // namespace
 
@@ -74,13 +75,13 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_cmp_extended<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
             // we compare 64 bits with this configuration
-            auto result =
-                call_component<PreLimbs, PostLimbs, component_type>(operation, stack, bp, assignment, start_row);
+            auto result = call_component<PreLimbs, PostLimbs, component_type>(operation, stack, bp, assignment,
+                                                                              start_row, gen_mode);
             switch (operation.getPredicate()) {
                 case mlir::arith::CmpFPredicate::UGT:
                 case mlir::arith::CmpFPredicate::OGT: {
@@ -132,12 +133,12 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_cmp_extended<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
             // we compare 64 bits with this configuration
-            auto result = call_component<2, 2, component_type>(operation, stack, bp, assignment, start_row);
+            auto result = call_component<2, 2, component_type>(operation, stack, bp, assignment, start_row, gen_mode);
             switch (operation.getPredicate()) {
                 case mlir::arith::CmpIPredicate::sgt:
                     stack.push_local(operation.getResult(), result.gt);

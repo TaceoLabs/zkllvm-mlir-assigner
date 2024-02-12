@@ -25,11 +25,10 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &nextIndex,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_gather_acc<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType,
-                basic_non_native_policy<BlueprintFieldType>>;
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             using input_type = typename component_type::input_type;
             input_type input;
@@ -45,7 +44,7 @@ namespace nil {
                                      manifest_reader::get_public_inputs(),
                                      var_value(assignment, nextIndex));
 
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
     }    // namespace blueprint

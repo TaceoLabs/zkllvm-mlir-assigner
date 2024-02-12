@@ -13,6 +13,7 @@
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/policy/policy_manager.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -25,7 +26,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_exp_ranged<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -36,7 +37,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -47,7 +48,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_exp<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -58,7 +59,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
     }    // namespace blueprint
 }    // namespace nil

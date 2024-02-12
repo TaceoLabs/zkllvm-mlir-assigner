@@ -69,14 +69,27 @@
 #define PREPARE_UNARY_INPUT(OP)                                                                                        \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP, typename component_type::input_type>( \
         operation, stack, bp, assignment);
-#define PREPARE_BINARY_INPUT(OP)                          \
-    prepare_binary_operation_input<BlueprintFieldType,    \
-                                   ArithmetizationParams, \
-                                   OP,                    \
+#define PREPARE_BINARY_INPUT(OP)                                                  \
+    prepare_binary_operation_input<BlueprintFieldType, ArithmetizationParams, OP, \
                                    typename component_type::input_type>(operation, stack, bp, assignment);
 
 namespace nil {
     namespace blueprint {
+
+        enum class generation_mode : uint8_t {
+            NONE = 0,
+            CIRCUIT = 1 << 0,
+            ASSIGNMENTS = 1 << 1,
+            FALSE_ASSIGNMENTS = 1 << 2,
+        };
+
+        constexpr enum generation_mode operator|(const enum generation_mode self, const enum generation_mode val) {
+            return static_cast<enum generation_mode>(static_cast<uint8_t>(self) | static_cast<uint8_t>(val));
+        }
+        constexpr enum generation_mode operator&(const enum generation_mode self, const enum generation_mode val) {
+            return static_cast<enum generation_mode>(static_cast<uint8_t>(self) & static_cast<uint8_t>(val));
+        }
+
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename UnaryOp, typename input_type>
         input_type prepare_unary_operation_input(
             UnaryOp &operation,
@@ -106,7 +119,7 @@ namespace nil {
         void handle_component_input(
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            typename ComponentType::input_type &instance_input) {
+            typename ComponentType::input_type &instance_input, generation_mode gen_mode) {
 
             using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
@@ -117,7 +130,15 @@ namespace nil {
                 bool found = (used_rows.find(v.get().rotation) != used_rows.end());
                 if (!found &&
                     (v.get().type == var::column_type::witness || v.get().type == var::column_type::constant)) {
-                    const auto new_v = save_shared_var(assignment, v);
+                    var new_v;
+                    if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
+                        new_v = save_shared_var(assignment, v);
+                    } else {
+                        // FRANCO_TODO: does this else block make sense?
+                        const auto &shared_idx = assignment.shared_column_size(0);
+                        assignment.shared(0, shared_idx) = BlueprintFieldType::value_type::zero();
+                        new_v = var(1, shared_idx, false, var::column_type::public_input);
+                    }
                     v.get().index = new_v.index;
                     v.get().rotation = new_v.rotation;
                     v.get().relative = new_v.relative;
@@ -128,14 +149,12 @@ namespace nil {
 
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
         typename component_type::result_type fill_trace_get_result(
-            component_type &component,
-            typename component_type::input_type &input,
-            Op &mlir_op,
+            component_type &component, typename component_type::input_type &input, Op &mlir_op,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
 
             if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                 auto lookup_tables = component.component_custom_lookup_tables();
@@ -152,22 +171,21 @@ namespace nil {
                 }
             };
 
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input);
+            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input,
+                                                                                              gen_mode);
 
             components::generate_circuit(component, bp, assignment, input, start_row);
             return components::generate_assignments(component, assignment, input, start_row);
         }
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
         void fill_trace(
-            component_type &component,
-            typename component_type::input_type &input,
-            Op &mlir_op,
+            component_type &component, typename component_type::input_type &input, Op &mlir_op,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
-            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, start_row);
+            std::uint32_t start_row, generation_mode gen_mode) {
+            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, start_row, gen_mode);
             stack.push_local(mlir_op.getResult(), result.output);
         }
     }    // namespace blueprint

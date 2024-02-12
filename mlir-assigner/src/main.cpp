@@ -407,6 +407,7 @@ int curve_dependent_main(std::string bytecode_file_name,
                          bool check_validity,
                          boost::log::trivial::severity_level log_level,
                          const std::string &policy,
+                         nil::blueprint::generation_mode gen_mode,
                          std::uint32_t max_num_provers,
                          std::uint32_t max_lookup_rows,
                          std::uint32_t target_prover,
@@ -470,7 +471,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     // parser does not have a check_validity argument
 
     nil::blueprint::parser<BlueprintFieldType, ArithmetizationParams, PreLimbs, PostLimbs> parser_instance(
-        stack_size, log_level, max_num_provers, target_prover, policy, circuit_output_print_format);
+        stack_size, log_level, max_num_provers, target_prover, policy, gen_mode, circuit_output_print_format);
 
     mlir::OwningOpRef<mlir::ModuleOp> module = parser_instance.parseMLIRFile(bytecode_file_name.c_str());
     if (!module) {
@@ -523,30 +524,35 @@ int curve_dependent_main(std::string bytecode_file_name,
                "Missmatch assignments circuits size");
     if (parser_instance.assignments.size() == 1 && (target_prover == 0 || target_prover == invalid_target_prover)) {
         // print assignment table
-        std::ofstream otable;
-        otable.open(assignment_table_file_name, std::ios_base::binary | std::ios_base::out);
-        if (!otable) {
-            std::cout << "Something wrong with output " << assignment_table_file_name << std::endl;
-            return 1;
+        if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::ASSIGNMENTS)) {
+            std::ofstream otable;
+            otable.open(assignment_table_file_name, std::ios_base::binary | std::ios_base::out);
+            if (!otable) {
+                std::cout << "Something wrong with output " << assignment_table_file_name << std::endl;
+                return 1;
+            }
+
+            print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType, BlueprintFieldType>(
+                parser_instance.assignments[0], print_table_kind::FULL, ComponentConstantColumns,
+                ComponentSelectorColumns, otable);
+
+            otable.close();
         }
 
-        print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType, BlueprintFieldType>(
-            parser_instance.assignments[0], print_table_kind::FULL, ComponentConstantColumns, ComponentSelectorColumns,
-            otable);
+        // print circuit
+        if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::CIRCUIT)) {
+            std::ofstream ocircuit;
+            ocircuit.open(circuit_file_name, std::ios_base::binary | std::ios_base::out);
+            if (!ocircuit) {
+                std::cout << "Something wrong with output " << circuit_file_name << std::endl;
+                return 1;
+            }
 
-        otable.close();
-
-        // print assignment circuit
-        std::ofstream ocircuit;
-        ocircuit.open(circuit_file_name, std::ios_base::binary | std::ios_base::out);
-        if (!ocircuit) {
-            std::cout << "Something wrong with output " << circuit_file_name << std::endl;
-            return 1;
+            print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
+                parser_instance.circuits[0], parser_instance.assignments[0], false, ocircuit);
+            ocircuit.close();
         }
 
-        print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
-            parser_instance.circuits[0], parser_instance.assignments[0], false, ocircuit);
-        ocircuit.close();
         if (!evm_output_file_name.empty()) {
             // write the json for EVM verifier if necessary
             assert(1 == parser_instance.assignments[0].public_inputs_amount() &&
@@ -556,8 +562,7 @@ int curve_dependent_main(std::string bytecode_file_name,
             std::ofstream oevm_input;
             oevm_input.open(evm_output_file_name, std::ios_base::out);
             if (!oevm_input) {
-                std::cout << "Something wrong with output "
-                          << evm_output_file_name << std::endl;
+                std::cout << "Something wrong with output " << evm_output_file_name << std::endl;
                 return 1;
             }
             auto &pub_input_column = parser_instance.assignments[0].public_input(0);
@@ -565,7 +570,7 @@ int curve_dependent_main(std::string bytecode_file_name,
             // we just print it without boost as we do not want to keep the whole column multiple times
             // in memory
             for (std::uint32_t i = 0; i < pub_input_rows - 1; ++i) {
-                oevm_input << "{\"field\": " << pub_input_column[i] << "},";
+                oevm_input << "{\"field\": " << pub_input_column[i] << "},\n";
             }
             oevm_input << "{\"field\": " << pub_input_column[pub_input_rows - 1] << "}]";
             oevm_input.close();
@@ -578,33 +583,38 @@ int curve_dependent_main(std::string bytecode_file_name,
             (target_prover == invalid_target_prover) ? parser_instance.assignments.size() : target_prover + 1;
         for (std::uint32_t idx = start_idx; idx < end_idx; idx++) {
             // print assignment table
-            std::ofstream otable;
-            otable.open(assignment_table_file_name + std::to_string(idx), std::ios_base::binary | std::ios_base::out);
-            if (!otable) {
-                std::cout << "Something wrong with output " << assignment_table_file_name + std::to_string(idx)
-                          << std::endl;
-                return 1;
+            if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::ASSIGNMENTS)) {
+                std::ofstream otable;
+                otable.open(assignment_table_file_name + std::to_string(idx),
+                            std::ios_base::binary | std::ios_base::out);
+                if (!otable) {
+                    std::cout << "Something wrong with output " << assignment_table_file_name + std::to_string(idx)
+                              << std::endl;
+                    return 1;
+                }
+
+                print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType, BlueprintFieldType>(
+                    parser_instance.assignments[idx], print_table_kind::PRIVATE, ComponentConstantColumns,
+                    ComponentSelectorColumns, otable);
+
+                otable.close();
             }
 
-            print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType, BlueprintFieldType>(
-                parser_instance.assignments[idx], print_table_kind::PRIVATE, ComponentConstantColumns,
-                ComponentSelectorColumns, otable);
+            // print circuit
+            if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::ASSIGNMENTS)) {
+                std::ofstream ocircuit;
+                ocircuit.open(circuit_file_name + std::to_string(idx), std::ios_base::binary | std::ios_base::out);
+                if (!ocircuit) {
+                    std::cout << "Something wrong with output " << circuit_file_name + std::to_string(idx) << std::endl;
+                    return 1;
+                }
 
-            otable.close();
+                ASSERT_MSG(idx < parser_instance.circuits.size(), "Not found circuit");
+                print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
+                    parser_instance.circuits[idx], parser_instance.assignments[idx], (idx > 0), ocircuit);
 
-            // print assignment table
-            std::ofstream ocircuit;
-            ocircuit.open(circuit_file_name + std::to_string(idx), std::ios_base::binary | std::ios_base::out);
-            if (!ocircuit) {
-                std::cout << "Something wrong with output " << circuit_file_name + std::to_string(idx) << std::endl;
-                return 1;
+                ocircuit.close();
             }
-
-            ASSERT_MSG(idx < parser_instance.circuits.size(), "Not found circuit");
-            print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
-                parser_instance.circuits[idx], parser_instance.assignments[idx], (idx > 0), ocircuit);
-
-            ocircuit.close();
         }
     } else {
         std::cout << "No data for print: target prover " << target_prover << ", actual number of provers "
@@ -612,7 +622,8 @@ int curve_dependent_main(std::string bytecode_file_name,
         return 1;
     }
 
-    if (check_validity) {
+    if (check_validity && (std::uint8_t(gen_mode & nil::blueprint::generation_mode::ASSIGNMENTS) &&
+                           std::uint8_t(gen_mode & nil::blueprint::generation_mode::CIRCUIT))) {
         if (parser_instance.assignments.size() == 1 && (target_prover == 0 || target_prover == invalid_target_prover)) {
             ASSERT_MSG(
                 nil::blueprint::is_satisfied(parser_instance.circuits[0].get(), parser_instance.assignments[0].get()),
@@ -664,6 +675,7 @@ int main(int argc, char *argv[]) {
             ("print_circuit_output", "deprecated, use \"-f\" instead")
             ("print-circuit-output-format,f", boost::program_options::value<std::string>(), "print output of the circuit (dec, hex)")
             ("policy", boost::program_options::value<std::string>(), "Policy for creating circuits. Possible values: default")
+            ("generate-type", boost::program_options::value<std::string>(), "Defien generated output. Possible values: circuit, assignment, circuit-assignment. Default value is circuit-assignment")
             ("max-num-provers", boost::program_options::value<int>(), "Maximum number of provers. Possible values >= 1")
             ("max-lookup-rows", boost::program_options::value<int>(), "Maximum number of provers. Possible values >= 1")
             ("target-prover", boost::program_options::value<int>(), "Assignment table and circuit will be generated only for defined prover. Possible values [0, max-num-provers)");
@@ -718,6 +730,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    nil::blueprint::generation_mode gen_mode =
+        nil::blueprint::generation_mode::ASSIGNMENTS | nil::blueprint::generation_mode::CIRCUIT;
+
+    if (vm.count("generate-type")) {
+        const auto generate_type = vm["generate-type"].as<std::string>();
+        if (generate_type == "circuit") {
+            gen_mode = nil::blueprint::generation_mode::CIRCUIT;
+        } else if (generate_type == "assignment") {
+            gen_mode = nil::blueprint::generation_mode::ASSIGNMENTS;
+        } else if (generate_type != "circuit-assignment") {
+            std::cerr << "Invalid command line argument - generate-type. " << generate_type << " is wrong value."
+                      << std::endl;
+            std::cout << options_desc << std::endl;
+            return 1;
+        }
+    }
+
     if (!vm.count("public-input") && !vm.count("private-input")) {
         std::cerr << "Both public and private input file names are not specified" << std::endl;
         std::cout << options_desc << std::endl;
@@ -751,7 +780,7 @@ int main(int argc, char *argv[]) {
 
     if (vm.count("assignment-table")) {
         assignment_table_file_name = vm["assignment-table"].as<std::string>();
-    } else {
+    } else if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::ASSIGNMENTS)) {
         std::cerr << "Invalid command line argument - assignment table file name is not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
@@ -759,7 +788,7 @@ int main(int argc, char *argv[]) {
 
     if (vm.count("circuit")) {
         circuit_file_name = vm["circuit"].as<std::string>();
-    } else {
+    } else if (std::uint8_t(gen_mode & nil::blueprint::generation_mode::CIRCUIT)) {
         std::cerr << "Invalid command line argument - circuit file name is not specified" << std::endl;
         std::cout << options_desc << std::endl;
         return 1;
@@ -899,7 +928,9 @@ int main(int argc, char *argv[]) {
     return curve_dependent_main<CURVE_NAME, PRE, POST>(                                                               \
         bytecode_file_name, public_input_file_name, private_input_file_name, public_output_file_name,                 \
         assignment_table_file_name, circuit_file_name, stack_size, vm.count("check"), log_options[log_level], policy, \
-        max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format, clip, evm_output_file_name);
+        gen_mode, max_num_provers, max_lookup_rows, target_prover, circuit_output_print_format, clip,                 \
+        evm_output_file_name);
+
 #define CURVE_MAIN_SWITCHER(CURVE_NAME)                                                                             \
     if ("16.16" == fixed_type) {                                                                                    \
         CURVE_MAIN(CURVE_NAME, 1, 1)                                                                                \

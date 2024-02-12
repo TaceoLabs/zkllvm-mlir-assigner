@@ -46,6 +46,7 @@
 #include <mlir-assigner/parser/evaluator.hpp>
 
 #include <mlir-assigner/policy/policy_manager.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -55,10 +56,11 @@ namespace nil {
         struct parser {
 
             parser(long stack_size, boost::log::trivial::severity_level log_level, std::uint32_t max_num_provers,
-                   std::uint32_t target_prover_idx, const std::string &kind = "",
+                   std::uint32_t target_prover_idx, const std::string &policy = "",
+                   generation_mode gen_mode = generation_mode::ASSIGNMENTS & generation_mode::CIRCUIT,
                    print_format output_print_format = no_print) :
                 max_num_provers(max_num_provers),
-                print_output_format(output_print_format) {
+                gen_mode(gen_mode), print_output_format(output_print_format) {
                 if (max_num_provers != 1) {
                     throw std::runtime_error(
                         "Currently only one prover is supported, please "
@@ -70,7 +72,7 @@ namespace nil {
                 //         "set target_prover_idx to 0");
                 // }
                 log.set_level(log_level);
-                detail::PolicyManager::set_policy(kind);
+                detail::PolicyManager::set_policy(policy);
 
                 // onnx_mlir::registerDialects(context);
                 onnx_mlir::loadDialects(context);
@@ -120,8 +122,8 @@ namespace nil {
                           std::string &clip) {
 
                 zk_ml_toolchain::evaluator<BlueprintFieldType, ArithmetizationParams, PreLimbs, PostLimbs> evaluator(
-                    circuits[0], assignments[0], public_input, private_input, public_output, print_output_format, clip,
-                    log);
+                    circuits[0], assignments[0], public_input, private_input, public_output, gen_mode,
+                    print_output_format, clip, log);
                 evaluator.evaluate(std::move(module));
 
                 if (nil::blueprint::print_format::no_print != print_output_format) {
@@ -134,6 +136,7 @@ namespace nil {
             mlir::MLIRContext context;
             bool finished = false;
             logger log;
+            generation_mode gen_mode;
             print_format print_output_format;
             std::uint32_t max_num_provers;
             std::shared_ptr<circuit<ArithmetizationType>> bp_ptr;

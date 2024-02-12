@@ -28,7 +28,7 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &nextIndex,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_argmin<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -44,7 +44,8 @@ namespace nil {
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row);
+            auto result =
+                fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
             stack.push_local(operation.getResult(0), result.min);
             stack.push_local(operation.getResult(1), result.index);
         }
@@ -58,7 +59,7 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &nextIndex,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_argmax<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -74,7 +75,8 @@ namespace nil {
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row);
+            auto result =
+                fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
             stack.push_local(operation.getResult(0), result.max);
             stack.push_local(operation.getResult(1), result.index);
         }

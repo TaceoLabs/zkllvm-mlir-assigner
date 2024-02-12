@@ -1,7 +1,6 @@
 #ifndef CRYPTO3_ASSIGNER_FIXEDPOINT_TRIGONOMETRIC_HPP
 #define CRYPTO3_ASSIGNER_FIXEDPOINT_TRIGONOMETRIC_HPP
 
-
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
 #include <nil/blueprint/component.hpp>
@@ -23,7 +22,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_sin<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -34,7 +33,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -45,7 +44,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_sinh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -55,7 +54,7 @@ namespace nil {
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -66,7 +65,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_asin<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -77,7 +76,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -88,7 +87,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_asinh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -99,7 +98,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -110,7 +109,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_cos<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -121,7 +120,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -132,7 +131,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_cosh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -143,7 +142,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -154,7 +153,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_acos<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -165,7 +164,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -176,7 +175,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_acosh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -187,9 +186,8 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
-
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
@@ -199,7 +197,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_tan<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -210,7 +208,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -221,7 +219,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_tanh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -232,7 +230,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -243,7 +241,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_atan<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -254,7 +252,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -265,7 +263,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            std::uint32_t start_row, generation_mode gen_mode) {
             using component_type = components::fix_atanh<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -276,7 +274,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
         }
     }    // namespace blueprint
 }    // namespace nil
