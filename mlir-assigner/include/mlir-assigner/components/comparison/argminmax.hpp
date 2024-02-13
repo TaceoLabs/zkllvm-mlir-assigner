@@ -33,45 +33,24 @@ namespace nil {
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            using input_type = typename component_type::input_type;
-            input_type instance_input;
-            instance_input.x = stack.get_local(operation.getAcc());
-            instance_input.y = stack.get_local(operation.getNext());
-            instance_input.index_x = stack.get_local(operation.getAccIndex());
+            typename component_type::input_type input;
+            input.x = stack.get_local(operation.getAcc());
+            input.y = stack.get_local(operation.getNext());
+            input.index_x = stack.get_local(operation.getAccIndex());
 
-            using manifest_reader =
-                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-            const auto p =
-                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
-                auto lookup_tables = component.component_custom_lookup_tables();
-                for (auto &t : lookup_tables) {
-                    bp.register_lookup_table(
-                        std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
-                }
-            };
-
-            if constexpr (nil::blueprint::use_lookups<component_type>()) {
-                auto lookup_tables = component.component_lookup_tables();
-                for (auto &[k, v] : lookup_tables) {
-                    bp.reserve_table(k);
-                }
-            };
-
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment,
-                                                                                              instance_input);
-
-            components::generate_circuit(component, bp, assignment, instance_input, start_row);
-            auto result = components::generate_assignments(component, assignment, instance_input, start_row);
+            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row);
             stack.push_local(operation.getResult(0), result.min);
             stack.push_local(operation.getResult(1), result.index);
         }
 
-        template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
+        template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
         void handle_argmax(
             mlir::zkml::ArgMaxOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -84,40 +63,18 @@ namespace nil {
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            using input_type = typename component_type::input_type;
-            input_type instance_input;
-            instance_input.x = stack.get_local(operation.getAcc());
-            instance_input.y = stack.get_local(operation.getNext());
-            instance_input.index_x = stack.get_local(operation.getAccIndex());
+            typename component_type::input_type input;
+            input.x = stack.get_local(operation.getAcc());
+            input.y = stack.get_local(operation.getNext());
+            input.index_x = stack.get_local(operation.getAccIndex());
 
-            using manifest_reader =
-                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-            const auto p =
-                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
-                auto lookup_tables = component.component_custom_lookup_tables();
-                for (auto &t : lookup_tables) {
-                    bp.register_lookup_table(
-                        std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
-                }
-            };
-
-            if constexpr (nil::blueprint::use_lookups<component_type>()) {
-                auto lookup_tables = component.component_lookup_tables();
-                for (auto &[k, v] : lookup_tables) {
-                    bp.reserve_table(k);
-                }
-            };
-
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment,
-                                                                                              instance_input);
-
-            components::generate_circuit(component, bp, assignment, instance_input, start_row);
-            auto result = components::generate_assignments(component, assignment, instance_input, start_row);
+            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row);
             stack.push_local(operation.getResult(0), result.max);
             stack.push_local(operation.getResult(1), result.index);
         }

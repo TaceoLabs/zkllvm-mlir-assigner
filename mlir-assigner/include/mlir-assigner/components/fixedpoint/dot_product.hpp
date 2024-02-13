@@ -13,72 +13,14 @@
 
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
-        namespace detail {
-
-            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
-                     typename ArithmetizationParams>
-            typename components::fix_dot_rescale_2_gates<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
-                handle_fixedpoint_dot_product_component(
-                    memref<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>>
-                        x,
-                    memref<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>>
-                        y,
-                    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &zero_var,
-                    circuit_proxy<
-                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                                                 ArithmetizationParams>> &assignment,
-                    std::uint32_t start_row) {
-
-                using component_type = components::fix_dot_rescale_2_gates<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-                auto dims = x.getDims();
-                ASSERT(dims.size() == 1 && "must be one-dim for dot product");
-                const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), PostLimbs));
-                component_type component_instance(p.witness, manifest_reader::get_constants(),
-                                                  manifest_reader::get_public_inputs(), dims.front(), PostLimbs);
-
-                if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
-                    auto lookup_tables = component_instance.component_custom_lookup_tables();
-                    for (auto &t : lookup_tables) {
-                        bp.register_lookup_table(
-                            std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
-                    }
-                };
-
-                if constexpr (nil::blueprint::use_lookups<component_type>()) {
-                    auto lookup_tables = component_instance.component_lookup_tables();
-                    for (auto &[k, v] : lookup_tables) {
-                        bp.reserve_table(k);
-                    }
-                };
-
-                using DotProductInputType =
-                    const typename components::plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType,
-                                                                                    ArithmetizationParams>::input_type;
-
-                // TACEO_TODO in the previous line I hardcoded 1 for now!!! CHANGE THAT
-                // TACEO_TODO make an assert that both have the same scale?
-                // TACEO_TODO we probably have to extract the field element from the type here
-
-                DotProductInputType input = {x.getData(), y.getData(), zero_var};
-
-                components::generate_circuit(component_instance, bp, assignment, input, start_row);
-                return components::generate_assignments(component_instance, assignment, input, start_row);
-            }
-
-        }    // namespace detail
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
-        void handle_fixedpoint_dot_product_component(
+        void handle_dot_product(
             mlir::zkml::DotProductOp &operation,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &zero_var,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
@@ -86,12 +28,26 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            auto &lhs = stack.get_memref(operation.getLhs());
-            auto &rhs = stack.get_memref(operation.getRhs());
+            using component_type = components::fix_dot_rescale_2_gates<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            auto result = detail::handle_fixedpoint_dot_product_component<PreLimbs, PostLimbs>(lhs, rhs, zero_var, bp,
-                                                                                                 assignment, start_row);
-            stack.push_local(operation.getResult(), result.output);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+
+            auto &x = stack.get_memref(operation.getLhs());
+            auto &y = stack.get_memref(operation.getRhs());
+            auto dims = x.getDims();
+            ASSERT(dims.size() == 1 && "must be one-dim for dot product");
+            const auto p =
+                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), PostLimbs));
+            component_type component_instance(p.witness, manifest_reader::get_constants(),
+                                              manifest_reader::get_public_inputs(), dims.front(), PostLimbs);
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     dims.front(), PostLimbs);
+            typename component_type::input_type input = {x.getData(), y.getData(), zero_var};
+
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
     }    // namespace blueprint
 }    // namespace nil

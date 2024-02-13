@@ -13,67 +13,30 @@
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/policy/policy_manager.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
-        namespace detail {
-
-            template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
-            typename components::fix_ceil<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
-                handle_fixedpoint_ceil_component(
-                    crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>
-                        x,
-                    circuit_proxy<
-                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                                                 ArithmetizationParams>> &assignment,
-                    std::uint32_t start_row) {
-
-                using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
-
-                using component_type = components::fix_ceil<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-
-                using manifest_reader = ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-                const auto p = PolicyManager::get_parameters(manifest_reader::get_witness(0));
-                component_type component_instance(p.witness, manifest_reader::get_constants(),
-                                                  manifest_reader::get_public_inputs(), PreLimbs, PostLimbs);
-
-                if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
-                    auto lookup_tables = component_instance.component_custom_lookup_tables();
-                    for (auto &t : lookup_tables) {
-                        bp.register_lookup_table(
-                            std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
-                    }
-                };
-
-                if constexpr (nil::blueprint::use_lookups<component_type>()) {
-                    auto lookup_tables = component_instance.component_lookup_tables();
-                    for (auto &[k, v] : lookup_tables) {
-                        bp.reserve_table(k);
-                    }
-                };
-
-                components::generate_circuit(component_instance, bp, assignment, {x}, start_row);
-                return components::generate_assignments(component_instance, assignment, {x}, start_row);
-            }
-
-        }    // namespace detail
-        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType, typename ArithmetizationParams>
-        void handle_fixedpoint_ceil_component(
+        template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
+                 typename ArithmetizationParams>
+        void handle_ceil(
             mlir::math::CeilOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
-            auto operand = stack.get_local(operation.getOperand());
+            using component_type = components::fix_ceil<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            auto result = detail::handle_fixedpoint_ceil_component<PreLimbs, PostLimbs>(operand, bp, assignment, start_row);
-            stack.push_local(operation.getResult(), result.output);
+            auto input = PREPARE_UNARY_INPUT(mlir::math::CeilOp);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
+
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
+                                     PreLimbs, PostLimbs);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
     }    // namespace blueprint
 }    // namespace nil

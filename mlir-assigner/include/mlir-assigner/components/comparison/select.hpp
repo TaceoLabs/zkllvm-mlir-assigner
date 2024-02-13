@@ -37,56 +37,35 @@
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/policy/policy_manager.hpp>
+#include <mlir-assigner/components/handle_component.hpp>
 
 namespace nil {
     namespace blueprint {
-        namespace detail {
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename components::fix_select<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>::result_type
-                handle_select_component(
-                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &c,
-                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &x,
-                    const typename crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &y,
-                    circuit_proxy<
-                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                                                 ArithmetizationParams>> &assignment,
-                    std::uint32_t start_row) {
-                using non_native_policy_type = basic_non_native_policy<BlueprintFieldType>;
-                using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
-                using component_type = components::fix_select<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                    BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                const auto params = PolicyManager::get_parameters(
-                    ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
-                component_type component_instance(
-                    params.witness,
-                    ManifestReader<component_type, ArithmetizationParams>::get_constants(),
-                    ManifestReader<component_type, ArithmetizationParams>::get_public_inputs());
-
-                components::generate_circuit(component_instance, bp, assignment, {c, x, y}, start_row);
-                return components::generate_assignments(component_instance, assignment, {c, x, y}, start_row);
-            }
-        }    // namespace detail
         template<typename BlueprintFieldType, typename ArithmetizationParams>
-        void handle_select_component(
+        void handle_select(
             mlir::arith::SelectOp &operation,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             std::uint32_t start_row) {
+
             auto c = stack.get_local(operation.getCondition());
             auto x = stack.get_local(operation.getTrueValue());
             auto y = stack.get_local(operation.getFalseValue());
+            using component_type = components::fix_select<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType,
+                basic_non_native_policy<BlueprintFieldType>>;
 
-            // TACEO_TODO: check types
-
-            auto result = detail::handle_select_component(c, x, y, bp, assignment, start_row);
-            stack.push_local(operation.getResult(), result.output);
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
+            typename component_type::input_type input;
+            input.c = stack.get_local(operation.getCondition());
+            input.x = stack.get_local(operation.getTrueValue());
+            input.y = stack.get_local(operation.getFalseValue());
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
+            component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
     }    // namespace blueprint
 }    // namespace nil
