@@ -28,6 +28,10 @@
 
 #include <functional>
 #include <mlir-assigner/memory/stack_frame.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/sign_abs.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/mul_rescale.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/ceil.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/floor.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_fixedpoint.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/to_int.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp>
@@ -50,21 +54,26 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/cmp_set.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/gather_acc.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/erf.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/div.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/rem.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/dot_rescale_2_gates.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/logic_ops.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/select.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/multiplication.hpp>
 
-#define PREPARE_UNARY_INPUT(OP)                                                             \
-    prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
+#define PREPARE_UNARY_INPUT(OP)                                                                                        \
+    prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP, typename component_type::input_type>( \
+        operation, stack, bp, assignment);
+#define PREPARE_BINARY_INPUT(OP)                          \
+    prepare_binary_operation_input<BlueprintFieldType,    \
+                                   ArithmetizationParams, \
+                                   OP,                    \
                                    typename component_type::input_type>(operation, stack, bp, assignment);
-#define PREPARE_BINARY_INPUT(OP)                                                             \
-    prepare_binary_operation_input<BlueprintFieldType, ArithmetizationParams, OP,     \
-                                   typename component_type::input_type>(operation, stack, bp, assignment);
-
 
 namespace nil {
     namespace blueprint {
@@ -93,7 +102,6 @@ namespace nil {
             return instance_input;
         }
 
-
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType>
         void handle_component_input(
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -119,7 +127,7 @@ namespace nil {
         }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
-        void fill_trace(
+        typename component_type::result_type fill_trace_get_result(
             component_type &component,
             typename component_type::input_type &input,
             Op &mlir_op,
@@ -147,7 +155,19 @@ namespace nil {
             handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input);
 
             components::generate_circuit(component, bp, assignment, input, start_row);
-            auto result = components::generate_assignments(component, assignment, input, start_row);
+            return components::generate_assignments(component, assignment, input, start_row);
+        }
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
+        void fill_trace(
+            component_type &component,
+            typename component_type::input_type &input,
+            Op &mlir_op,
+            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
+            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                &assignment,
+            std::uint32_t start_row) {
+            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, start_row);
             stack.push_local(mlir_op.getResult(), result.output);
         }
     }    // namespace blueprint

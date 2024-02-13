@@ -365,13 +365,13 @@ namespace zk_ml_toolchain {
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
                 handle_sub(operation, stack, bp, assignmnt, start_row);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
-                handle_fixedpoint_mul_rescale_component<PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fmul<PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
-                handle_fixedpoint_division_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fdiv<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
-                handle_fixedpoint_remainder_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_frem<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
-                handle_fixedpoint_comparison_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fcmp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
                 ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
                 ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
@@ -398,7 +398,7 @@ namespace zk_ml_toolchain {
                             stack.push_local(operation->getResult(0), falsy);
                         }
                     } else {
-                        handle_select_component(operation, stack, bp, assignmnt, start_row);
+                        handle_select(operation, stack, bp, assignmnt, start_row);
                     }
                 } else {
                     std::string typeStr;
@@ -536,7 +536,7 @@ namespace zk_ml_toolchain {
                 } else {
                     // FIXME we use the fcmp gadget here for the time being.
                     // as soon as we get the cmpi gadget from upstream, swap the gadget
-                    handle_integer_comparison_component(operation, stack, bp, assignmnt, start_row);
+                    handle_icmp(operation, stack, bp, assignmnt, start_row);
                 }
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
@@ -601,7 +601,7 @@ namespace zk_ml_toolchain {
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
                 handle_exp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
-                handle_fixedpoint_log_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_log<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
                 UNREACHABLE("powf not supported. Did you compile the model with standard MLIR?");
             } else if (math::IPowIOp operation = llvm::dyn_cast<math::IPowIOp>(op)) {
@@ -613,11 +613,11 @@ namespace zk_ml_toolchain {
                 assert(base == 2 && "For now we only support powi to power of 2");
                 stack.push_constant(operation.getResult(), 1 << pow);
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
-                handle_fixedpoint_abs_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_abs<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
-                handle_fixedpoint_ceil_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_ceil<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
-                handle_fixedpoint_floor_component<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
                 // TODO: do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
@@ -850,8 +850,7 @@ namespace zk_ml_toolchain {
                 mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
                 assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
                 logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
-                handle_fixedpoint_dot_product_component<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt,
-                                                                             start_row);
+                handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt, start_row);
                 return;
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
@@ -866,7 +865,7 @@ namespace zk_ml_toolchain {
             } else if (zkml::CmpSetOp operation = llvm::dyn_cast<zkml::CmpSetOp>(op)) {
                 auto dataIndex = stack.get_constant(operation.getIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
-                handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
+                handle_cmp_set(operation, stack, bp, assignmnt, dataIndexVar, start_row);
             } else if (zkml::ExpNoClipOp operation = llvm::dyn_cast<zkml::ExpNoClipOp>(op)) {
                 handle_exp_no_clip<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
             } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {

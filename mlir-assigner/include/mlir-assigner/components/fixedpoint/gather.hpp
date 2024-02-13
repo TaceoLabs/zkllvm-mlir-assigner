@@ -32,10 +32,10 @@ namespace nil {
                 basic_non_native_policy<BlueprintFieldType>>;
 
             using input_type = typename component_type::input_type;
-            input_type instance_input;
-            instance_input.prev_acc = stack.get_local(operation.getPrevAcc());
-            instance_input.data = stack.get_local(operation.getData());
-            instance_input.index_a = stack.get_local(operation.getGatherIndex());
+            input_type input;
+            input.prev_acc = stack.get_local(operation.getPrevAcc());
+            input.data = stack.get_local(operation.getData());
+            input.index_a = stack.get_local(operation.getGatherIndex());
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             const auto p = detail::PolicyManager::get_parameters(
@@ -45,27 +45,7 @@ namespace nil {
                                      manifest_reader::get_public_inputs(),
                                      var_value(assignment, nextIndex));
 
-            if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
-                auto lookup_tables = component.component_custom_lookup_tables();
-                for (auto &t : lookup_tables) {
-                    bp.register_lookup_table(
-                        std::shared_ptr<nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>>(t));
-                }
-            };
-
-            if constexpr (nil::blueprint::use_lookups<component_type>()) {
-                auto lookup_tables = component.component_lookup_tables();
-                for (auto &[k, v] : lookup_tables) {
-                    bp.reserve_table(k);
-                }
-            };
-
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment,
-                                                                                              instance_input);
-
-            components::generate_circuit(component, bp, assignment, instance_input, start_row);
-            auto result = components::generate_assignments(component, assignment, instance_input, start_row);
-            stack.push_local(operation.getResult(), result.output);
+            fill_trace(component, input, operation, stack, bp, assignment, start_row);
         }
 
     }    // namespace blueprint
