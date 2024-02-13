@@ -45,9 +45,12 @@ namespace nil {
                                      operation.getSelectLastIndex());
 
             auto result =
-                fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
-            stack.push_local(operation.getResult(0), result.min);
-            stack.push_local(operation.getResult(1), result.index);
+                fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
+            //TODO should we store zero instead???
+            if (result.has_value()) {
+                stack.push_local(operation.getResult(0), result.value().min);
+                stack.push_local(operation.getResult(1), result.value().index);
+            }
         }
 
         template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType,
@@ -76,9 +79,12 @@ namespace nil {
                                      operation.getSelectLastIndex());
 
             auto result =
-                fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
-            stack.push_local(operation.getResult(0), result.max);
-            stack.push_local(operation.getResult(1), result.index);
+                fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
+            //TODO should we store zero instead???
+            if (result.has_value()) {
+                stack.push_local(operation.getResult(0), result.value().max);
+                stack.push_local(operation.getResult(1), result.value().index);
+            }
         }
     }    // namespace blueprint
 }    // namespace nil

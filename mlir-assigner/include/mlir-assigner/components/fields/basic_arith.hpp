@@ -21,15 +21,17 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::addition<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                BlueprintFieldType,
+                basic_non_native_policy<BlueprintFieldType>>;
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             auto input = PREPARE_BINARY_INPUT(MlirOp);
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
 
         template<typename MlirOp, typename BlueprintFieldType, typename ArithmetizationParams>
@@ -39,15 +41,17 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::subtraction<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                BlueprintFieldType,
+                basic_non_native_policy<BlueprintFieldType>>;
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             auto input = PREPARE_BINARY_INPUT(MlirOp);
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
     }    // namespace blueprint
 }    // namespace nil

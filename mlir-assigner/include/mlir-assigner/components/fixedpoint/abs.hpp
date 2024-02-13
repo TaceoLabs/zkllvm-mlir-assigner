@@ -37,7 +37,10 @@ namespace nil {
                                      PreLimbs, PostLimbs);
             auto result =
                 fill_trace_get_result(component, input, operation, stack, bp, assignment, start_row, gen_mode);
-            stack.push_local(operation.getResult(), result.abs);
+            //TODO should we store zero instead???
+            if (result.has_value()) {
+              stack.push_local(operation.getResult(), result.value().abs);
+            }
         }
     }    // namespace blueprint
 }    // namespace nil

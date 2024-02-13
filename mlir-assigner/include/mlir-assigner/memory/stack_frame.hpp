@@ -141,11 +141,11 @@ namespace nil {
 
 
             template<typename MlirType>
-            void push_local(MlirType identifier, VarType &local, bool allow_overwrite = true) {
+            void push_local(MlirType identifier, const VarType &local, bool allow_overwrite = true) {
                 push_local(mlir::hash_value(identifier), local, allow_overwrite);
             }
 
-            void push_local(llvm::hash_code hash_code, VarType &local, bool allow_overwrite = true) {
+            void push_local(llvm::hash_code hash_code, const VarType &local, bool allow_overwrite = true) {
                 assert(frames.size() && "stack is empty but we push?");
                 if (allow_overwrite) {
                     frames.back().locals[size_t(hash_code)] = local;
@@ -182,11 +182,11 @@ namespace nil {
             }
 
             template<typename MlirType>
-            void push_memref(MlirType identifier, memref<VarType> &memref, bool allow_overwrite = true) {
+            void push_memref(MlirType identifier, const memref<VarType> &memref, bool allow_overwrite = true) {
                 push_memref(mlir::hash_value(identifier), memref, allow_overwrite);
             }
 
-            void push_memref(llvm::hash_code hash_code, memref<VarType> &memref, bool allow_overwrite = true) {
+            void push_memref(llvm::hash_code hash_code, const memref<VarType> &memref, bool allow_overwrite = true) {
                 assert(frames.size() && "stack is empty but we push?");
                 if (allow_overwrite) {
                     frames.back().memrefs[size_t(hash_code)] = memref;

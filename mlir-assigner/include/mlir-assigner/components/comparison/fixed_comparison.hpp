@@ -46,7 +46,7 @@ namespace nil {
         namespace {
             template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename FCmpComponent, typename BlueprintFieldType,
                      typename ArithmetizationParams, typename MlirOp>
-            typename FCmpComponent::result_type call_component(
+            std::optional<typename FCmpComponent::result_type> call_component(
                 MlirOp &operation,
                 stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
                 circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -82,47 +82,50 @@ namespace nil {
             // we compare 64 bits with this configuration
             auto result = call_component<PreLimbs, PostLimbs, component_type>(operation, stack, bp, assignment,
                                                                               start_row, gen_mode);
-            switch (operation.getPredicate()) {
-                case mlir::arith::CmpFPredicate::UGT:
-                case mlir::arith::CmpFPredicate::OGT: {
-                    stack.push_local(operation.getResult(), result.gt);
-                    break;
+            // TODO should we store zero instead???
+            if (result.has_value()) {
+                switch (operation.getPredicate()) {
+                    case mlir::arith::CmpFPredicate::UGT:
+                    case mlir::arith::CmpFPredicate::OGT: {
+                        stack.push_local(operation.getResult(), result.value().gt);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::ULT:
+                    case mlir::arith::CmpFPredicate::OLT: {
+                        stack.push_local(operation.getResult(), result.value().lt);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::UGE:
+                    case mlir::arith::CmpFPredicate::OGE: {
+                        stack.push_local(operation.getResult(), result.value().geq);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::ULE:
+                    case mlir::arith::CmpFPredicate::OLE: {
+                        stack.push_local(operation.getResult(), result.value().leq);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::UNE:
+                    case mlir::arith::CmpFPredicate::ONE: {
+                        stack.push_local(operation.getResult(), result.value().neq);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::UEQ:
+                    case mlir::arith::CmpFPredicate::OEQ: {
+                        stack.push_local(operation.getResult(), result.value().eq);
+                        break;
+                    }
+                    case mlir::arith::CmpFPredicate::UNO:
+                    case mlir::arith::CmpFPredicate::ORD:
+                    case mlir::arith::CmpFPredicate::AlwaysFalse:
+                    case mlir::arith::CmpFPredicate::AlwaysTrue: {
+                        UNREACHABLE("Unsupported fcmp predicate (UNO, ORD, AlwaysFalse, AlwaysTrue)");
+                        break;
+                    }
+                    default:
+                        UNREACHABLE("Unsupported fcmp predicate");
+                        break;
                 }
-                case mlir::arith::CmpFPredicate::ULT:
-                case mlir::arith::CmpFPredicate::OLT: {
-                    stack.push_local(operation.getResult(), result.lt);
-                    break;
-                }
-                case mlir::arith::CmpFPredicate::UGE:
-                case mlir::arith::CmpFPredicate::OGE: {
-                    stack.push_local(operation.getResult(), result.geq);
-                    break;
-                }
-                case mlir::arith::CmpFPredicate::ULE:
-                case mlir::arith::CmpFPredicate::OLE: {
-                    stack.push_local(operation.getResult(), result.leq);
-                    break;
-                }
-                case mlir::arith::CmpFPredicate::UNE:
-                case mlir::arith::CmpFPredicate::ONE: {
-                    stack.push_local(operation.getResult(), result.neq);
-                    break;
-                }
-                case mlir::arith::CmpFPredicate::UEQ:
-                case mlir::arith::CmpFPredicate::OEQ: {
-                    stack.push_local(operation.getResult(), result.eq);
-                    break;
-                }
-                case mlir::arith::CmpFPredicate::UNO:
-                case mlir::arith::CmpFPredicate::ORD:
-                case mlir::arith::CmpFPredicate::AlwaysFalse:
-                case mlir::arith::CmpFPredicate::AlwaysTrue: {
-                    UNREACHABLE("Unsupported fcmp predicate (UNO, ORD, AlwaysFalse, AlwaysTrue)");
-                    break;
-                }
-                default:
-                    UNREACHABLE("Unsupported fcmp predicate");
-                    break;
             }
         }
 
@@ -139,27 +142,30 @@ namespace nil {
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
             // we compare 64 bits with this configuration
             auto result = call_component<2, 2, component_type>(operation, stack, bp, assignment, start_row, gen_mode);
-            switch (operation.getPredicate()) {
-                case mlir::arith::CmpIPredicate::sgt:
-                    stack.push_local(operation.getResult(), result.gt);
-                    break;
-                case mlir::arith::CmpIPredicate::slt:
-                    stack.push_local(operation.getResult(), result.lt);
-                    break;
-                case mlir::arith::CmpIPredicate::sge:
-                    stack.push_local(operation.getResult(), result.geq);
-                    break;
-                case mlir::arith::CmpIPredicate::sle:
-                    stack.push_local(operation.getResult(), result.leq);
-                    break;
-                case mlir::arith::CmpIPredicate::ne:
-                    stack.push_local(operation.getResult(), result.neq);
-                    break;
-                case mlir::arith::CmpIPredicate::eq:
-                    stack.push_local(operation.getResult(), result.eq);
-                    break;
-                default:
-                    UNREACHABLE("unsupported predicate for cmpi");
+            if (result.has_value()) {
+
+                switch (operation.getPredicate()) {
+                    case mlir::arith::CmpIPredicate::sgt:
+                        stack.push_local(operation.getResult(), result.value().gt);
+                        break;
+                    case mlir::arith::CmpIPredicate::slt:
+                        stack.push_local(operation.getResult(), result.value().lt);
+                        break;
+                    case mlir::arith::CmpIPredicate::sge:
+                        stack.push_local(operation.getResult(), result.value().geq);
+                        break;
+                    case mlir::arith::CmpIPredicate::sle:
+                        stack.push_local(operation.getResult(), result.value().leq);
+                        break;
+                    case mlir::arith::CmpIPredicate::ne:
+                        stack.push_local(operation.getResult(), result.value().neq);
+                        break;
+                    case mlir::arith::CmpIPredicate::eq:
+                        stack.push_local(operation.getResult(), result.value().eq);
+                        break;
+                    default:
+                        UNREACHABLE("unsupported predicate for cmpi");
+                }
             }
         }
     }    // namespace blueprint
