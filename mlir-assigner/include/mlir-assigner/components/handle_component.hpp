@@ -162,7 +162,8 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
 
             if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
                 auto lookup_tables = component.component_custom_lookup_tables();
@@ -180,29 +181,16 @@ namespace nil {
             };
 
             handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input,
-                                                                                              gen_mode);
+                                                                                              compParams.gen_mode);
 
-            components::generate_circuit(component, bp, assignment, input, start_row);
+            components::generate_circuit(component, bp, assignment, input, compParams.start_row);
 
-            if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
-                return components::generate_assignments(component, assignment, input, start_row);
+            if (std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS)) {
+                return components::generate_assignments(component, assignment, input, compParams.start_row);
             } else {
                 return std::nullopt;
             }
         }
-        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
-        void fill_trace(
-            component_type &component, typename component_type::input_type &input, Op &mlir_op,
-            stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
-            circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-            assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
-            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, start_row, gen_mode);
-            if (result.has_value()) {
-                stack.push_local(mlir_op.getResult(), result.value().output);
-            }
-        }
 
         template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
         void fill_trace(
@@ -211,8 +199,9 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
-            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, compParams.start_row, compParams.gen_mode);
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
+            auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, compParams);
             if (result.has_value()) {
                 stack.push_local(mlir_op.getResult(), result.value().output);
             } else {

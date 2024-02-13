@@ -26,7 +26,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_dot_rescale_2_gates<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -46,7 +46,7 @@ namespace nil {
                                      dims.front(), PostLimbs);
             typename component_type::input_type input = {x.getData(), y.getData(), zero_var};
 
-            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
     }    // namespace blueprint
 }    // namespace nil

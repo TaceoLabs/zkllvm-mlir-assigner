@@ -48,7 +48,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             auto c = stack.get_local(operation.getCondition());
             auto x = stack.get_local(operation.getTrueValue());
             auto y = stack.get_local(operation.getFalseValue());
@@ -63,7 +63,7 @@ namespace nil {
             input.y = stack.get_local(operation.getFalseValue());
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs());
-            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
     }    // namespace blueprint
 }    // namespace nil

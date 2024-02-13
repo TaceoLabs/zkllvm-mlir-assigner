@@ -26,7 +26,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::int_to_fix<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -39,7 +39,7 @@ namespace nil {
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
         namespace detail {
             template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
@@ -51,7 +51,7 @@ namespace nil {
                     &bp,
                 assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                std::uint32_t start_row, generation_mode gen_mode) {
+                const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
                 using component_type = components::fix_to_int<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -64,17 +64,17 @@ namespace nil {
 
                 component_type component(p.witness, manifest_reader::get_constants(),
                                          manifest_reader::get_public_inputs(), PreLimbs, PostLimbs, outputType);
-                fill_trace(component, input, operation, stack, bp, assignment, start_row, gen_mode);
+                fill_trace(component, input, operation, stack, bp, assignment, compParams);
             }
         }    // namespace detail
 
 #define HANDLE_TO_INT(TY)                                                                                             \
     detail::handle_to_int<PreLimbs, PostLimbs, BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToSIOp, TY>( \
-        operation, stack, bp, assignment, start_row, gen_mode);
+        operation, stack, bp, assignment, compParams);
 
 #define HANDLE_TO_UINT(TY)                                                                                            \
     detail::handle_to_int<PreLimbs, PostLimbs, BlueprintFieldType, ArithmetizationParams, mlir::arith::FPToUIOp, TY>( \
-        operation, stack, bp, assignment, start_row, gen_mode);
+        operation, stack, bp, assignment, compParams);
 
         template<std::uint8_t PreLimbs, std::uint8_t PostLimbs, typename BlueprintFieldType,
                  typename ArithmetizationParams>
@@ -84,7 +84,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_to_int<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -112,7 +112,7 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row, generation_mode gen_mode) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_to_int<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
