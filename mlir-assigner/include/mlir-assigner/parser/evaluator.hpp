@@ -263,7 +263,8 @@ namespace zk_ml_toolchain {
                 nil::blueprint::InputReader<BlueprintFieldType, VarType,
                                             nil::blueprint::assignment<ArithmetizationType>, PreLimbs, PostLimbs>
                     input_reader(main_frame, assignmnt, output_memrefs);
-                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
+                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input,
+                                                  uint8_t(gen_mode & generation_mode::ASSIGNMENTS));
                 if (!ok) {
                     std::cerr << "Provided input files do not match the circuit signature";
                     const std::string &error = input_reader.get_error();
@@ -274,6 +275,10 @@ namespace zk_ml_toolchain {
                     exit(-1);
                 }
 
+                if (uint8_t(gen_mode & generation_mode::ASSIGNMENTS) == 0 && !public_output.empty()) {
+                    std::cerr << "Public output provided, but no assignments requested" << std::endl;
+                    exit(-1);
+                }
                 // reserve space for the output constraints
                 ok = input_reader.reserve_outputs(funcOp->second, public_output, output_is_already_assigned);
                 if (!ok) {
@@ -1035,7 +1040,7 @@ namespace zk_ml_toolchain {
                             }
                         }
                     }
-                    if (!output_is_already_assigned) {
+                    if (!output_is_already_assigned && uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
                         // if the output was only just calculated, we write it out into the public output file
                         nil::blueprint::OutputWriter<BlueprintFieldType, VarType,
                                                      nil::blueprint::assignment<ArithmetizationType>, PreLimbs,
