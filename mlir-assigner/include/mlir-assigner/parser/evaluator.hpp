@@ -662,24 +662,20 @@ namespace zk_ml_toolchain {
                 int64_t to = evaluateForParameter(toMap, operandsToV, false);
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
-                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
-                    nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
-                    // grab the indices and build index vector
-                    auto indices = operation.getIndices();
-                    std::vector<int64_t> mapDims;
-                    mapDims.reserve(indices.size());
-                    for (auto idx : indices) {
-                        // look for indices in constant_values
-                        mapDims.push_back(stack.get_constant(idx));
-                    }
-                    auto affineMap =
-                        castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
-                            .getAffineMap();
-                    auto value = memref.get(evalAffineMap(affineMap, mapDims));
-                    stack.push_local(operation.getResult(), value);
-                } else {
-                    stack.push_local(operation.getResult(), zero_var);
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
+                // grab the indices and build index vector
+                auto indices = operation.getIndices();
+                std::vector<int64_t> mapDims;
+                mapDims.reserve(indices.size());
+                for (auto idx : indices) {
+                    // look for indices in constant_values
+                    mapDims.push_back(stack.get_constant(idx));
                 }
+                auto affineMap =
+                    castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
+                        .getAffineMap();
+                auto value = memref.get(evalAffineMap(affineMap, mapDims));
+                stack.push_local(operation.getResult(), value);
             } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
                 // affine.store
                 nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
@@ -693,12 +689,8 @@ namespace zk_ml_toolchain {
                 auto affineMap =
                     castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName()))
                         .getAffineMap();
-                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
-                    VarType &value = stack.get_local(operation.getValue());
-                    memref.put(evalAffineMap(affineMap, mapDims), value);
-                } else {
-                    memref.put(evalAffineMap(affineMap, mapDims), zero_var);
-                }
+                VarType &value = stack.get_local(operation.getValue());
+                memref.put(evalAffineMap(affineMap, mapDims), value);
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
@@ -909,22 +901,17 @@ namespace zk_ml_toolchain {
                 stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
                 // TODO: deduplicate with affine.load
-                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
-                    nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
-                    // grab the indices and build index vector
-                    auto indices = operation.getIndices();
-                    std::vector<int64_t> indicesV;
-                    indicesV.reserve(indices.size());
-                    for (auto idx : indices) {
-                        // look for indices in constant_values
-                        indicesV.push_back(stack.get_constant(idx));
-                    }
-                    auto value = memref.get(indicesV);
-                    stack.push_local(operation.getResult(), value);
-                } else {
-                    stack.push_local(operation.getResult(), zero_var);
+                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
+                // grab the indices and build index vector
+                auto indices = operation.getIndices();
+                std::vector<int64_t> indicesV;
+                indicesV.reserve(indices.size());
+                for (auto idx : indices) {
+                    // look for indices in constant_values
+                    indicesV.push_back(stack.get_constant(idx));
                 }
-
+                auto value = memref.get(indicesV);
+                stack.push_local(operation.getResult(), value);
             } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
                 // TODO: deduplicate with affine.load
                 auto memRefHash = mlir::hash_value(operation.getMemref());
@@ -937,14 +924,10 @@ namespace zk_ml_toolchain {
                 for (auto idx : indices) {
                     indicesV.push_back(stack.get_constant(idx));
                 }
-                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
-                    // grab the element from the locals array
-                    VarType &value = stack.get_local(operation.getValue());
-                    // put the element from the memref using index vector
-                    memref.put(indicesV, value);
-                } else {
-                    memref.put(indicesV, zero_var);
-                }
+                // grab the element from the locals array
+                VarType &value = stack.get_local(operation.getValue());
+                // put the element from the memref using index vector
+                memref.put(indicesV, value);
             } else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
                 stack.erase_memref(operation.getMemref());
                 // TACEO_TODO

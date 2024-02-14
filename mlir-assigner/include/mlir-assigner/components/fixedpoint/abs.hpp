@@ -25,7 +25,8 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_sign_abs<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -35,12 +36,8 @@ namespace nil {
             const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0));
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            auto result =
-                fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
-            //TODO should we store zero instead???
-            if (result.has_value()) {
-              stack.push_local(operation.getResult(), result.value().abs);
-            }
+            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
+            stack.push_local(operation.getResult(), result.abs);
         }
     }    // namespace blueprint
 }    // namespace nil

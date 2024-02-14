@@ -142,7 +142,6 @@ namespace nil {
                     if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
                         new_v = save_shared_var(assignment, v);
                     } else {
-                        // FRANCO_TODO: does this else block make sense?
                         const auto &shared_idx = assignment.shared_column_size(0);
                         assignment.shared(0, shared_idx) = BlueprintFieldType::value_type::zero();
                         new_v = var(1, shared_idx, false, var::column_type::public_input);
@@ -155,17 +154,18 @@ namespace nil {
             }
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
-        std::optional<typename component_type::result_type> fill_trace_get_result(
-            component_type &component, typename component_type::input_type &input, Op &mlir_op,
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType, typename Op>
+        typename ComponentType::result_type fill_trace_get_result(
+            ComponentType &component, typename ComponentType::input_type &input, Op &mlir_op,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             const common_component_parameters<
                 crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
+            using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
-            if constexpr (nil::blueprint::use_custom_lookup_tables<component_type>()) {
+            if constexpr (nil::blueprint::use_custom_lookup_tables<ComponentType>()) {
                 auto lookup_tables = component.component_custom_lookup_tables();
                 for (auto &t : lookup_tables) {
                     bp.register_lookup_table(
@@ -173,28 +173,40 @@ namespace nil {
                 }
             };
 
-            if constexpr (nil::blueprint::use_lookups<component_type>()) {
+            if constexpr (nil::blueprint::use_lookups<ComponentType>()) {
                 auto lookup_tables = component.component_lookup_tables();
                 for (auto &[k, v] : lookup_tables) {
                     bp.reserve_table(k);
                 }
             };
 
-            handle_component_input<BlueprintFieldType, ArithmetizationParams, component_type>(assignment, input,
-                                                                                              compParams.gen_mode);
+            handle_component_input<BlueprintFieldType, ArithmetizationParams, ComponentType>(assignment, input,
+                                                                                             compParams.gen_mode);
 
             components::generate_circuit(component, bp, assignment, input, compParams.start_row);
 
-            if (std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS)) {
-                return components::generate_assignments(component, assignment, input, compParams.start_row);
-            } else {
-                return std::nullopt;
+            typename ComponentType::result_type result =
+                std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS) ?
+                    result = components::generate_assignments(component, assignment, input, compParams.start_row) :
+                    result = typename ComponentType::result_type(component, compParams.start_row);
+
+            // touch result variables
+            if (std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS) == 0) {
+                const auto result_vars = result.all_vars();
+                for (const auto &v : result_vars) {
+                    if (v.type == var::column_type::witness) {
+                        assignment.witness(v.index, v.rotation) = BlueprintFieldType::value_type::zero();
+                    } else if (v.type == var::column_type::constant) {
+                        assignment.constant(v.index, v.rotation) = BlueprintFieldType::value_type::zero();
+                    }
+                }
             }
+            return result;
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams, typename component_type, typename Op>
+        template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType, typename Op>
         void fill_trace(
-            component_type &component, typename component_type::input_type &input, Op &mlir_op,
+            ComponentType &component, typename ComponentType::input_type &input, Op &mlir_op,
             stack<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &stack,
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -202,11 +214,7 @@ namespace nil {
             const common_component_parameters<
                 crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             auto result = fill_trace_get_result(component, input, mlir_op, stack, bp, assignment, compParams);
-            if (result.has_value()) {
-                stack.push_local(mlir_op.getResult(), result.value().output);
-            } else {
-                stack.push_local(mlir_op.getResult(), compParams.zero_var);
-            }
+            stack.push_local(mlir_op.getResult(), result.output);
         }
 
     }    // namespace blueprint

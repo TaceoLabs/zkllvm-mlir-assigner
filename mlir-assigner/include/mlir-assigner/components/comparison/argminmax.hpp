@@ -28,7 +28,8 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &nextIndex,
-            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_argmin<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -44,13 +45,9 @@ namespace nil {
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            auto result =
-                fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
-            //TODO should we store zero instead???
-            if (result.has_value()) {
-                stack.push_local(operation.getResult(0), result.value().min);
-                stack.push_local(operation.getResult(1), result.value().index);
-            }
+            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
+            stack.push_local(operation.getResult(0), result.min);
+            stack.push_local(operation.getResult(1), result.index);
         }
 
         template<std::uint32_t PreLimbs, std::uint32_t PostLimbs, typename BlueprintFieldType,
@@ -62,7 +59,8 @@ namespace nil {
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
             crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type> &nextIndex,
-            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_argmax<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
@@ -78,13 +76,9 @@ namespace nil {
                                      PreLimbs, PostLimbs, var_value(assignment, nextIndex),
                                      operation.getSelectLastIndex());
 
-            auto result =
-                fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
-            //TODO should we store zero instead???
-            if (result.has_value()) {
-                stack.push_local(operation.getResult(0), result.value().max);
-                stack.push_local(operation.getResult(1), result.value().index);
-            }
+            auto result = fill_trace_get_result(component, input, operation, stack, bp, assignment, compParams);
+            stack.push_local(operation.getResult(0), result.max);
+            stack.push_local(operation.getResult(1), result.index);
         }
     }    // namespace blueprint
 }    // namespace nil
