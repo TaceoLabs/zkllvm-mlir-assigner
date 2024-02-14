@@ -696,23 +696,6 @@ namespace zk_ml_toolchain {
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
-            } else if (opName == "affine.if") {
-                logger.debug("visiting affine if!");
-                assert(op->getAttrs().size() == 1);
-                IntegerSet condition = castFromAttr<IntegerSetAttr>(op->getAttrs()[0].getValue()).getValue();
-                //  IntegerSet condition = op->getAttrs()[0].getValue();
-                //  assert(op->getNumOperands() == condition.getNumInputs());
-                llvm::SmallVector<int64_t> operands(op->getNumOperands());
-                logger.log_attribute(op->getAttrs()[0].getValue());
-                int i = 0;
-                for (auto operand : op->getOperands()) {
-                    operands[i++] = stack.get_constant(operand);
-                }
-                if (evalIntegerSet(condition, operands, logger)) {
-                    handleRegion(op->getRegion(0));
-                } else {
-                    handleRegion(op->getRegion(1));
-                }
             } else if (opName == "affine.apply" || opName == "affine.min") {
                 // TODO: nicer handling of these
                 logger.debug("got affine.apply");
