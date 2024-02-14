@@ -81,7 +81,6 @@ namespace nil {
             NONE = 0,
             CIRCUIT = 1 << 0,
             ASSIGNMENTS = 1 << 1,
-            FALSE_ASSIGNMENTS = 1 << 2,
         };
 
         template<typename VarType>

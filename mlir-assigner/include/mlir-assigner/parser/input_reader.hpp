@@ -147,11 +147,44 @@ namespace nil {
                     return false;
                 }
                 auto dims = parse_dim_array(mo.at("dims").as_array());
+                if (dims.size() != memref_type.getShape().size()) {
+                    error = "memref json dims do not match the expected shape of input memref";
+                    return false;
+                }
+                for (size_t i = 0; i < dims.size(); ++i) {
+                    if (dims[i] != memref_type.getShape()[i]) {
+                        error = "memref json dims do not match the expected shape of input memref";
+                        return false;
+                    }
+                }
                 std::string type = mo.at("type").as_string().c_str();
                 if (is_private) {
-                    parse_memref_data_private(m, mo.at("data").as_array(), type);
+                    if (!parse_memref_data_private(m, mo.at("data").as_array(), type)) {
+                        return false;
+                    }
                 } else {
-                    parse_memref_data_public(m, mo.at("data").as_array(), type);
+                    if (!parse_memref_data_public(m, mo.at("data").as_array(), type)) {
+                        return false;
+                    }
+                }
+
+                auto res = frame.memrefs.insert({mlir::hash_value(arg), m});
+                ASSERT(res.second);    // we do not want to override stuff here
+                return true;
+            }
+
+            bool reserve_input_memref(mlir::BlockArgument arg, mlir::MemRefType memref_type, bool is_private) {
+                memref<var> m(memref_type.getShape(), memref_type.getElementType());
+
+                for (size_t i = 0; i < m.size(); ++i) {
+                    if (is_private) {
+                        assignmnt.private_storage(private_input_idx) = 0;
+                        m.put_flat(i, var(Assignment::private_storage_index, private_input_idx++, false,
+                                          var::column_type::public_input));
+                    } else {
+                        assignmnt.public_input(0, public_input_idx) = 0;
+                        m.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
+                    }
                 }
 
                 auto res = frame.memrefs.insert({mlir::hash_value(arg), m});
@@ -201,11 +234,25 @@ namespace nil {
                     return false;
                 }
                 auto dims = parse_dim_array(mo.at("dims").as_array());
+                if (dims.size() != memref_type.getShape().size()) {
+                    error = "memref json dims do not match the expected shape of input memref";
+                    return false;
+                }
+                for (size_t i = 0; i < dims.size(); ++i) {
+                    if (dims[i] != memref_type.getShape()[i]) {
+                        error = "memref json dims do not match the expected shape of input memref";
+                        return false;
+                    }
+                }
                 std::string type = mo.at("type").as_string().c_str();
                 if (is_private) {
-                    parse_memref_data_private(m, mo.at("data").as_array(), type);
+                    if (!parse_memref_data_private(m, mo.at("data").as_array(), type)) {
+                        return false;
+                    }
                 } else {
-                    parse_memref_data_public(m, mo.at("data").as_array(), type);
+                    if (!parse_memref_data_public(m, mo.at("data").as_array(), type)) {
+                        return false;
+                    }
                 }
                 output_memrefs.push_back(std::move(m));
 
@@ -214,7 +261,11 @@ namespace nil {
 
             /// parse a memref from the input file into the public input column
             bool parse_memref_data_public(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
-                if (type == "f16" || type == "f32" || type == "f64") {
+                if (type == "f32") {
+                    if (!data.getType().template isa<mlir::FloatType>()) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_fixedpoint(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";
@@ -223,6 +274,10 @@ namespace nil {
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
                     }
                 } else if (type == "int") {
+                    if (!data.getType().template isa<mlir::IntegerType>()) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
@@ -232,6 +287,10 @@ namespace nil {
                         data.put_flat(i, var(0, public_input_idx++, false, var::column_type::public_input));
                     }
                 } else if (type == "bool") {
+                    if (!data.getType().isInteger(1)) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_bool(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect booleans in tensor\n";
@@ -248,6 +307,10 @@ namespace nil {
             /// parse a memref from the input file into the private input column
             bool parse_memref_data_private(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
                 if (type == "f32") {
+                    if (!data.getType().template isa<mlir::FloatType>()) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_fixedpoint(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
                             llvm::errs() << "expect fixedpoints in tensor\n";
@@ -257,6 +320,10 @@ namespace nil {
                                              var::column_type::public_input));
                     }
                 } else if (type == "int") {
+                    if (!data.getType().template isa<mlir::IntegerType>()) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
@@ -267,6 +334,10 @@ namespace nil {
                                              var::column_type::public_input));
                     }
                 } else if (type == "bool") {
+                    if (!data.getType().isInteger(1)) {
+                        error = "json type does not match memref type";
+                        return false;
+                    }
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_bool(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
                             llvm::errs() << "expect booleans in tensor\n";
@@ -325,8 +396,16 @@ namespace nil {
             }
 
             bool map_input(size_t counter, mlir::BlockArgument arg, mlir::Type arg_type,
-                           std::unordered_map<size_t, size_t> &idx_map, const boost::json::array &json,
-                           bool is_private) {
+                           std::unordered_map<size_t, size_t> &idx_map, const boost::json::array &json, bool is_private,
+                           bool have_input) {
+                if (!have_input) {
+                    if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(arg_type)) {
+                        return reserve_input_memref(arg, memref_type, is_private);
+                    } else {
+                        UNREACHABLE("only memref types are supported for now");
+                        return false;
+                    }
+                }
                 auto idx = idx_map.find(counter);
                 if (idx == idx_map.end()) {
                     error = (is_private ? "No private input found with idx (" : "No public input found with idx (") +
@@ -350,15 +429,17 @@ namespace nil {
             }
 
             bool fill_input(mlir::func::FuncOp &function, const boost::json::array &public_input,
-                            const boost::json::array &private_input) {
+                            const boost::json::array &private_input, bool have_inputs) {
 
                 std::unordered_map<size_t, size_t> public_indices;
                 std::unordered_map<size_t, size_t> private_indices;
-                if (!parse_indices(public_indices, public_input)) {
-                    return false;
-                }
-                if (!parse_indices(private_indices, private_input)) {
-                    return false;
+                if (have_inputs) {
+                    if (!parse_indices(public_indices, public_input)) {
+                        return false;
+                    }
+                    if (!parse_indices(private_indices, private_input)) {
+                        return false;
+                    }
                 }
 
                 mlir::FunctionType func_type = function.getFunctionType();
@@ -378,9 +459,10 @@ namespace nil {
                                "Got unknown attribute for zkML.input on input");
                         is_private = true;
                     }
-                    bool success =
-                        is_private ? map_input(private_counter++, arg, arg_type, private_indices, private_input, true) :
-                                     map_input(public_counter++, arg, arg_type, public_indices, public_input, false);
+                    bool success = is_private ? map_input(private_counter++, arg, arg_type, private_indices,
+                                                          private_input, true, have_inputs) :
+                                                map_input(public_counter++, arg, arg_type, public_indices, public_input,
+                                                          false, have_inputs);
                     if (!success) {
                         return false;
                     }
@@ -412,14 +494,14 @@ namespace nil {
                 for (unsigned i = 0; i < results.size(); ++i) {
                     mlir::Type return_type = results[i];
                     if (mlir::MemRefType memref_type = llvm::dyn_cast<mlir::MemRefType>(return_type)) {
-                        if (!output_is_already_present) {
-                            if (!reserve_output_memref(memref_type, is_private)) {
-                                return false;
-                            }
-                        } else {
+                        if (output_is_already_present) {
                             const boost::json::object &current_value = public_outputs[i].as_object();
                             if (!take_output_memref(memref_type, current_value, is_private))
                                 return false;
+                        } else {
+                            if (!reserve_output_memref(memref_type, is_private)) {
+                                return false;
+                            }
                         }
                     } else {
                         UNREACHABLE("only memref types are supported for now");
