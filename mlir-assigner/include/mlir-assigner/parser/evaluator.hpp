@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
@@ -177,13 +177,14 @@ namespace zk_ml_toolchain {
         using VarType = nil::crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
         using FixedPoint = nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
         using ComponentParameters = nil::blueprint::common_component_parameters<VarType>;
+        using generation_mode = nil::blueprint::generation_mode;
 
         enum class ClipStrategy { PANIC, CLIP, ZERO };
 
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
                   const boost::json::array &public_input, const boost::json::array &private_input,
-                  boost::json::array &public_output, nil::blueprint::generation_mode gen_mode,
+                  boost::json::array &public_output, generation_mode gen_mode,
                   nil::blueprint::print_format print_circuit_format, std::string &clip,
                   nil::blueprint::logger &logger) :
             bp(circuit),
@@ -661,21 +662,24 @@ namespace zk_ml_toolchain {
                 int64_t to = evaluateForParameter(toMap, operandsToV, false);
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
-                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
-
-                // grab the indices and build index vector
-                auto indices = operation.getIndices();
-                std::vector<int64_t> mapDims;
-                mapDims.reserve(indices.size());
-                for (auto idx : indices) {
-                    // look for indices in constant_values
-                    mapDims.push_back(stack.get_constant(idx));
+                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
+                    nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
+                    // grab the indices and build index vector
+                    auto indices = operation.getIndices();
+                    std::vector<int64_t> mapDims;
+                    mapDims.reserve(indices.size());
+                    for (auto idx : indices) {
+                        // look for indices in constant_values
+                        mapDims.push_back(stack.get_constant(idx));
+                    }
+                    auto affineMap =
+                        castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
+                            .getAffineMap();
+                    auto value = memref.get(evalAffineMap(affineMap, mapDims));
+                    stack.push_local(operation.getResult(), value);
+                } else {
+                    stack.push_local(operation.getResult(), zero_var);
                 }
-                auto affineMap =
-                    castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineLoadOp::getMapAttrStrName()))
-                        .getAffineMap();
-                auto value = memref.get(evalAffineMap(affineMap, mapDims));
-                stack.push_local(operation.getResult(), value);
             } else if (affine::AffineStoreOp operation = llvm::dyn_cast<affine::AffineStoreOp>(op)) {
                 // affine.store
                 nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
@@ -686,14 +690,15 @@ namespace zk_ml_toolchain {
                 for (auto idx : indices) {
                     mapDims.push_back(stack.get_constant(idx));
                 }
-                // grab the element from the locals array
-                VarType &value = stack.get_local(operation.getValue());
-                // put the element from the memref using index vector
                 auto affineMap =
                     castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName()))
                         .getAffineMap();
-                auto test = evalAffineMap(affineMap, mapDims);
-                memref.put(test, value);
+                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
+                    VarType &value = stack.get_local(operation.getValue());
+                    memref.put(evalAffineMap(affineMap, mapDims), value);
+                } else {
+                    memref.put(evalAffineMap(affineMap, mapDims), zero_var);
+                }
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
@@ -904,17 +909,21 @@ namespace zk_ml_toolchain {
                 stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
                 // TODO: deduplicate with affine.load
-                nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
-                // grab the indices and build index vector
-                auto indices = operation.getIndices();
-                std::vector<int64_t> indicesV;
-                indicesV.reserve(indices.size());
-                for (auto idx : indices) {
-                    // look for indices in constant_values
-                    indicesV.push_back(stack.get_constant(idx));
+                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
+                    nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
+                    // grab the indices and build index vector
+                    auto indices = operation.getIndices();
+                    std::vector<int64_t> indicesV;
+                    indicesV.reserve(indices.size());
+                    for (auto idx : indices) {
+                        // look for indices in constant_values
+                        indicesV.push_back(stack.get_constant(idx));
+                    }
+                    auto value = memref.get(indicesV);
+                    stack.push_local(operation.getResult(), value);
+                } else {
+                    stack.push_local(operation.getResult(), zero_var);
                 }
-                auto value = memref.get(indicesV);
-                stack.push_local(operation.getResult(), value);
 
             } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
                 // TODO: deduplicate with affine.load
@@ -928,10 +937,14 @@ namespace zk_ml_toolchain {
                 for (auto idx : indices) {
                     indicesV.push_back(stack.get_constant(idx));
                 }
-                // grab the element from the locals array
-                VarType &value = stack.get_local(operation.getValue());
-                // put the element from the memref using index vector
-                memref.put(indicesV, value);
+                if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
+                    // grab the element from the locals array
+                    VarType &value = stack.get_local(operation.getValue());
+                    // put the element from the memref using index vector
+                    memref.put(indicesV, value);
+                } else {
+                    memref.put(indicesV, zero_var);
+                }
             } else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
                 stack.erase_memref(operation.getMemref());
                 // TACEO_TODO
@@ -1134,7 +1147,7 @@ namespace zk_ml_toolchain {
             }
         }
 
-        nil::blueprint::generation_mode gen_mode;
+        generation_mode gen_mode;
         nil::blueprint::print_format print_circuit_format;
         nil::blueprint::logger &logger;
 
