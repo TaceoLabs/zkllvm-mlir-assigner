@@ -261,7 +261,7 @@ namespace nil {
 
             /// parse a memref from the input file into the public input column
             bool parse_memref_data_public(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
-                if (type == "f32") {
+                if (type == "f16" || type == "f32" || type == "f64") {
                     if (!data.getType().template isa<mlir::FloatType>()) {
                         error = "json type does not match memref type";
                         return false;
@@ -306,7 +306,7 @@ namespace nil {
 
             /// parse a memref from the input file into the private input column
             bool parse_memref_data_private(memref<var> &data, const boost::json::array &tensor_arr, std::string &type) {
-                if (type == "f32") {
+                if (type == "f16" || type == "f32" || type == "f64") {
                     if (!data.getType().template isa<mlir::FloatType>()) {
                         error = "json type does not match memref type";
                         return false;
