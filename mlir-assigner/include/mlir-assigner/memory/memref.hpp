@@ -25,8 +25,8 @@ namespace nil {
 
             memref(std::vector<int64_t> dims, mlir::Type type) : data(), dims(dims), strides(), type(type) {
                 strides.resize(dims.size());
-                for (size_t i = dims.size() - 1; i >= 0; i--) {
-                    strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
+                for (ssize_t i = dims.size() - 1; i >= 0; i--) {
+                    strides[i] = (i == ssize_t(dims.size()) - 1) ? 1 : strides[i + 1] * dims[i + 1];
                     ASSERT(dims[i] > 0 &&
                            "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
                 }
@@ -36,8 +36,8 @@ namespace nil {
             }
             memref(llvm::ArrayRef<int64_t> dims, mlir::Type type) : data(), dims(dims), strides(), type(type) {
                 strides.resize(dims.size());
-                for (size_t i = dims.size() - 1; i >= 0; i--) {
-                    strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
+                for (ssize_t i = dims.size() - 1; i >= 0; i--) {
+                    strides[i] = (i == ssize_t(dims.size()) - 1) ? 1 : strides[i + 1] * dims[i + 1];
                     ASSERT(dims[i] > 0 &&
                            "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
                 }
@@ -49,8 +49,8 @@ namespace nil {
             memref(std::vector<int64_t> dims, std::vector<VarType> data, mlir::Type type) :
                 data(data), dims(dims), strides() {
                 strides.resize(dims.size());
-                for (size_t i = dims.size() - 1; i >= 0; i--) {
-                    strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
+                for (ssize_t i = dims.size() - 1; i >= 0; i--) {
+                    strides[i] = (i == ssize_t(dims.size()) - 1) ? 1 : strides[i + 1] * dims[i + 1];
                 }
                 assert(data.size() ==
                        std::accumulate(std::begin(dims), std::end(dims), 1, std::multiplies<uint32_t>()));
