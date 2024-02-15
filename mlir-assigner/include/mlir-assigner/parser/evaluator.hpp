@@ -828,12 +828,6 @@ namespace zk_ml_toolchain {
 
         void handleZkMlOperation(Operation *op, const ComponentParameters &compParams) {
             if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
-                mlir::Value lhs = operation.getLhs();
-                mlir::Value rhs = operation.getRhs();
-                assert(lhs.getType() == rhs.getType() && "memrefs must be same type for DotProduct");
-                mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
-                assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
-                logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
                 handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt, compParams);
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
