@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
-// #define TEST_WITHOUT_LOOKUP_TABLES
+#define TEST_WITHOUT_LOOKUP_TABLES
 
 #include "mlir-assigner/helper/asserts.hpp"
 #include "mlir-assigner/helper/logger.hpp"
@@ -958,7 +958,7 @@ namespace zk_ml_toolchain {
                 logger.error("Encountered an unregistered Dialect");
                 exit(-1);
             }
-            ComponentParameters compParams = {assignmnt.allocated_rows(), zero_var, gen_mode};
+            ComponentParameters compParams = {assignmnt.allocated_rows(), gen_mode};
             if (llvm::isa<mlir::arith::ArithDialect>(dial)) {
                 handleArithOperation(op, compParams);
                 return;

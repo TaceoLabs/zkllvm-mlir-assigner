@@ -87,7 +87,6 @@ namespace nil {
         template<typename VarType>
         struct common_component_parameters {
             std::uint32_t start_row;
-            VarType zero_var;
             generation_mode gen_mode;
         };
 
