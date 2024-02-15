@@ -25,9 +25,10 @@ namespace nil {
 
             memref(std::vector<int64_t> dims, mlir::Type type) : data(), dims(dims), strides(), type(type) {
                 strides.resize(dims.size());
-                for (int i = dims.size() - 1; i >= 0; i--) {
+                for (size_t i = dims.size() - 1; i >= 0; i--) {
                     strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
-                    ASSERT(dims[i] > 0 && "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
+                    ASSERT(dims[i] > 0 &&
+                           "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
                 }
                 // this also handles the case when dims is empty, since we still allocate
                 // 1 here
@@ -35,9 +36,10 @@ namespace nil {
             }
             memref(llvm::ArrayRef<int64_t> dims, mlir::Type type) : data(), dims(dims), strides(), type(type) {
                 strides.resize(dims.size());
-                for (int i = dims.size() - 1; i >= 0; i--) {
+                for (size_t i = dims.size() - 1; i >= 0; i--) {
                     strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
-                    ASSERT(dims[i] > 0 && "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
+                    ASSERT(dims[i] > 0 &&
+                           "Dims in tensor must be greater zero. Do you have a model with dynamic input?");
                 }
                 // this also handles the case when dims is empty, since we still allocate 1
                 // here
@@ -47,7 +49,7 @@ namespace nil {
             memref(std::vector<int64_t> dims, std::vector<VarType> data, mlir::Type type) :
                 data(data), dims(dims), strides() {
                 strides.resize(dims.size());
-                for (int i = dims.size() - 1; i >= 0; i--) {
+                for (size_t i = dims.size() - 1; i >= 0; i--) {
                     strides[i] = (i == dims.size() - 1) ? 1 : strides[i + 1] * dims[i + 1];
                 }
                 assert(data.size() ==
@@ -57,7 +59,7 @@ namespace nil {
             const VarType &get(const std::vector<int64_t> &indices) const {
                 assert(indices.size() == dims.size());
                 uint32_t offset = 0;
-                for (int i = 0; i < indices.size(); i++) {
+                for (size_t i = 0; i < indices.size(); i++) {
                     assert(indices[i] < dims[i]);
                     offset += indices[i] * strides[i];
                 }
@@ -67,7 +69,7 @@ namespace nil {
             const VarType &get(const llvm::SmallVector<int64_t> &indices) const {
                 assert(indices.size() == dims.size());
                 uint32_t offset = 0;
-                for (int i = 0; i < indices.size(); i++) {
+                for (size_t i = 0; i < indices.size(); i++) {
                     assert(indices[i] < dims[i]);
                     offset += indices[i] * strides[i];
                 }
@@ -81,7 +83,7 @@ namespace nil {
             void put(const std::vector<int64_t> &indices, const VarType &value) {
                 assert(indices.size() == dims.size());
                 uint32_t offset = 0;
-                for (int i = 0; i < indices.size(); i++) {
+                for (size_t i = 0; i < indices.size(); i++) {
                     assert(indices[i] < dims[i]);
                     offset += indices[i] * strides[i];
                 }
@@ -91,7 +93,7 @@ namespace nil {
             void put(const llvm::SmallVector<int64_t> &indices, const VarType &value) {
                 assert(indices.size() == dims.size());
                 uint32_t offset = 0;
-                for (int i = 0; i < indices.size(); i++) {
+                for (size_t i = 0; i < indices.size(); i++) {
                     assert(indices[i] < dims[i]);
                     offset += indices[i] * strides[i];
                 }
@@ -126,7 +128,7 @@ namespace nil {
                     &assignment) {
                 using FixedPoint = components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
                 os << "memref<";
-                for (int i = 0; i < dims.size(); i++) {
+                for (size_t i = 0; i < dims.size(); i++) {
                     os << dims[i];
                     os << "x";
                 }
@@ -136,7 +138,7 @@ namespace nil {
                 os << type_str;
                 if (type.isa<mlir::IntegerType>()) {
                     if (type.isUnsignedInteger()) {
-                        for (int i = 0; i < data.size(); i++) {
+                        for (size_t i = 0; i < data.size(); i++) {
                             os << var_value(assignment, data[i]).data;
                             if (i != data.size() - 1)
                                 os << ",";
@@ -145,7 +147,7 @@ namespace nil {
                         static constexpr typename BlueprintFieldType::integral_type half_p =
                             (BlueprintFieldType::modulus - typename BlueprintFieldType::integral_type(1)) /
                             typename BlueprintFieldType::integral_type(2);
-                        for (int i = 0; i < data.size(); i++) {
+                        for (size_t i = 0; i < data.size(); i++) {
                             auto val = static_cast<typename BlueprintFieldType::integral_type>(
                                 var_value(assignment, data[i]).data);
                             // check if negative
@@ -159,7 +161,7 @@ namespace nil {
                         }
                     }
                 } else if (type.isa<mlir::FloatType>()) {
-                    for (int i = 0; i < data.size(); i++) {
+                    for (size_t i = 0; i < data.size(); i++) {
                         auto value = var_value(assignment, data[i]).data;
                         FixedPoint out(value, FixedPoint::SCALE);
                         os << out.to_double();

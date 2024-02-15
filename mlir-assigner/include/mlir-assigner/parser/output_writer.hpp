@@ -148,18 +148,18 @@ namespace nil {
                     boost::json::array data;
 
                     if (type == "f16" || type == "f32" || type == "f64") {
-                        for (size_t j = 0; j < memref.size(); ++j) {
+                        for (int64_t j = 0; j < memref.size(); ++j) {
                             auto val = var_value(assignmnt, memref.get_flat(j));
                             FixedPoint fixed(val, FixedPoint::SCALE);
                             data.emplace_back(fixed.to_double());
                         }
                     } else if (type == "int") {
-                        for (size_t j = 0; j < memref.size(); ++j) {
+                        for (int64_t j = 0; j < memref.size(); ++j) {
                             int64_t val = resolve_number(memref.get_flat(j));
                             data.emplace_back(val);
                         }
                     } else if (type == "bool") {
-                        for (size_t j = 0; j < memref.size(); ++j) {
+                        for (int64_t j = 0; j < memref.size(); ++j) {
                             int64_t val = resolve_number(memref.get_flat(j));
                             ASSERT(val == 0 || val == 1);
                             data.emplace_back(val);
