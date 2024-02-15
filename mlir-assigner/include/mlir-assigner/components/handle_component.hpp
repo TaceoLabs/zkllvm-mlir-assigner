@@ -192,6 +192,11 @@ namespace nil {
 
             // touch result variables
             if (std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS) == 0) {
+                // touch the last row of the component to ensure table is resized up to this point
+                const size_t last_component_row = compParams.start_row + component.rows_amount - 1;
+                assignment.witness(0, last_component_row) = BlueprintFieldType::value_type::zero();
+
+                // touch all output variables to ensure they are valid
                 const auto result_vars = result.all_vars();
                 for (const auto &v : result_vars) {
                     if (v.type == var::column_type::witness) {
