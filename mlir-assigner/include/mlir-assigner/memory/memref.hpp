@@ -101,7 +101,7 @@ namespace nil {
             }
 
             void put_flat(const int64_t idx, const VarType &value) {
-                assert(idx >= 0 && idx < data.size());
+                assert(idx >= 0 && size_t(idx) < data.size());
                 data[idx] = value;
             }
 
