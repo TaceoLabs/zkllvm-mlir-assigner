@@ -22,20 +22,18 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            std::uint32_t start_row) {
+            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_erf<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             auto input = PREPARE_UNARY_INPUT(mlir::math::ErfOp);
-            using manifest_reader =
-                detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-            const auto p =
-                detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
+            using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
+            const auto p = detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, PreLimbs, PostLimbs));
 
             component_type component(p.witness, manifest_reader::get_constants(), manifest_reader::get_public_inputs(),
                                      PreLimbs, PostLimbs);
-            fill_trace(component, input, operation, stack, bp, assignment, start_row);
+            fill_trace(component, input, operation, stack, bp, assignment, compParams);
         }
     }    // namespace blueprint
 }    // namespace nil

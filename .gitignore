@@ -1,3 +1,4 @@
+mlir-assigner/tests/Ops/Current/
 **output.json
 ## Circifier, Assigner and Transpiler generated files:
 /*.crct

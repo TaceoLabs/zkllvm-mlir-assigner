@@ -176,17 +176,21 @@ namespace zk_ml_toolchain {
             nil::crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
         using VarType = nil::crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
         using FixedPoint = nil::blueprint::components::FixedPoint<BlueprintFieldType, PreLimbs, PostLimbs>;
+        using ComponentParameters = nil::blueprint::common_component_parameters<VarType>;
+        using generation_mode = nil::blueprint::generation_mode;
 
         enum class ClipStrategy { PANIC, CLIP, ZERO };
 
         evaluator(nil::blueprint::circuit_proxy<ArithmetizationType> &circuit,
                   nil::blueprint::assignment_proxy<ArithmetizationType> &assignment,
                   const boost::json::array &public_input, const boost::json::array &private_input,
-                  boost::json::array &public_output, nil::blueprint::print_format print_circuit_format,
-                  std::string &clip, nil::blueprint::logger &logger) :
+                  boost::json::array &public_output, generation_mode gen_mode,
+                  nil::blueprint::print_format print_circuit_format, std::string &clip,
+                  nil::blueprint::logger &logger) :
             bp(circuit),
             assignmnt(assignment), public_input(public_input), private_input(private_input),
-            public_output(public_output), print_circuit_format(print_circuit_format), logger(logger) {
+            public_output(public_output), gen_mode(gen_mode), print_circuit_format(print_circuit_format),
+            logger(logger) {
             lower_bound = FixedPoint(1, FixedPoint::SCALE).to_double();
             if ("clip" == clip) {
                 clip_strategy = ClipStrategy::CLIP;
@@ -259,7 +263,8 @@ namespace zk_ml_toolchain {
                 nil::blueprint::InputReader<BlueprintFieldType, VarType,
                                             nil::blueprint::assignment<ArithmetizationType>, PreLimbs, PostLimbs>
                     input_reader(main_frame, assignmnt, output_memrefs);
-                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input);
+                bool ok = input_reader.fill_input(funcOp->second, public_input, private_input,
+                                                  uint8_t(gen_mode & generation_mode::ASSIGNMENTS));
                 if (!ok) {
                     std::cerr << "Provided input files do not match the circuit signature";
                     const std::string &error = input_reader.get_error();
@@ -270,6 +275,10 @@ namespace zk_ml_toolchain {
                     exit(-1);
                 }
 
+                if (uint8_t(gen_mode & generation_mode::ASSIGNMENTS) == 0 && !public_output.empty()) {
+                    std::cerr << "Public output provided, but no assignments requested" << std::endl;
+                    exit(-1);
+                }
                 // reserve space for the output constraints
                 ok = input_reader.reserve_outputs(funcOp->second, public_output, output_is_already_assigned);
                 if (!ok) {
@@ -343,35 +352,34 @@ namespace zk_ml_toolchain {
 #define BITSWITCHER(func, b)                                                                           \
     switch (b) {                                                                                       \
         case 8:                                                                                        \
-            func<1>(operation, stack, bp, assignmnt, start_row);                                       \
+            func<1>(operation, stack, bp, assignmnt, compParams);                                      \
             break;                                                                                     \
         case 16:                                                                                       \
-            func<2>(operation, stack, bp, assignmnt, start_row);                                       \
+            func<2>(operation, stack, bp, assignmnt, compParams);                                      \
             break;                                                                                     \
         case 32:                                                                                       \
-            func<4>(operation, stack, bp, assignmnt, start_row);                                       \
+            func<4>(operation, stack, bp, assignmnt, compParams);                                      \
             break;                                                                                     \
         case 64:                                                                                       \
-            func<8>(operation, stack, bp, assignmnt, start_row);                                       \
+            func<8>(operation, stack, bp, assignmnt, compParams);                                      \
             break;                                                                                     \
         default:                                                                                       \
             UNREACHABLE(std::string("unsupported int bit size for bitwise op: ") + std::to_string(b)); \
     }
 
-        void handleArithOperation(Operation *op) {
-            std::uint32_t start_row = assignmnt.allocated_rows();
+        void handleArithOperation(Operation *op, const ComponentParameters &compParams) {
             if (arith::AddFOp operation = llvm::dyn_cast<arith::AddFOp>(op)) {
-                handle_add(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_add(operation, stack, bp, assignmnt, compParams);
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
-                handle_sub(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_sub(operation, stack, bp, assignmnt, compParams);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
-                handle_fmul<PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fmul<PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
-                handle_fdiv<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fdiv<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
-                handle_frem<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_frem<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
-                handle_fcmp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_fcmp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
                 ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
                 ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
@@ -398,7 +406,7 @@ namespace zk_ml_toolchain {
                             stack.push_local(operation->getResult(0), falsy);
                         }
                     } else {
-                        handle_select(operation, stack, bp, assignmnt, start_row);
+                        handle_select(operation, stack, bp, assignmnt, compParams);
                     }
                 } else {
                     std::string typeStr;
@@ -407,7 +415,7 @@ namespace zk_ml_toolchain {
                     UNREACHABLE(std::string("unhandled select operand: ") + typeStr);
                 }
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
-                handle_neg(operation, stack, bp, assignmnt, start_row);
+                handle_neg(operation, stack, bp, assignmnt, compParams);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
                 // check if logical and or bitwise and
                 mlir::Type LhsType = operation.getLhs().getType();
@@ -415,9 +423,9 @@ namespace zk_ml_toolchain {
                 assert(LhsType == RhsType && "must be same type for AndIOp");
                 uint8_t bits = LhsType.getIntOrFloatBitWidth();
                 if (1 == bits) {
-                    handle_logic_and(operation, stack, bp, assignmnt, start_row);
+                    nil::blueprint::handle_logic_and(operation, stack, bp, assignmnt, compParams);
                 } else {
-                    BITSWITCHER(handle_bitwise_and, bits);
+                    BITSWITCHER(nil::blueprint::handle_bitwise_and, bits);
                 }
             } else if (arith::OrIOp operation = llvm::dyn_cast<arith::OrIOp>(op)) {
                 ASSERT(operation.getNumOperands() == 2 && "Or must have two operands");
@@ -438,9 +446,9 @@ namespace zk_ml_toolchain {
                     assert(LhsType == RhsType && "must be same type for OrIOp");
                     unsigned bits = LhsType.getIntOrFloatBitWidth();
                     if (1 == bits) {
-                        handle_logic_or(operation, stack, bp, assignmnt, start_row);
+                        nil::blueprint::handle_logic_or(operation, stack, bp, assignmnt, compParams);
                     } else {
-                        BITSWITCHER(handle_bitwise_or, bits);
+                        BITSWITCHER(nil::blueprint::handle_bitwise_or, bits);
                     }
                 }
             } else if (arith::ExtFOp operation = llvm::dyn_cast<arith::ExtFOp>(op)) {
@@ -460,9 +468,9 @@ namespace zk_ml_toolchain {
                 assert(LhsType == RhsType && "must be same type for XOrIOp");
                 unsigned bits = LhsType.getIntOrFloatBitWidth();
                 if (1 == bits) {
-                    handle_logic_xor(operation, stack, bp, assignmnt, start_row);
+                    nil::blueprint::handle_logic_xor(operation, stack, bp, assignmnt, compParams);
                 } else {
-                    BITSWITCHER(handle_bitwise_xor, bits);
+                    BITSWITCHER(nil::blueprint::handle_bitwise_xor, bits);
                 }
             } else if (arith::AddIOp operation = llvm::dyn_cast<arith::AddIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
@@ -471,7 +479,7 @@ namespace zk_ml_toolchain {
                     auto rhs = stack.get_constant(operation.getRhs());
                     stack.push_constant(operation.getResult(), lhs + rhs);
                 } else {
-                    handle_add(operation, stack, bp, assignmnt, start_row);
+                    nil::blueprint::handle_add(operation, stack, bp, assignmnt, compParams);
                 }
             } else if (arith::SubIOp operation = llvm::dyn_cast<arith::SubIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
@@ -480,7 +488,7 @@ namespace zk_ml_toolchain {
                     auto rhs = stack.get_constant(operation.getRhs());
                     stack.push_constant(operation.getResult(), lhs - rhs);
                 } else {
-                    handle_sub(operation, stack, bp, assignmnt, start_row);
+                    nil::blueprint::handle_sub(operation, stack, bp, assignmnt, compParams);
                 }
             } else if (arith::MulIOp operation = llvm::dyn_cast<arith::MulIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
@@ -489,7 +497,7 @@ namespace zk_ml_toolchain {
                     auto rhs = stack.get_constant(operation.getRhs());
                     stack.push_constant(operation.getResult(), lhs * rhs);
                 } else {
-                    handle_integer_mul(operation, stack, bp, assignmnt, start_row);
+                    nil::blueprint::handle_integer_mul(operation, stack, bp, assignmnt, compParams);
                 }
             } else if (arith::CmpIOp operation = llvm::dyn_cast<arith::CmpIOp>(op)) {
                 if (operation.getLhs().getType().isa<IndexType>()) {
@@ -536,7 +544,7 @@ namespace zk_ml_toolchain {
                 } else {
                     // FIXME we use the fcmp gadget here for the time being.
                     // as soon as we get the cmpi gadget from upstream, swap the gadget
-                    handle_icmp(operation, stack, bp, assignmnt, start_row);
+                    handle_icmp(operation, stack, bp, assignmnt, compParams);
                 }
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
                 TypedAttr constantValue = operation.getValueAttr();
@@ -578,13 +586,13 @@ namespace zk_ml_toolchain {
                     UNREACHABLE("unsupported Index Cast");
                 }
             } else if (arith::SIToFPOp operation = llvm::dyn_cast<arith::SIToFPOp>(op)) {
-                handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::UIToFPOp operation = llvm::dyn_cast<arith::UIToFPOp>(op)) {
-                handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_to_fixedpoint<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::FPToSIOp operation = llvm::dyn_cast<arith::FPToSIOp>(op)) {
-                handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::FPToUIOp operation = llvm::dyn_cast<arith::FPToUIOp>(op)) {
-                handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_to_int<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (llvm::isa<arith::ExtUIOp>(op) || llvm::isa<arith::ExtSIOp>(op) ||
                        llvm::isa<arith::TruncIOp>(op)) {
                 VarType &toExtend = stack.get_local(op->getOperand(0));
@@ -596,12 +604,11 @@ namespace zk_ml_toolchain {
         }
 #undef BITSWITCHER
 
-        void handleMathOperation(Operation *op) {
-            std::uint32_t start_row = assignmnt.allocated_rows();
+        void handleMathOperation(Operation *op, const ComponentParameters &compParams) {
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
-                handle_exp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_exp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
-                handle_log<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_log<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
                 UNREACHABLE("powf not supported. Did you compile the model with standard MLIR?");
             } else if (math::IPowIOp operation = llvm::dyn_cast<math::IPowIOp>(op)) {
@@ -613,26 +620,26 @@ namespace zk_ml_toolchain {
                 assert(base == 2 && "For now we only support powi to power of 2");
                 stack.push_constant(operation.getResult(), 1 << pow);
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
-                handle_abs<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_abs<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
-                handle_ceil<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_ceil<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
-                handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
                 // TODO: do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
                 VarType &src = stack.get_local(operation.getLhs());
                 stack.push_local(operation.getResult(), src);
             } else if (math::SqrtOp operation = llvm::dyn_cast<math::SqrtOp>(op)) {
-                handle_sqrt<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_sqrt<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::SinOp operation = llvm::dyn_cast<math::SinOp>(op)) {
-                handle_sin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_sin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CosOp operation = llvm::dyn_cast<math::CosOp>(op)) {
-                handle_cos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_cos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::TanhOp operation = llvm::dyn_cast<math::TanhOp>(op)) {
-                handle_tanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_tanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::ErfOp operation = llvm::dyn_cast<math::ErfOp>(op)) {
-                handle_erf<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_erf<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled math operation: ") + opName);
@@ -661,7 +668,6 @@ namespace zk_ml_toolchain {
                 doAffineFor(operation, from, to, step);
             } else if (affine::AffineLoadOp operation = llvm::dyn_cast<affine::AffineLoadOp>(op)) {
                 nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
-
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
                 std::vector<int64_t> mapDims;
@@ -685,14 +691,11 @@ namespace zk_ml_toolchain {
                 for (auto idx : indices) {
                     mapDims.push_back(stack.get_constant(idx));
                 }
-                // grab the element from the locals array
-                VarType &value = stack.get_local(operation.getValue());
-                // put the element from the memref using index vector
                 auto affineMap =
                     castFromAttr<AffineMapAttr>(operation->getAttr(affine::AffineStoreOp::getMapAttrStrName()))
                         .getAffineMap();
-                auto test = evalAffineMap(affineMap, mapDims);
-                memref.put(test, value);
+                VarType &value = stack.get_local(operation.getValue());
+                memref.put(evalAffineMap(affineMap, mapDims), value);
 
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
@@ -718,10 +721,9 @@ namespace zk_ml_toolchain {
             }
         }
 
-        void handleKrnlOperation(Operation *op) {
+        void handleKrnlOperation(Operation *op, const ComponentParameters &compParams) {
             // Print the operation itself and some of its properties
             // Print the operation attributes
-            std::uint32_t start_row = assignmnt.allocated_rows();
             std::string opName = op->getName().getIdentifier().str();
             logger.debug("visiting %s", opName);
             if (KrnlGlobalOp operation = llvm::dyn_cast<KrnlGlobalOp>(op)) {
@@ -805,27 +807,26 @@ namespace zk_ml_toolchain {
                 auto SrcOffset = stack.get_constant(operation.getSrcOffset());
                 DstMemref.copyFrom(SrcMemref, NumElements, DstOffset, SrcOffset);
             } else if (KrnlAsinOp operation = llvm::dyn_cast<KrnlAsinOp>(op)) {
-                handle_asin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_asin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlAsinhOp operation = llvm::dyn_cast<KrnlAsinhOp>(op)) {
-                handle_asinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_asinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlAcosOp operation = llvm::dyn_cast<KrnlAcosOp>(op)) {
-                handle_acos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_acos<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlAcoshOp operation = llvm::dyn_cast<KrnlAcoshOp>(op)) {
-                handle_acosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_acosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlTanOp operation = llvm::dyn_cast<KrnlTanOp>(op)) {
-                handle_tan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_tan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlAtanOp operation = llvm::dyn_cast<KrnlAtanOp>(op)) {
-                handle_atan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_atan<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (KrnlAtanhOp operation = llvm::dyn_cast<KrnlAtanhOp>(op)) {
-                handle_atanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_atanh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled krnl operation: ") + opName);
             }
         }
 
-        void handleZkMlOperation(Operation *op) {
-            std::uint32_t start_row = assignmnt.allocated_rows();
+        void handleZkMlOperation(Operation *op, const ComponentParameters &compParams) {
             if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
                 mlir::Value lhs = operation.getLhs();
                 mlir::Value rhs = operation.getRhs();
@@ -833,28 +834,29 @@ namespace zk_ml_toolchain {
                 mlir::MemRefType MemRefType = mlir::cast<mlir::MemRefType>(lhs.getType());
                 assert(MemRefType.getShape().size() == 1 && "DotProduct must have tensors of rank 1");
                 logger.debug("computing DotProduct with %d x %d", MemRefType.getShape().back());
-                handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt, start_row);
-                return;
+                handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt, compParams);
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
-                handle_argmin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar, start_row);
+                nil::blueprint::handle_argmin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar,
+                                                                   compParams);
             } else if (zkml::ArgMaxOp operation = llvm::dyn_cast<zkml::ArgMaxOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
-                handle_argmax<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar, start_row);
+                nil::blueprint::handle_argmax<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar,
+                                                                   compParams);
             } else if (zkml::GatherOp operation = llvm::dyn_cast<zkml::GatherOp>(op)) {
                 auto dataIndex = stack.get_constant(operation.getDataIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
-                handle_gather(operation, stack, bp, assignmnt, dataIndexVar, start_row);
+                nil::blueprint::handle_gather(operation, stack, bp, assignmnt, dataIndexVar, compParams);
             } else if (zkml::CmpSetOp operation = llvm::dyn_cast<zkml::CmpSetOp>(op)) {
                 auto dataIndex = stack.get_constant(operation.getIndex());
                 auto dataIndexVar = put_into_assignment(dataIndex);
-                handle_cmp_set(operation, stack, bp, assignmnt, dataIndexVar, start_row);
+                handle_cmp_set(operation, stack, bp, assignmnt, dataIndexVar, compParams);
             } else if (zkml::ExpNoClipOp operation = llvm::dyn_cast<zkml::ExpNoClipOp>(op)) {
-                handle_exp_no_clip<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_exp_no_clip<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (zkml::SinhOp operation = llvm::dyn_cast<zkml::SinhOp>(op)) {
-                handle_sinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_sinh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (zkml::CoshOp operation = llvm::dyn_cast<zkml::CoshOp>(op)) {
-                handle_cosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, start_row);
+                nil::blueprint::handle_cosh<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (zkml::OnnxAmountOp operation = llvm::dyn_cast<zkml::OnnxAmountOp>(op)) {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
@@ -915,7 +917,6 @@ namespace zk_ml_toolchain {
                 }
                 auto value = memref.get(indicesV);
                 stack.push_local(operation.getResult(), value);
-
             } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
                 // TODO: deduplicate with affine.load
                 auto memRefHash = mlir::hash_value(operation.getMemref());
@@ -963,14 +964,14 @@ namespace zk_ml_toolchain {
                 logger.error("Encountered an unregistered Dialect");
                 exit(-1);
             }
-
+            ComponentParameters compParams = {assignmnt.allocated_rows(), zero_var, gen_mode};
             if (llvm::isa<mlir::arith::ArithDialect>(dial)) {
-                handleArithOperation(op);
+                handleArithOperation(op, compParams);
                 return;
             }
 
             if (llvm::isa<mlir::math::MathDialect>(dial)) {
-                handleMathOperation(op);
+                handleMathOperation(op, compParams);
                 return;
             }
 
@@ -985,12 +986,12 @@ namespace zk_ml_toolchain {
             }
 
             if (llvm::isa<zkml::ZkMlDialect>(dial)) {
-                handleZkMlOperation(op);
+                handleZkMlOperation(op, compParams);
                 return;
             }
 
             if (llvm::isa<mlir::KrnlDialect>(dial)) {
-                handleKrnlOperation(op);
+                handleKrnlOperation(op, compParams);
                 return;
             }
 
@@ -1039,7 +1040,7 @@ namespace zk_ml_toolchain {
                             }
                         }
                     }
-                    if (!output_is_already_assigned) {
+                    if (!output_is_already_assigned && uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
                         // if the output was only just calculated, we write it out into the public output file
                         nil::blueprint::OutputWriter<BlueprintFieldType, VarType,
                                                      nil::blueprint::assignment<ArithmetizationType>, PreLimbs,
@@ -1134,6 +1135,7 @@ namespace zk_ml_toolchain {
             }
         }
 
+        generation_mode gen_mode;
         nil::blueprint::print_format print_circuit_format;
         nil::blueprint::logger &logger;
 

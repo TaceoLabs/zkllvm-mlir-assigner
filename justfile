@@ -39,3 +39,6 @@ buildbpfptester:
 
 build-warn:
   make -C build/ -j 12 zkml-onnx-compiler mlir-assigner
+
+delete-output:
+  find . -type f -iname \*.output.json -delete
