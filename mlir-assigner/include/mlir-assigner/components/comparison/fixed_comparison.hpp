@@ -83,7 +83,6 @@ namespace nil {
             // we compare 64 bits with this configuration
             auto result =
                 call_component<PreLimbs, PostLimbs, component_type>(operation, stack, bp, assignment, compParams);
-            // TODO should we store zero instead???
             switch (operation.getPredicate()) {
                 case mlir::arith::CmpFPredicate::UGT:
                 case mlir::arith::CmpFPredicate::OGT: {
@@ -122,9 +121,6 @@ namespace nil {
                     UNREACHABLE("Unsupported fcmp predicate (UNO, ORD, AlwaysFalse, AlwaysTrue)");
                     break;
                 }
-                default:
-                    UNREACHABLE("Unsupported fcmp predicate");
-                    break;
             }
         }
 
