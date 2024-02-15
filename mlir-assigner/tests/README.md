@@ -243,7 +243,7 @@ long as it is applicable for ZK).
 | **Scaler**                    |        :x:         |        :x:         |                                                    |
 | **Scan**                      |        :x:         | :white_check_mark: | Not supported at the moment due to ZK limitations. |
 | **Scatter**                   |        :x:         |        :x:         |                                                    |
-| **ScatterElements**           |        :x:         | :white_check_mark: |                                                    |
+| **ScatterElements**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **ScatterND**                 |        :x:         | :white_check_mark: |                                                    |
 | **Selu**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **SequenceAt**                |        :x:         |        :x:         |                                                    |
