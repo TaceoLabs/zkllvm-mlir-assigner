@@ -56,13 +56,14 @@
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/erf.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/div.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/rem.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/select.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/dot_rescale_2_gates.hpp>
+#include <nil/blueprint/components/algebra/fields/plonk/dot_2_gates.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_and.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_or.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/bitwise_xor.hpp>
-#include <nil/blueprint/components/algebra/fixedpoint/plonk/dot_rescale_2_gates.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/non_native/logic_ops.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
-#include <nil/blueprint/components/algebra/fixedpoint/plonk/select.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/multiplication.hpp>
 #include <optional>

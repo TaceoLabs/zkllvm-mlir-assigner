@@ -182,7 +182,7 @@ long as it is applicable for ZK).
 | **LpNormalization**           |        :x:         |        :x:         |                                                    |
 | **LpPool**                    |        :x:         |        :x:         |                                                    |
 | **MatMul**                    | :white_check_mark: | :white_check_mark: |                                                    |
-| **MatMulInteger**             |        :x:         | :white_check_mark: |                                                    |
+| **MatMulInteger**             | :white_check_mark: | :white_check_mark: |                                                    |
 | **Max**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **MaxPool**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **MaxRoiPool**                |        :x:         |        :x:         |                                                    |
