@@ -137,6 +137,7 @@ namespace nil {
                 bool found = (used_rows.find(v.get().rotation) != used_rows.end());
                 if (!found &&
                     (v.get().type == var::column_type::witness || v.get().type == var::column_type::constant)) {
+                    UNREACHABLE("input variable not found in used rows, cannot happen atm in our assigner");
                     var new_v;
                     if (std::uint8_t(gen_mode & generation_mode::ASSIGNMENTS)) {
                         new_v = save_shared_var(assignment, v);
@@ -197,6 +198,8 @@ namespace nil {
                         assignment.witness(v.index, v.rotation) = BlueprintFieldType::value_type::zero();
                     } else if (v.type == var::column_type::constant) {
                         assignment.constant(v.index, v.rotation) = BlueprintFieldType::value_type::zero();
+                    } else {
+                        UNREACHABLE("unexpected variable type");
                     }
                 }
             }
