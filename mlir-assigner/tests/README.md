@@ -108,19 +108,19 @@ long as it is applicable for ZK).
 | **CastLike**                  |        :x:         |        :x:         |                                                    |
 | **CastMap**                   |        :x:         |        :x:         |                                                    |
 | **CategoryMapper**            |        :x:         |        :x:         |                                                    |
-| **Ceil**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Ceil**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Celu**                      |        :x:         |        :x:         |                                                    |
 | **CenterCropPad**             |        :x:         |        :x:         |                                                    |
-| **Clip**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Clip**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Col2Im**                    |        :x:         |        :x:         |                                                    |
-| **Compress**                  |        :x:         | :white_check_mark: |                                                    |
+| **Compress**                  |        :x:         | :white_check_mark: | Not supported because op has dynamic output        |
 | **Concat**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConcatFromSequence**        |        :x:         |        :x:         |                                                    |
 | **Constant**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConstantOfShape**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **Conv**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **ConvInteger**               |        :x:         |        :x:         |                                                    |
-| **ConvTranspose**             |        :x:         | :white_check_mark: |                                                    |
+| **ConvTranspose**             |        :x:         | :white_check_mark: | No support atm due to dynamic tensor indexing      |
 | **Cos**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Cosh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **CumSum**                    | :white_check_mark: | :white_check_mark: |                                                    |
@@ -142,12 +142,12 @@ long as it is applicable for ZK).
 | **EyeLike**                   |        :x:         |        :x:         |                                                    |
 | **FeatureVectorizer**         |        :x:         |        :x:         |                                                    |
 | **Flatten**                   | :white_check_mark: | :white_check_mark: |                                                    |
-| **Floor**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Floor**                     | :white_check_mark: | :white_check_mark: |                                                    |
 | **GRU**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Gather**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **GatherElements**            | :white_check_mark: | :white_check_mark: |                                                    |
-| **GatherND**                  |        :x:         | :white_check_mark: |                                                    |
-| **Gemm**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **GatherND**                  |        :x:         | :white_check_mark: | No support atm due to dynamic tensor indexing      |
+| **Gemm**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **GlobalAveragePool**         | :white_check_mark: | :white_check_mark: |                                                    |
 | **GlobalLpPool**              |        :x:         |        :x:         |                                                    |
 | **GlobalMaxPool**             | :white_check_mark: | :white_check_mark: |                                                    |
@@ -170,7 +170,7 @@ long as it is applicable for ZK).
 | **LRN**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **LSTM**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **LabelEncoder**              |        :x:         |        :x:         |                                                    |
-| **LayerNormalization**        |        :x:         | :white_check_mark: |                                                    |
+| **LayerNormalization**        |        :x:         |        :x:         |                                                    |
 | **LeakyRelu**                 | :white_check_mark: | :white_check_mark: |                                                    |
 | **Less**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **LessOrEqual**               | :white_check_mark: | :white_check_mark: |                                                    |
@@ -184,7 +184,7 @@ long as it is applicable for ZK).
 | **MatMul**                    | :white_check_mark: | :white_check_mark: |                                                    |
 | **MatMulInteger**             | :white_check_mark: | :white_check_mark: |                                                    |
 | **Max**                       | :white_check_mark: | :white_check_mark: |                                                    |
-| **MaxPool**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **MaxPool**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **MaxRoiPool**                |        :x:         |        :x:         |                                                    |
 | **MaxUnpool**                 |        :x:         |        :x:         |                                                    |
 | **Mean**                      | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
@@ -194,9 +194,9 @@ long as it is applicable for ZK).
 | **Mish**                      |        :x:         |        :x:         |                                                    |
 | **Mod**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
 | **Momentum**                  |        :x:         |        :x:         |                                                    |
-| **Mul**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Mul**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **Multinomial**               |        :x:         |        :x:         |                                                    |
-| **Neg**                       | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Neg**                       | :white_check_mark: | :white_check_mark: |                                                    |
 | **NegativeLogLikelihoodLoss** |        :x:         |        :x:         |                                                    |
 | **NonMaxSuppression**         |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
 | **NonZero**                   |        :x:         | :white_check_mark: | Cannot support due to zk limitations               |
@@ -233,7 +233,7 @@ long as it is applicable for ZK).
 | **ReduceSumSquare**           | :white_check_mark: | :white_check_mark: |                                                    |
 | **Relu**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Reshape**                   | :white_check_mark: | :white_check_mark: |                                                    |
-| **Resize**                    |        :x:         | :white_check_mark: |                                                    |
+| **Resize**                    |        :x:         | :white_check_mark: | No support atm due to dynamic tensor indexing      |
 | **ReverseSequence**           |        :x:         | :white_check_mark: | Sequences not supported at the moment.             |
 | **RoiAlign**                  |        :x:         |        :x:         |                                                    |
 | **Round**                     | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
@@ -244,7 +244,7 @@ long as it is applicable for ZK).
 | **Scan**                      |        :x:         | :white_check_mark: | Not supported at the moment due to ZK limitations. |
 | **Scatter**                   |        :x:         |        :x:         |                                                    |
 | **ScatterElements**           | :white_check_mark: | :white_check_mark: |                                                    |
-| **ScatterND**                 |        :x:         | :white_check_mark: |                                                    |
+| **ScatterND**                 |        :x:         | :white_check_mark: | No support atm due to dynamic tensor indexing      |
 | **Selu**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **SequenceAt**                |        :x:         |        :x:         |                                                    |
 | **SequenceConstruct**         |        :x:         |        :x:         |                                                    |
@@ -261,7 +261,7 @@ long as it is applicable for ZK).
 | **Sinh**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Size**                      | :white_check_mark: | :white_check_mark: |                                                    |
 | **Slice**                     | :white_check_mark: | :white_check_mark: |                                                    |
-| **Softmax**                   | :white_check_mark: | :white_check_mark: | No support for integers at the moment.             |
+| **Softmax**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **SoftmaxCrossEntropyLoss**   |        :x:         |        :x:         |                                                    |
 | **Softplus**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **Softsign**                  | :white_check_mark: | :white_check_mark: |                                                    |
@@ -278,7 +278,7 @@ long as it is applicable for ZK).
 | **TfIdfVectorizer**           |        :x:         |        :x:         |                                                    |
 | **ThresholdedRelu**           |        :x:         |        :x:         |                                                    |
 | **Tile**                      | :white_check_mark: | :white_check_mark: |                                                    |
-| **TopK**                      |        :x:         | :white_check_mark: |                                                    |
+| **TopK**                      |        :x:         | :white_check_mark: | Not supported due to external library calls        |
 | **Transpose**                 | :white_check_mark: | :white_check_mark: |                                                    |
 | **TreeEnsembleClassifier**    |        :x:         |        :x:         |                                                    |
 | **TreeEnsembleRegressor**     |        :x:         |        :x:         |                                                    |
