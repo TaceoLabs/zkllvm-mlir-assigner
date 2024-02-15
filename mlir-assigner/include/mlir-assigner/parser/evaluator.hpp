@@ -207,16 +207,15 @@ namespace zk_ml_toolchain {
         evaluator &operator=(const evaluator &pass) = delete;
 
         void handleKrnlEntryOperation(KrnlEntryPointOp &EntryPoint, std::string &func) {
-            int32_t numInputs = -1;
-            int32_t numOutputs = -1;
-
             for (auto a : EntryPoint->getAttrs()) {
                 if (a.getName() == EntryPoint.getEntryPointFuncAttrName()) {
                     func = a.getValue().cast<SymbolRefAttr>().getLeafReference().str();
                 } else if (a.getName() == EntryPoint.getNumInputsAttrName()) {
-                    numInputs = a.getValue().cast<IntegerAttr>().getInt();
+                    // do nothing for num inputs atm
+                    // a.getValue().cast<IntegerAttr>().getInt();
                 } else if (a.getName() == EntryPoint.getNumOutputsAttrName()) {
-                    numOutputs = a.getValue().cast<IntegerAttr>().getInt();
+                    // do nothing for num outputs atm
+                    // a.getValue().cast<IntegerAttr>().getInt();
                 } else if (a.getName() == EntryPoint.getSignatureAttrName()) {
                     // do nothing for signature atm
                     // TODO: check against input types & shapes
@@ -868,9 +867,6 @@ namespace zk_ml_toolchain {
                 logger.debug("allocating memref");
                 logger << operation;
                 MemRefType type = operation.getType();
-                auto uses = operation->getResult(0).getUsers();
-                auto res = operation->getResult(0);
-                auto res2 = operation.getMemref();
                 // check for dynamic size
                 std::vector<int64_t> dims;
                 auto operands = operation.getOperands();
