@@ -187,10 +187,9 @@ namespace zk_ml_toolchain {
                   boost::json::array &public_output, generation_mode gen_mode,
                   nil::blueprint::print_format print_circuit_format, std::string &clip,
                   nil::blueprint::logger &logger) :
-            bp(circuit),
-            assignmnt(assignment), public_input(public_input), private_input(private_input),
-            public_output(public_output), gen_mode(gen_mode), print_circuit_format(print_circuit_format),
-            logger(logger) {
+            gen_mode(gen_mode),
+            print_circuit_format(print_circuit_format), logger(logger), bp(circuit), assignmnt(assignment),
+            public_input(public_input), private_input(private_input), public_output(public_output) {
             lower_bound = FixedPoint(1, FixedPoint::SCALE).to_double();
             if ("clip" == clip) {
                 clip_strategy = ClipStrategy::CLIP;
@@ -208,16 +207,15 @@ namespace zk_ml_toolchain {
         evaluator &operator=(const evaluator &pass) = delete;
 
         void handleKrnlEntryOperation(KrnlEntryPointOp &EntryPoint, std::string &func) {
-            int32_t numInputs = -1;
-            int32_t numOutputs = -1;
-
             for (auto a : EntryPoint->getAttrs()) {
                 if (a.getName() == EntryPoint.getEntryPointFuncAttrName()) {
                     func = a.getValue().cast<SymbolRefAttr>().getLeafReference().str();
                 } else if (a.getName() == EntryPoint.getNumInputsAttrName()) {
-                    numInputs = a.getValue().cast<IntegerAttr>().getInt();
+                    // do nothing for num inputs atm
+                    // a.getValue().cast<IntegerAttr>().getInt();
                 } else if (a.getName() == EntryPoint.getNumOutputsAttrName()) {
-                    numOutputs = a.getValue().cast<IntegerAttr>().getInt();
+                    // do nothing for num outputs atm
+                    // a.getValue().cast<IntegerAttr>().getInt();
                 } else if (a.getName() == EntryPoint.getSignatureAttrName()) {
                     // do nothing for signature atm
                     // TODO: check against input types & shapes
@@ -373,13 +371,13 @@ namespace zk_ml_toolchain {
             } else if (arith::SubFOp operation = llvm::dyn_cast<arith::SubFOp>(op)) {
                 nil::blueprint::handle_sub(operation, stack, bp, assignmnt, compParams);
             } else if (arith::MulFOp operation = llvm::dyn_cast<arith::MulFOp>(op)) {
-                handle_fmul<PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_fmul<PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::DivFOp operation = llvm::dyn_cast<arith::DivFOp>(op)) {
-                handle_fdiv<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_fdiv<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::RemFOp operation = llvm::dyn_cast<arith::RemFOp>(op)) {
-                handle_frem<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_frem<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::CmpFOp operation = llvm::dyn_cast<arith::CmpFOp>(op)) {
-                handle_fcmp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_fcmp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (arith::SelectOp operation = llvm::dyn_cast<arith::SelectOp>(op)) {
                 ASSERT(operation.getNumOperands() == 3 && "Select must have three operands");
                 ASSERT(operation->getOperand(1).getType() == operation->getOperand(2).getType() &&
@@ -406,7 +404,7 @@ namespace zk_ml_toolchain {
                             stack.push_local(operation->getResult(0), falsy);
                         }
                     } else {
-                        handle_select(operation, stack, bp, assignmnt, compParams);
+                        nil::blueprint::handle_select(operation, stack, bp, assignmnt, compParams);
                     }
                 } else {
                     std::string typeStr;
@@ -415,7 +413,7 @@ namespace zk_ml_toolchain {
                     UNREACHABLE(std::string("unhandled select operand: ") + typeStr);
                 }
             } else if (arith::NegFOp operation = llvm::dyn_cast<arith::NegFOp>(op)) {
-                handle_neg(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_neg(operation, stack, bp, assignmnt, compParams);
             } else if (arith::AndIOp operation = llvm::dyn_cast<arith::AndIOp>(op)) {
                 // check if logical and or bitwise and
                 mlir::Type LhsType = operation.getLhs().getType();
@@ -608,7 +606,7 @@ namespace zk_ml_toolchain {
             if (math::ExpOp operation = llvm::dyn_cast<math::ExpOp>(op)) {
                 nil::blueprint::handle_exp<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::LogOp operation = llvm::dyn_cast<math::LogOp>(op)) {
-                handle_log<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_log<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::PowFOp operation = llvm::dyn_cast<math::PowFOp>(op)) {
                 UNREACHABLE("powf not supported. Did you compile the model with standard MLIR?");
             } else if (math::IPowIOp operation = llvm::dyn_cast<math::IPowIOp>(op)) {
@@ -620,11 +618,11 @@ namespace zk_ml_toolchain {
                 assert(base == 2 && "For now we only support powi to power of 2");
                 stack.push_constant(operation.getResult(), 1 << pow);
             } else if (math::AbsFOp operation = llvm::dyn_cast<math::AbsFOp>(op)) {
-                handle_abs<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_abs<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CeilOp operation = llvm::dyn_cast<math::CeilOp>(op)) {
-                handle_ceil<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_ceil<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
-                handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
                 // TODO: do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
@@ -828,7 +826,8 @@ namespace zk_ml_toolchain {
 
         void handleZkMlOperation(Operation *op, const ComponentParameters &compParams) {
             if (zkml::DotProductOp operation = llvm::dyn_cast<zkml::DotProductOp>(op)) {
-                handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt, compParams);
+                nil::blueprint::handle_dot_product<PreLimbs, PostLimbs>(operation, zero_var, stack, bp, assignmnt,
+                                                                        compParams);
             } else if (zkml::ArgMinOp operation = llvm::dyn_cast<zkml::ArgMinOp>(op)) {
                 auto nextIndexVar = put_into_assignment(stack.get_constant(operation.getNextIndex()));
                 nil::blueprint::handle_argmin<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, nextIndexVar,
@@ -868,9 +867,6 @@ namespace zk_ml_toolchain {
                 logger.debug("allocating memref");
                 logger << operation;
                 MemRefType type = operation.getType();
-                auto uses = operation->getResult(0).getUsers();
-                auto res = operation->getResult(0);
-                auto res2 = operation.getMemref();
                 // check for dynamic size
                 std::vector<int64_t> dims;
                 auto operands = operation.getOperands();

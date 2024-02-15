@@ -110,12 +110,12 @@ void print_circuit(const circuit_proxy<ArithmetizationType> &circuit_proxy,
                 const auto second_var = constraint.second;
                 if ((first_var.type == variable_type::column_type::witness ||
                      first_var.type == variable_type::column_type::constant) &&
-                    first_var.rotation == row) {
+                    uint32_t(first_var.rotation) == row) {
                     constraint.first = variable_type(first_var.index, local_row, first_var.relative, first_var.type);
                 }
                 if ((second_var.type == variable_type::column_type::witness ||
                      second_var.type == variable_type::column_type::constant) &&
-                    second_var.rotation == row) {
+                    uint32_t(second_var.rotation) == row) {
                     constraint.second =
                         variable_type(second_var.index, local_row, second_var.relative, second_var.type);
                 }
@@ -428,11 +428,7 @@ int curve_dependent_main(std::string bytecode_file_name,
     using ArithmetizationParams =
         zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ConstraintSystemType = zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
-    using ConstraintSystemProxyType =
-        zk::snark::plonk_table<BlueprintFieldType, ArithmetizationParams, zk::snark::plonk_column<BlueprintFieldType>>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
-    using AssignmentTableType =
-        zk::snark::plonk_table<BlueprintFieldType, ArithmetizationParams, zk::snark::plonk_column<BlueprintFieldType>>;
 
     boost::json::value public_input_json_value;
     if (public_input_file_name.empty()) {
@@ -507,15 +503,14 @@ int curve_dependent_main(std::string bytecode_file_name,
         // fill ComponentConstantColumns, ComponentConstantColumns + 1, ...
         std::iota(lookup_columns_indices.begin(), lookup_columns_indices.end(), ComponentConstantColumns);
 
-        auto usable_rows_amount =
-            zk::snark::pack_lookup_tables_horizontal(parser_instance.circuits[0].get_reserved_indices(),
-                                                     parser_instance.circuits[0].get_reserved_tables(),
-                                                     parser_instance.circuits[0].get(),
-                                                     parser_instance.assignments[0].get(),
-                                                     lookup_columns_indices,
-                                                     ComponentSelectorColumns,
-                                                     0,
-                                                     max_lookup_rows);
+        zk::snark::pack_lookup_tables_horizontal(parser_instance.circuits[0].get_reserved_indices(),
+                                                 parser_instance.circuits[0].get_reserved_tables(),
+                                                 parser_instance.circuits[0].get(),
+                                                 parser_instance.assignments[0].get(),
+                                                 lookup_columns_indices,
+                                                 ComponentSelectorColumns,
+                                                 0,
+                                                 max_lookup_rows);
     }
 
     constexpr std::uint32_t invalid_target_prover = std::numeric_limits<std::uint32_t>::max();
@@ -628,8 +623,8 @@ int curve_dependent_main(std::string bytecode_file_name,
             ASSERT_MSG(
                 nil::blueprint::is_satisfied(parser_instance.circuits[0].get(), parser_instance.assignments[0].get()),
                 "The circuit is not satisfied");
-        } else if (parser_instance.assignments.size() > 1 && (target_prover < parser_instance.assignments.size() ||
-                                                              invalid_target_prover == invalid_target_prover)) {
+        } else if (parser_instance.assignments.size() > 1 &&
+                   (target_prover < parser_instance.assignments.size() || target_prover == invalid_target_prover)) {
             //  check only for target prover if set
             std::uint32_t start_idx = (target_prover == invalid_target_prover) ? 0 : target_prover;
             std::uint32_t end_idx =

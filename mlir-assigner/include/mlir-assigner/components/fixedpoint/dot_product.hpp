@@ -30,9 +30,6 @@ namespace nil {
                 &assignment,
             const common_component_parameters<
                 crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
-            using component_type = components::fix_dot_rescale_2_gates<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             mlir::Value lhs = operation.getLhs();
             mlir::Value rhs = operation.getRhs();

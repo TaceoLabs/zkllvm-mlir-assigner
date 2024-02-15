@@ -187,8 +187,8 @@ namespace nil {
 
             typename ComponentType::result_type result =
                 std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS) ?
-                    result = components::generate_assignments(component, assignment, input, compParams.start_row) :
-                    result = typename ComponentType::result_type(component, compParams.start_row);
+                    components::generate_assignments(component, assignment, input, compParams.start_row) :
+                    typename ComponentType::result_type(component, compParams.start_row);
 
             // touch result variables
             if (std::uint8_t(compParams.gen_mode & generation_mode::ASSIGNMENTS) == 0) {

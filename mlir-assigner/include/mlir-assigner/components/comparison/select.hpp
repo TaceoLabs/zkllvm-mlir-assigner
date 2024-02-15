@@ -48,13 +48,12 @@ namespace nil {
             circuit_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
             assignment_proxy<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                 &assignment,
-            const common_component_parameters<crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
-            auto c = stack.get_local(operation.getCondition());
-            auto x = stack.get_local(operation.getTrueValue());
-            auto y = stack.get_local(operation.getFalseValue());
+            const common_component_parameters<
+                crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>> &compParams) {
             using component_type = components::fix_select<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+                BlueprintFieldType,
+                basic_non_native_policy<BlueprintFieldType>>;
 
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams>;
             typename component_type::input_type input;
