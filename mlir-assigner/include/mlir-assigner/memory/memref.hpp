@@ -108,7 +108,7 @@ namespace nil {
             mlir::Type getType() const {
                 return type;
             }
-            int64_t size() const {
+            size_t size() const {
                 return data.size();
             }
 
