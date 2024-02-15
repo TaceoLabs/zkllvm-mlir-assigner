@@ -187,10 +187,9 @@ namespace zk_ml_toolchain {
                   boost::json::array &public_output, generation_mode gen_mode,
                   nil::blueprint::print_format print_circuit_format, std::string &clip,
                   nil::blueprint::logger &logger) :
-            bp(circuit),
-            assignmnt(assignment), public_input(public_input), private_input(private_input),
-            public_output(public_output), gen_mode(gen_mode), print_circuit_format(print_circuit_format),
-            logger(logger) {
+            gen_mode(gen_mode),
+            print_circuit_format(print_circuit_format), logger(logger), bp(circuit), assignmnt(assignment),
+            public_input(public_input), private_input(private_input), public_output(public_output) {
             lower_bound = FixedPoint(1, FixedPoint::SCALE).to_double();
             if ("clip" == clip) {
                 clip_strategy = ClipStrategy::CLIP;

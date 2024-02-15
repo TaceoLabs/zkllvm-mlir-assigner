@@ -59,8 +59,8 @@ namespace nil {
                    std::uint32_t target_prover_idx, const std::string &policy = "",
                    generation_mode gen_mode = generation_mode::ASSIGNMENTS & generation_mode::CIRCUIT,
                    print_format output_print_format = no_print) :
-                max_num_provers(max_num_provers),
-                gen_mode(gen_mode), print_output_format(output_print_format) {
+                gen_mode(gen_mode),
+                print_output_format(output_print_format), max_num_provers(max_num_provers) {
                 if (max_num_provers != 1) {
                     throw std::runtime_error(
                         "Currently only one prover is supported, please "
