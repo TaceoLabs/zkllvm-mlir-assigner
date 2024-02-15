@@ -1,27 +1,0 @@
-	:ý
-„
-in_a
-in_bout_a"ConvTranspose*
-auto_pad"NOTSET *
-	dilations@@ *
-group *
-kernel_shape@@ *
-strides@@ ConvTransposeSimpleZ
-in_a
-
-
-
-
-Z
-in_b
-
-
-
-
-b
-out_a
-
-
-
-
-B
