@@ -108,39 +108,6 @@ namespace nil {
             }
 
             template<typename MlirType>
-            bool peek_local(MlirType identifier) {
-                return peek_local(mlir::hash_value(identifier));
-            }
-
-            bool peek_local(llvm::hash_code hash_code) {
-                size_t hash = size_t(hash_code);
-                for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter) {
-                    if (iter->locals.find(hash) != iter->locals.end()) {
-                        // yay we found it
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            template<typename MlirType>
-            bool peek_memref(MlirType identifier) {
-                return peek_memref(mlir::hash_value(identifier));
-            }
-
-            bool peek_memref(llvm::hash_code hash_code) {
-                size_t hash = size_t(hash_code);
-                for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter) {
-                    if (iter->memrefs.find(hash) != iter->memrefs.end()) {
-                        // yay we found it
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-
-            template<typename MlirType>
             void push_local(MlirType identifier, const VarType &local, bool allow_overwrite = true) {
                 push_local(mlir::hash_value(identifier), local, allow_overwrite);
             }
