@@ -160,7 +160,7 @@ long as it is applicable for ZK).
 | **HannWindow**                |        :x:         |        :x:         |                                                    |
 | **HardSigmoid**               | :white_check_mark: | :white_check_mark: |                                                    |
 | **HardSwish**                 |        :x:         |        :x:         |                                                    |
-| **Hardmax**                   |        :x:         | :white_check_mark: |                                                    |
+| **Hardmax**                   | :white_check_mark: | :white_check_mark: |                                                    |
 | **Identity**                  | :white_check_mark: | :white_check_mark: |                                                    |
 | **If**                        |        :x:         | :white_check_mark: | Not supported at the moment due to Zk limitations. |
 | **Imputer**                   |        :x:         |        :x:         |                                                    |
