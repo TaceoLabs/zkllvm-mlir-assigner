@@ -33,8 +33,8 @@ llvm::cl::OptionCategory ZkMlOptions("ZKML options", "These are ZKML options");
 
 llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::Required);
 llvm::cl::opt<std::string> OutputFilename("output", llvm::cl::desc("Specify output filename"),
-                                          llvm::cl::value_desc("filename"),
-                                          llvm::cl::cat(ZkMlOptions), llvm::cl::init(STDOUT_MARKER));
+                                          llvm::cl::value_desc("filename"), llvm::cl::cat(ZkMlOptions),
+                                          llvm::cl::init(STDOUT_MARKER));
 
 llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you want?"), llvm::cl::cat(ZkMlOptions),
                                    llvm::cl::values(clEnumVal(ONNX, "Lower to \"ONNX\" dialect."),
@@ -42,9 +42,13 @@ llvm::cl::opt<EmitLevel> EmitLevel(llvm::cl::desc("Which lowering level do you w
                                                     clEnumVal(zkMLIR, "Lower to \"zkMLIR-IR\"."),
                                                     clEnumVal(LLVMIR, "Lower to \"LLVM-IR\".")));
 
-llvm::cl::opt<std::string> PrivateInputs("zk", llvm::cl::desc("specifies which inputs to the model are private. Comma separated list of {0,1}"), llvm::cl::cat(ZkMlOptions), llvm::cl::init("NOT_SET"));
+llvm::cl::opt<std::string>
+    PrivateInputs("zk",
+                  llvm::cl::desc("specifies which inputs to the model are private. Comma separated list of {0,1}"),
+                  llvm::cl::cat(ZkMlOptions), llvm::cl::init("NOT_SET"));
 
-llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::cat(ZkMlOptions), llvm::cl::init(false));
+llvm::cl::opt<bool> ZkMlDebugFlag("DEBUG", llvm::cl::desc("turns on debugging log"), llvm::cl::cat(ZkMlOptions),
+                                  llvm::cl::init(false));
 
 bool hasEnding(std::string const &fullString, std::string const &ending) {
     if (fullString.length() >= ending.length()) {
@@ -67,7 +71,6 @@ int loadOnnxFile(llvm::StringRef inputFilename, mlir::MLIRContext &context, mlir
     onnx_mlir::ImportOptions options;
     options.useOnnxModelTypes = true;
     options.invokeOnnxVersionConverter = false;
-    // TODO check the default value
     options.shapeInformation = onnx_mlir::shapeInformation;
     options.allowSorting = true;
     options.externalDataDir = dirName(inputFilename);
@@ -77,15 +80,6 @@ int loadOnnxFile(llvm::StringRef inputFilename, mlir::MLIRContext &context, mlir
 std::unique_ptr<llvm::Module> lowerToLLVM(llvm::LLVMContext &llvmContext, mlir::OwningOpRef<mlir::ModuleOp> &mlirModule,
                                           int *error_code) {
     std::error_code error;
-
-    // TODO do we want to emit .bc? Or at least make it configureable
-    //   mlir::registerLLVMDialectTranslation(*mlirModule->getContext());
-    //   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*mlirModule, llvmContext);
-    //   if (!llvmModule) {
-    //       llvm::errs() << "Failed to translate module to LLVMIR.\n";
-    //       *error_code = -1;
-    //       return nullptr;
-    //   }
 
     mlir::registerBuiltinDialectTranslation(*(mlirModule.get().getContext()));
     mlir::registerLLVMDialectTranslation(*(mlirModule.get().getContext()));

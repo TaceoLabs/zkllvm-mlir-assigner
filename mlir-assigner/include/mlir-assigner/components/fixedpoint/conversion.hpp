@@ -33,7 +33,6 @@ namespace nil {
 
             auto input = PREPARE_UNARY_INPUT(MlirOp);
             using manifest_reader = detail::ManifestReader<component_type, ArithmetizationParams, PreLimbs, PostLimbs>;
-            // TODO are those manifest readers correct?
             const auto p = detail::PolicyManager::get_parameters(
                 detail::ManifestReader<component_type, ArithmetizationParams>::get_witness(0));
 

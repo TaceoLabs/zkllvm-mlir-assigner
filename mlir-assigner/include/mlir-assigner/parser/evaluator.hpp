@@ -210,17 +210,6 @@ namespace zk_ml_toolchain {
             for (auto a : EntryPoint->getAttrs()) {
                 if (a.getName() == EntryPoint.getEntryPointFuncAttrName()) {
                     func = a.getValue().cast<SymbolRefAttr>().getLeafReference().str();
-                } else if (a.getName() == EntryPoint.getNumInputsAttrName()) {
-                    // do nothing for num inputs atm
-                    // a.getValue().cast<IntegerAttr>().getInt();
-                } else if (a.getName() == EntryPoint.getNumOutputsAttrName()) {
-                    // do nothing for num outputs atm
-                    // a.getValue().cast<IntegerAttr>().getInt();
-                } else if (a.getName() == EntryPoint.getSignatureAttrName()) {
-                    // do nothing for signature atm
-                    // TODO: check against input types & shapes
-                } else {
-                    UNREACHABLE("unhandled attribute: " + a.getName().str());
                 }
             }
         }
@@ -254,7 +243,7 @@ namespace zk_ml_toolchain {
             assert(funcOp != functions.end());
             // prepare everything for run
 
-            // FIXME remove me
+            // Setup a stack frame to use
             stack.push_frame();
             nil::blueprint::stack_frame<VarType> &main_frame = stack.get_last_frame();
             {
@@ -501,8 +490,6 @@ namespace zk_ml_toolchain {
                 if (operation.getLhs().getType().isa<IndexType>()) {
                     assert(operation.getRhs().getType().isa<IndexType>());
 
-                    // TODO: ATM, handle only the case where we work on indices that are
-                    // constant values
                     auto lhs = stack.get_constant(operation.getLhs());
                     auto rhs = stack.get_constant(operation.getRhs());
                     int64_t cmpResult;
@@ -540,8 +527,6 @@ namespace zk_ml_toolchain {
                     }
                     stack.push_constant(operation.getResult(), cmpResult);
                 } else {
-                    // FIXME we use the fcmp gadget here for the time being.
-                    // as soon as we get the cmpi gadget from upstream, swap the gadget
                     handle_icmp(operation, stack, bp, assignmnt, compParams);
                 }
             } else if (arith::ConstantOp operation = llvm::dyn_cast<arith::ConstantOp>(op)) {
@@ -624,7 +609,7 @@ namespace zk_ml_toolchain {
             } else if (math::FloorOp operation = llvm::dyn_cast<math::FloorOp>(op)) {
                 nil::blueprint::handle_floor<PreLimbs, PostLimbs>(operation, stack, bp, assignmnt, compParams);
             } else if (math::CopySignOp operation = llvm::dyn_cast<math::CopySignOp>(op)) {
-                // TODO: do nothing for now since it only comes up during mod, and there
+                // do nothing for now since it only comes up during mod, and there
                 // the component handles this correctly; do we need this later on?
                 VarType &src = stack.get_local(operation.getLhs());
                 stack.push_local(operation.getResult(), src);
@@ -698,7 +683,6 @@ namespace zk_ml_toolchain {
             } else if (affine::AffineYieldOp operation = llvm::dyn_cast<affine::AffineYieldOp>(op)) {
                 // Affine Yields are Noops for us
             } else if (opName == "affine.apply" || opName == "affine.min") {
-                // TODO: nicer handling of these
                 logger.debug("got affine.apply");
                 assert(op->getResults().size() == 1);
                 assert(op->getAttrs().size() == 1);
@@ -745,7 +729,6 @@ namespace zk_ml_toolchain {
                 // Create the global at the entry of the module.
                 assert(operation.getValue().has_value() && "Krnl Global must always have a value");
                 auto value = operation.getValue().value();
-                // TODO check other bit sizes. Also no range constraint is this necessary????
                 if (DenseElementsAttr attr = llvm::dyn_cast<DenseElementsAttr>(value)) {
                     mlir::Type attrType = attr.getElementType();
                     if (attrType.isa<mlir::IntegerType>()) {
@@ -882,8 +865,6 @@ namespace zk_ml_toolchain {
                 auto m = nil::blueprint::memref<VarType>(dims, type.getElementType());
                 stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::AllocaOp operation = llvm::dyn_cast<memref::AllocaOp>(op)) {
-                // TACEO_TODO: handle cleanup of these stack memrefs
-                // TACEO_TODO: deduplicate with above
                 logger.debug("allocating (stack) memref");
                 MemRefType type = operation.getType();
                 logger << type.getElementType();
@@ -895,7 +876,6 @@ namespace zk_ml_toolchain {
                 auto m = nil::blueprint::memref<VarType>(type.getShape(), type.getElementType());
                 stack.push_memref(operation.getMemref(), m, false);
             } else if (memref::LoadOp operation = llvm::dyn_cast<memref::LoadOp>(op)) {
-                // TODO: deduplicate with affine.load
                 nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
                 // grab the indices and build index vector
                 auto indices = operation.getIndices();
@@ -908,7 +888,6 @@ namespace zk_ml_toolchain {
                 auto value = memref.get(indicesV);
                 stack.push_local(operation.getResult(), value);
             } else if (memref::StoreOp operation = llvm::dyn_cast<memref::StoreOp>(op)) {
-                // TODO: deduplicate with affine.load
                 auto memRefHash = mlir::hash_value(operation.getMemref());
                 logger.debug("looking for MemRef %x", size_t(memRefHash));
                 nil::blueprint::memref<VarType> &memref = stack.get_memref(operation.getMemref());
@@ -925,8 +904,6 @@ namespace zk_ml_toolchain {
                 memref.put(indicesV, value);
             } else if (memref::DeallocOp operation = llvm::dyn_cast<memref::DeallocOp>(op)) {
                 stack.erase_memref(operation.getMemref());
-                // TACEO_TODO
-                return;
             } else if (memref::ReinterpretCastOp operation = llvm::dyn_cast<memref::ReinterpretCastOp>(op)) {
                 auto source = operation.getSource();
                 auto result = operation.getResult();
@@ -1038,7 +1015,7 @@ namespace zk_ml_toolchain {
                             output_writer(assignmnt, output_memrefs);
                         bool ok = output_writer.make_outputs_to_json(public_output);
                         if (!ok) {
-                            std::cerr << "TODO better error message";
+                            std::cerr << "Could not create output JSON object";
                             const std::string &error = output_writer.get_error();
                             if (!error.empty()) {
                                 std::cerr << ": " << error;

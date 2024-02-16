@@ -37,11 +37,8 @@
 #include <mlir-assigner/memory/stack_frame.hpp>
 #include <mlir-assigner/components/handle_component.hpp>
 
-// TODO We want to use the flags not the logic_ops
-
 namespace nil {
     namespace blueprint {
-        // TODO There is also the logic_and_flag. Should we use this one or should we use the logic_ops?????
         template<typename BlueprintFieldType, typename ArithmetizationParams>
         void handle_logic_and(
             mlir::arith::AndIOp &operation,

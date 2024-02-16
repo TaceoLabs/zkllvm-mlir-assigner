@@ -78,8 +78,6 @@ namespace nil {
                 BOOST_LOG_TRIVIAL(error) << boost::str((boost::format(fmt) % ... % args));
             }
 
-            // TODO: these two functions can be substituted by one when std::format is
-            // widely supported
             void debug(boost::basic_format<char> formated_debug_message) {
                 BOOST_LOG_TRIVIAL(debug) << boost::str(formated_debug_message);
             }

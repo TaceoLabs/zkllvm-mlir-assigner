@@ -278,7 +278,6 @@ namespace nil {
                         error = "json type does not match memref type";
                         return false;
                     }
-                    // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.public_input(0, public_input_idx))) {
                             llvm::errs() << "expect ints in tensor\n";
@@ -324,7 +323,6 @@ namespace nil {
                         error = "json type does not match memref type";
                         return false;
                     }
-                    // TODO do we have to handle uint?
                     for (size_t i = 0; i < tensor_arr.size(); ++i) {
                         if (!parse_int(tensor_arr[i], assignmnt.private_storage(private_input_idx))) {
                             llvm::errs() << "expect ints in tensor\n";

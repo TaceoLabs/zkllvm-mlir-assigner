@@ -54,7 +54,6 @@ namespace nil {
                 using ComponentType = components::fix_dot_rescale_2_gates<
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
-                // FIXME the PreLimbs paramter here gets ignored. It is in fact
                 using manifest_reader = detail::ManifestReader<ComponentType, ArithmetizationParams, PostLimbs>;
                 const auto p =
                     detail::PolicyManager::get_parameters(manifest_reader::get_witness(0, dims.front(), PostLimbs));
