@@ -66,7 +66,8 @@
 #include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/multiplication.hpp>
-#include <optional>
+
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp>
 
 #define PREPARE_UNARY_INPUT(OP)                                                                                        \
     prepare_unary_operation_input<BlueprintFieldType, ArithmetizationParams, OP, typename component_type::input_type>( \

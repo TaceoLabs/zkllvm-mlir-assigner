@@ -5,7 +5,6 @@
 
 #include <nil/blueprint/component.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
-#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp>
 
 #include <mlir-assigner/helper/asserts.hpp>
 #include <mlir-assigner/memory/stack_frame.hpp>
