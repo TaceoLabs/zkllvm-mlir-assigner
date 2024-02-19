@@ -12,4 +12,4 @@
 	url = ../../TaceoLabs/onnx-mlir.git
 [submodule "libs/zk-ml-dialect"]
 	path = libs/zk-ml-dialect
-	url = git@github.com:TaceoLabs/zk-ml-dialect.git
+	url = ../../TaceoLabs/zk-ml-dialect.git
