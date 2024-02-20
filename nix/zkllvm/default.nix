@@ -4,8 +4,8 @@ clangStdenv.mkDerivation {
   name = "zkllvm_with_mlir";
   src = fetchgit {
     url = "https://github.com/NilFoundation/zkllvm";
-    rev = "fcf5cc56716c9ac2011ec7b91db45a70224cef93"; # also change hash + version below in cmakeflags
-    sha256 = "1iv8ijs4cxnflsiyf0hb6w9cyfdcx835izy5kbvlpj56pn5ymwpq";
+    rev = "261d6271708f91d0318a9314fb2e64ab587dcd63"; # also change hash + version below in cmakeflags
+    sha256 = "1m0h11daa6xyb2sqwjlj7nyy6gvwyl9kpwjaw9bf1qsinyafchgr";
     fetchSubmodules = true;
   };
   enableParallelBuilding = true;
@@ -33,7 +33,7 @@ clangStdenv.mkDerivation {
     "-DLLVM_ENABLE_RTTI=ON"
     "-DLLVM_ENABLE_LIBEDIT=OFF"
     "-DLLVM_INSTALL_UTILS=ON"
-    "-DZKLLVM_VERSION=v0.1.16" # WARN: this is not really the exact commit for this version
+    "-DZKLLVM_VERSION=v0.1.17"
   ];
   # We need to clean up some files that are invalid for newer cmake versions.
   postInstall = ''
