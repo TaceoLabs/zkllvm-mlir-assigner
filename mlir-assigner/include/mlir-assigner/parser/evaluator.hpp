@@ -834,7 +834,6 @@ namespace zk_ml_toolchain {
                 amount_ops = operation.getAmount();
             } else if (zkml::TraceOp operation = llvm::dyn_cast<zkml::TraceOp>(op)) {
                 std::cout << "> " << operation.getTrace().str() << " (" << (++progress) << "/" << amount_ops << ")\n";
-                stack.print(std::cout);
             } else {
                 std::string opName = op->getName().getIdentifier().str();
                 UNREACHABLE(std::string("unhandled zkML operation: ") + opName);
